@@ -1,0 +1,31 @@
+---
+import LandingPage from "../assets/LandingPage.png";
+---
+
+<div id="container">
+  <img id="background" src={LandingPage.src} alt="" fetchpriority="high" />
+</div>
+
+<style>
+  body {
+    background: linear-gradient(to right, #193357, #318171);
+  }
+  #background {
+    max-width: 95%;
+    height: auto;
+    display: block;
+    margin: 20px auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  #container {
+    font-family:
+      Inter, Roboto, "Helvetica Neue", "Arial Nova", "Nimbus Sans", Arial,
+      sans-serif;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+</style>
