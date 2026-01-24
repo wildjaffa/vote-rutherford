@@ -1,0 +1,268 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Election {
+  id            String                @id @default(uuid()) @db.Uuid
+  name          String
+  description   String
+  date          DateTime              @db.Timestamptz(3)
+  headerImage   BlobStorageReference? @relation("ElectionHeaderImage", fields: [headerImageId], references: [id])
+  headerImageId String?               @db.Uuid
+  createdAt     DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime              @default(now()) @db.Timestamptz(3)
+  deletedAt     DateTime?             @db.Timestamptz(3)
+  archivedAt    DateTime?             @db.Timestamptz(3)
+
+  races                  Race[]
+  policyQuestions        PolicyQuestion[]
+  usersToElections       UserToElection[]
+  blobStorageReference   BlobStorageReference? @relation(fields: [blobStorageReferenceId], references: [id])
+  blobStorageReferenceId String?               @db.Uuid
+
+  @@map("elections")
+}
+
+model Race {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String
+  description String
+  election    Election  @relation(fields: [electionId], references: [id])
+  electionId  String    @db.Uuid
+  status      String
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @default(now()) @db.Timestamptz(3)
+  deletedAt   DateTime? @db.Timestamptz(3)
+
+  candidates             Candidate[]
+  policyQuestionsToRaces PolicyQuestionToRace[]
+
+  @@map("races")
+}
+
+model Candidate {
+  id                String                @id @default(uuid()) @db.Uuid
+  race              Race                  @relation(fields: [raceId], references: [id])
+  raceId            String                @db.Uuid
+  firstName         String
+  middleName        String?
+  lastName          String
+  birthYear         Int?
+  biography         String?
+  biographyRedacted String?
+  profileImage      BlobStorageReference? @relation("CandidateProfileImage", fields: [profileImageId], references: [id])
+  profileImageId    String?               @db.Uuid
+  historicalLink    Candidate?            @relation("HistoricalLink", fields: [historicalLinkId], references: [id])
+  historicalLinkId  String?               @db.Uuid
+  createdAt         DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime              @default(now()) @db.Timestamptz(3)
+  deletedAt         DateTime?             @db.Timestamptz(3)
+
+  externalLinks   CandidateExternalLink[]
+  policyResponses CandidatePolicyResponse[]
+  qualifications  CandidateQualification[]
+  historicalLinks Candidate[]               @relation("HistoricalLink")
+
+  @@map("candidates")
+}
+
+model CandidateExternalLink {
+  id                 String           @id @default(uuid()) @db.Uuid
+  candidate          Candidate        @relation(fields: [candidate_id], references: [id])
+  candidate_id       String           @db.Uuid
+  hyperlink          String
+  externalLinkType   ExternalLinkType @relation(fields: [externalLinkTypeId], references: [id])
+  externalLinkTypeId Int
+  createdAt          DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime         @default(now()) @db.Timestamptz(3)
+  deletedAt          DateTime?        @db.Timestamptz(3)
+
+  @@map("candidate_external_links")
+}
+
+model ExternalLinkType {
+  id        Int       @id @default(autoincrement())
+  value     String
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
+  deletedAt DateTime? @db.Timestamptz(3)
+
+  CandidateExternalLinks CandidateExternalLink[]
+
+  @@map("external_link_types")
+}
+
+model PolicyQuestion {
+  id              String    @id @default(uuid()) @db.Uuid
+  election        Election  @relation(fields: [electionId], references: [id])
+  electionId      String    @db.Uuid
+  questiontext    String
+  descriptionText String
+  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime  @default(now()) @db.Timestamptz(3)
+  deletedAt       DateTime? @db.Timestamptz(3)
+
+  PolicyQuestionsToRaces   PolicyQuestionToRace[]
+  candidatePolicyResponses CandidatePolicyResponse[]
+
+  @@map("policy_questions")
+}
+
+model PolicyQuestionToRace {
+  id               String         @id @default(uuid()) @db.Uuid
+  policyQuestion   PolicyQuestion @relation(fields: [policyQuestionId], references: [id])
+  policyQuestionId String         @db.Uuid
+  race             Race           @relation(fields: [raceId], references: [id])
+  raceId           String         @db.Uuid
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime       @default(now()) @db.Timestamptz(3)
+  deletedAt        DateTime?      @db.Timestamptz(3)
+
+  @@map("policy_questions_to_races")
+}
+
+model CandidatePolicyResponse {
+  id                 String         @id @default(uuid()) @db.Uuid
+  candidate          Candidate      @relation(fields: [candidateId], references: [id])
+  candidateId        String         @db.Uuid
+  policyQuestion     PolicyQuestion @relation(fields: [policyQuestionId], references: [id])
+  policyQuestionId   String         @db.Uuid
+  requestSentAt      DateTime       @db.Timestamptz(3)
+  responseReceivedAt DateTime?      @db.Timestamptz(3)
+  response           String
+  responseRedacted   String?
+  createdAt          DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime       @default(now()) @db.Timestamptz(3)
+  deletedAt          DateTime?      @db.Timestamptz(3)
+
+  clarifications CandidatePolicyResponseClarification[]
+
+  @@map("candidate_policy_responses")
+}
+
+model CandidatePolicyResponseClarification {
+  id                        String                  @id @default(uuid()) @db.Uuid
+  candidatePolicyResponse   CandidatePolicyResponse @relation(fields: [candidatePolicyResponseId], references: [id])
+  candidatePolicyResponseId String                  @db.Uuid
+  clarification             String
+  clarificationRedacted     String?
+  clarificationReceivedAt   DateTime?               @db.Timestamptz(3)
+  createdAt                 DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt                 DateTime                @default(now()) @db.Timestamptz(3)
+  deletedAt                 DateTime?               @db.Timestamptz(3)
+
+  @@map("candidate_policy_response_clarifications")
+}
+
+model CandidateQualification {
+  id                        String            @id @default(uuid()) @db.Uuid
+  candidate                 Candidate         @relation(fields: [candidateId], references: [id])
+  candidateId               String            @db.Uuid
+  qualification_description String
+  qualificationType         QualificationType @relation(fields: [qualificationTypeId], references: [id])
+  qualificationTypeId       Int
+  qaulification_url         String
+  createdAt                 DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt                 DateTime          @default(now()) @db.Timestamptz(3)
+  deletedAt                 DateTime?         @db.Timestamptz(3)
+
+  @@map("candidate_qualifications")
+}
+
+model QualificationType {
+  id                      Int                      @id @default(autoincrement())
+  value                   String
+  createdAt               DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime                 @default(now()) @db.Timestamptz(3)
+  deletedAt               DateTime?                @db.Timestamptz(3)
+  candidateQualifications CandidateQualification[]
+
+  @@map("qualification_types")
+}
+
+model User {
+  id             String                @id @default(uuid()) @db.Uuid
+  firstName      String
+  middleName     String?
+  lastName       String
+  username       String
+  email          String                @unique
+  userType       UserType              @relation(fields: [userTypeId], references: [id])
+  userTypeId     Int
+  profileImage   BlobStorageReference? @relation("UserProfileImage", fields: [profileImageId], references: [id])
+  profileImageId String?               @db.Uuid
+  createdAt      DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime              @default(now()) @db.Timestamptz(3)
+  deletedAt      DateTime?             @db.Timestamptz(3)
+
+  usersToElections UserToElection[]
+
+  @@map("users")
+}
+
+model UserType {
+  id        Int       @id @default(autoincrement())
+  value     String
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
+  deletedAt DateTime? @db.Timestamptz(3)
+
+  Users User[]
+
+  @@map("user_types")
+}
+
+model UserToElection {
+  id         String    @id @default(uuid()) @db.Uuid
+  user       User      @relation(fields: [userId], references: [id])
+  userId     String    @db.Uuid
+  election   Election  @relation(fields: [electionId], references: [id])
+  electionId String    @db.Uuid
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @db.Timestamptz(3)
+  deletedAt  DateTime? @db.Timestamptz(3)
+
+  @@map("users_to_elections")
+}
+
+model BlobStorageReference {
+  id                String          @id @default(uuid()) @db.Uuid
+  fileType          String
+  fileName          String
+  fileLocation      String
+  blobStorageType   BlobStorageType @relation(fields: [blobStorageTypeId], references: [id])
+  blobStorageTypeId Int
+  createdAt         DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime        @default(now()) @db.Timestamptz(3)
+  deletedAt         DateTime?       @db.Timestamptz(3)
+
+  Users                  User[]      @relation("UserProfileImage")
+  ElectionsHeaderImage   Election[]  @relation("ElectionHeaderImage")
+  CandidatesProfileImage Candidate[] @relation("CandidateProfileImage")
+  elections              Election[]
+
+  @@map("blob_storage_references")
+}
+
+model BlobStorageType {
+  id        Int       @id @default(autoincrement())
+  value     String
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
+  deletedAt DateTime? @db.Timestamptz(3)
+
+  BlobStorageReferences BlobStorageReference[]
+
+  @@map("blob_storage_types")
+}
