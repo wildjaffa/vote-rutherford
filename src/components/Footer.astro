@@ -1,0 +1,106 @@
+---
+import "../styles/global.css";
+import { Icon } from "astro-icon/components";
+---
+
+<footer class="bg-secondary text-white mt-12 shadow-md">
+  <div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- About Section -->
+      <div>
+        <h3 class="text-lg font-bold text-accent mb-4">
+          About Vote Rutherford
+        </h3>
+        <p class="text-sm text-gray-200">
+          Empowering voters with clear, accessible information about candidates
+          and races in Rutherford County.
+        </p>
+      </div>
+
+      <!-- Quick Links -->
+      <div>
+        <h3 class="text-lg font-bold text-accent mb-4">Quick Links</h3>
+        <ul class="space-y-2 text-sm">
+          <li>
+            <a href="/" class="hover:text-accent transition-colors">Home</a>
+          </li>
+          <li>
+            <a
+              href="/upcoming-races"
+              class="hover:text-accent transition-colors">Upcoming Races</a
+            >
+          </li>
+          <li>
+            <a href="/about" class="hover:text-accent transition-colors"
+              >About</a
+            >
+          </li>
+        </ul>
+      </div>
+
+      <!-- Resources -->
+      <div>
+        <h3 class="text-lg font-bold text-accent mb-4">Resources</h3>
+        <ul class="space-y-2 text-sm">
+          <li>
+            <a
+              href="https://rutherfordcountytn.gov/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="hover:text-accent transition-colors"
+              >Rutherford County Site<Icon
+                name="lucide:external-link"
+                class="ml-1 inline align-text-top"
+              /></a
+            >
+          </li>
+          <li>
+            <a
+              href="https://ovr.govote.tn.gov/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="hover:text-accent transition-colors"
+              >Register to Vote<Icon
+                name="lucide:external-link"
+                class="ml-1 inline align-text-top"
+              />
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://sos.tn.gov/govotetn"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="hover:text-accent transition-colors"
+              >Tennessee Voter Information<Icon
+                name="lucide:external-link"
+                class="ml-1 inline align-text-top"
+              />
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Bottom Section -->
+    <div
+      class="border-t border-white/20 mt-8 pt-8 text-center text-sm text-gray-300"
+    >
+      <p>
+        &copy; {new Date().getFullYear()} Vote Rutherford. All rights reserved.
+      </p>
+      <p>
+        <small>
+          Candidate information is provided for educational purposes. Verify all
+          information before voting.</small
+        >
+      </p>
+    </div>
+  </div>
+
+  <style>
+    footer {
+      margin-top: auto;
+    }
+  </style>
+</footer>

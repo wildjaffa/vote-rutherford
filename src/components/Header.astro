@@ -2,23 +2,42 @@
 import { Image } from "astro:assets";
 import Logo from "../assets/Logo.png";
 import { Icon } from "astro-icon/components";
+import Button from "./Button.astro";
 import "../styles/global.css";
 ---
 
 <header
   class="relative flex items-center justify-between p-1 bg-secondary shadow-md w-full"
 >
-  <a href="/"><Image src={Logo} alt="Vote Rutherford Logo" class="w-40" /></a>
+  <a href="/"
+    ><Image
+      src={Logo}
+      alt="Vote Rutherford Logo"
+      class="w-40"
+      fetchpriority={"low"}
+      loading={"eager"}
+    /></a
+  >
 
   <!-- Desktop Navigation -->
   <nav class="hidden sm:block">
     <ul class="flex space-x-4">
       <li><a href="/" class="text-white hover:text-accent">Home</a></li>
       <li>
-        <a href="/about" class="text-white hover:text-red-500">About</a>
+        <a href="/upcoming-races" class="text-white hover:text-accent"
+          >Upcoming Races</a
+        >
       </li>
       <li>
-        <a href="/contact" class="text-white hover:text-accent">Contact</a>
+        <a href="/about" class="text-white hover:text-accent">About</a>
+      </li>
+      <li>
+        <Button
+          variant="secondary"
+          href="https://ovr.govote.tn.gov/"
+          target="_blank"
+          rel="noopener noreferrer">Register to Vote</Button
+        >
       </li>
     </ul>
   </nav>
@@ -44,7 +63,7 @@ import "../styles/global.css";
   <!-- Mobile Navigation -->
   <nav
     id="mobile-menu"
-    class="hidden absolute top-full left-0 right-0 bg-primary shadow-md sm:hidden"
+    class="hidden absolute top-full left-0 right-0 bg-secondary shadow-md sm:hidden"
   >
     <div class="border-b border-white/20"></div>
     <ul
@@ -57,6 +76,14 @@ import "../styles/global.css";
       </li>
       <li>
         <a href="/contact" class="text-white hover:text-accent block">Contact</a
+        >
+      </li>
+      <li>
+        <Button
+          variant="secondary"
+          href="https://ovr.govote.tn.gov/"
+          target="_blank"
+          rel="noopener noreferrer">Register to Vote</Button
         >
       </li>
     </ul>
