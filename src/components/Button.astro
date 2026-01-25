@@ -1,0 +1,60 @@
+---
+import "@fontsource-variable/montserrat";
+
+interface Props {
+  variant?: "primary" | "secondary";
+  size?: "sm" | "md" | "lg";
+  disabled?: boolean;
+  type?: "button" | "submit" | "reset";
+  class?: string;
+  href?: string;
+  target?: string;
+  rel?: string;
+}
+
+const {
+  variant = "primary",
+  size = "md",
+  disabled = false,
+  type = "button",
+  class: className,
+  href,
+  target,
+  rel,
+} = Astro.props;
+
+const baseStyles =
+  "font-montserrat font-semibold transition-colors duration-200 rounded focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
+
+const sizeStyles = {
+  sm: "px-3 py-1 text-sm",
+  md: "px-4 py-2 text-base",
+  lg: "px-6 py-3 text-lg",
+};
+
+const variantStyles = {
+  primary: "bg-secondary text-white hover:bg-secondary/90 focus:ring-secondary",
+  secondary: "bg-accent text-white hover:bg-accent/90 focus:ring-accent",
+};
+
+const buttonClass =
+  `${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]} ${className || ""}`.trim();
+---
+
+{
+  href ? (
+    <a href={href} target={target} rel={rel} class={buttonClass}>
+      <slot />
+    </a>
+  ) : (
+    <button type={type} disabled={disabled} class={buttonClass}>
+      <slot />
+    </button>
+  )
+}
+
+<style>
+  button {
+    font-family: "Montserrat", var(--font-sans);
+  }
+</style>

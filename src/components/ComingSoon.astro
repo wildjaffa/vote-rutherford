@@ -4,6 +4,8 @@ import "@fontsource-variable/montserrat";
 import type { Election } from "../generated/prisma/client";
 import { GET } from "../pages/api/elections";
 import "../styles/global.css";
+import { Image } from "astro:assets";
+import MobileLandingPage from "../assets/MobileLandingPage.png";
 
 const electionsResponse = await GET(Astro);
 const elections: Election[] = await electionsResponse.json();
@@ -19,6 +21,7 @@ const elections: Election[] = await electionsResponse.json();
     ))
   }
 </div>
+<Image id="background" src={MobileLandingPage} alt="" fetchpriority="high" />
 
 <style>
   body {
