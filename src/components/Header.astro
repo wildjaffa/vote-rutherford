@@ -1,0 +1,96 @@
+---
+import { Image } from "astro:assets";
+import Logo from "../assets/Logo.png";
+import { Icon } from "astro-icon/components";
+import "../styles/global.css";
+---
+
+<header
+  class="relative flex items-center justify-between p-1 bg-secondary shadow-md w-full"
+>
+  <a href="/"><Image src={Logo} alt="Vote Rutherford Logo" class="w-40" /></a>
+
+  <!-- Desktop Navigation -->
+  <nav class="hidden sm:block">
+    <ul class="flex space-x-4">
+      <li><a href="/" class="text-white hover:text-accent">Home</a></li>
+      <li>
+        <a href="/about" class="text-white hover:text-red-500">About</a>
+      </li>
+      <li>
+        <a href="/contact" class="text-white hover:text-accent">Contact</a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Mobile Hamburger Button -->
+  <button
+    id="menu-toggle"
+    class="sm:hidden flex items-center justify-center w-8 h-8"
+    aria-label="Toggle menu"
+  >
+    <Icon
+      name="lucide:menu"
+      class="w-6 h-6 text-white menu-icon"
+      id="menu-icon"
+    />
+    <Icon
+      name="lucide:x"
+      class="w-6 h-6 text-white x-icon hidden"
+      id="x-icon"
+    />
+  </button>
+
+  <!-- Mobile Navigation -->
+  <nav
+    id="mobile-menu"
+    class="hidden absolute top-full left-0 right-0 bg-primary shadow-md sm:hidden"
+  >
+    <div class="border-b border-white/20"></div>
+    <ul
+      class="flex flex-col space-y-4 p-4 transition-opacity duration-300 opacity-0"
+      id="mobile-menu-list"
+    >
+      <li><a href="/" class="text-white hover:text-accent block">Home</a></li>
+      <li>
+        <a href="/about" class="text-white hover:text-accent block">About</a>
+      </li>
+      <li>
+        <a href="/contact" class="text-white hover:text-accent block">Contact</a
+        >
+      </li>
+    </ul>
+  </nav>
+</header>
+
+<script>
+  const menuToggle = document.getElementById("menu-toggle");
+  const mobileMenu = document.getElementById("mobile-menu");
+  const menuList = document.getElementById("mobile-menu-list");
+  const menuIcon = document.getElementById("menu-icon");
+  const xIcon = document.getElementById("x-icon");
+
+  menuToggle?.addEventListener("click", () => {
+    const isHidden = mobileMenu?.classList.toggle("hidden");
+
+    if (!isHidden) {
+      menuIcon?.classList.add("hidden");
+      xIcon?.classList.remove("hidden");
+      menuList?.classList.remove("opacity-0");
+    } else {
+      menuIcon?.classList.remove("hidden");
+      xIcon?.classList.add("hidden");
+      menuList?.classList.add("opacity-0");
+    }
+  });
+
+  // Close menu when a link is clicked
+  mobileMenu?.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      mobileMenu.classList.add("hidden");
+      menuIcon?.classList.remove("hidden");
+      xIcon?.classList.add("hidden");
+      menuList?.classList.add("opacity-0");
+    });
+  });
+</script>

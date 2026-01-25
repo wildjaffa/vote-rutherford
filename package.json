@@ -11,11 +11,15 @@
   "dependencies": {
     "@fontsource-variable/montserrat": "^5.2.8",
     "@fontsource/sorts-mill-goudy": "^5.2.8",
+    "@iconify-json/lucide": "^1.2.86",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
+    "@tailwindcss/vite": "^4.1.18",
     "astro": "^5.16.15",
+    "astro-icon": "^1.1.5",
     "dotenv": "^17.2.3",
-    "pg": "^8.17.2"
+    "pg": "^8.17.2",
+    "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
     "@types/pg": "^8.16.0",
