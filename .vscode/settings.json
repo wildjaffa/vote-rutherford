@@ -1,6 +1,8 @@
 {
-    "cSpell.words": [
-        "fontsource",
-        "lucide"
-    ]
+  "cSpell.words": ["fontsource", "lucide"],
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[astro]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
 }
