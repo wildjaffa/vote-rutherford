@@ -1,9 +1,9 @@
 ---
 import { Image } from "astro:assets";
 import Logo from "../assets/Logo.png";
-import { Icon } from "astro-icon/components";
 import Button from "./Button.astro";
 import "../styles/global.css";
+import { Menu, X } from "@lucide/astro";
 ---
 
 <header
@@ -48,16 +48,8 @@ import "../styles/global.css";
     class="sm:hidden flex items-center justify-center w-8 h-8"
     aria-label="Toggle menu"
   >
-    <Icon
-      name="lucide:menu"
-      class="w-6 h-6 text-white menu-icon"
-      id="menu-icon"
-    />
-    <Icon
-      name="lucide:x"
-      class="w-6 h-6 text-white x-icon hidden"
-      id="x-icon"
-    />
+    <Menu class="w-6 h-6 text-white menu-icon" id="menu-icon" />
+    <X class="w-6 h-6 text-white x-icon hidden" id="x-icon" />
   </button>
 
   <!-- Mobile Navigation -->
