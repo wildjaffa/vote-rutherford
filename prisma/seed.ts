@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
@@ -149,6 +150,7 @@ async function main() {
       description: "The general election for President of the United States",
       date: new Date("2026-11-08"),
       headerImageId: headerImage.id,
+      slug: "2026-presidential-election",
       usersToElections: {
         create: [{ userId: adminUser.id }, { userId: moderatorUser.id }],
       },
@@ -165,6 +167,7 @@ async function main() {
       electionId: election.id,
       status: "active",
       raceTypeId: federalRaceType.id,
+      slug: "presidential-race",
     },
   });
 
@@ -175,6 +178,7 @@ async function main() {
       electionId: election.id,
       status: "active",
       raceTypeId: federalRaceType.id,
+      slug: "senate-race",
     },
   });
 
@@ -209,6 +213,7 @@ async function main() {
         biography: `${candidateValue.firstName} ${candidateValue.lastName} is a dedicated public servant with years of experience in local government.`,
         profileImageId: profileImage.id,
         raceId: i < 2 ? presidentialRace.id : senateRace.id,
+        slug: `${candidateValue.firstName.toLowerCase()}-${candidateValue.lastName.toLowerCase()}`,
         externalLinks: {
           create: [
             {
@@ -335,10 +340,11 @@ async function main() {
 }
 
 main()
-  .catch((e) => {
-    console.error("❌ Seed failed:", e);
-    process.exit(1);
-  })
-  .finally(async () => {
+  .then(async () => {
     await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
   });

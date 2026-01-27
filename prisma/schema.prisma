@@ -16,6 +16,7 @@ datasource db {
 model Election {
   id            String                @id @default(uuid()) @db.Uuid
   name          String
+  slug          String                @unique @default(cuid())
   description   String
   date          DateTime              @db.Timestamptz(3)
   headerImage   BlobStorageReference? @relation("ElectionHeaderImage", fields: [headerImageId], references: [id])
@@ -37,6 +38,7 @@ model Election {
 model Race {
   id          String    @id @default(uuid()) @db.Uuid
   name        String
+  slug        String                @default(cuid())
   description String
   election    Election  @relation(fields: [electionId], references: [id])
   electionId  String    @db.Uuid
@@ -50,6 +52,7 @@ model Race {
   candidates             Candidate[]
   policyQuestionsToRaces PolicyQuestionToRace[]
 
+  @@unique([electionId, slug])
   @@map("races")
 }
 
@@ -72,6 +75,7 @@ model Candidate {
   firstName         String
   middleName        String?
   lastName          String
+  slug              String                @default(cuid())
   birthYear         Int?
   biography         String?
   biographyRedacted String?
@@ -88,6 +92,7 @@ model Candidate {
   qualifications  CandidateQualification[]
   historicalLinks Candidate[]               @relation("HistoricalLink")
 
+  @@unique([raceId, slug])
   @@map("candidates")
 }
 

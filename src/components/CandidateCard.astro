@@ -1,0 +1,56 @@
+---
+import { User, ArrowRight } from "@lucide/astro";
+import type {
+  Candidate,
+  BlobStorageReference,
+} from "../generated/prisma/client";
+
+export type CandidateWithImage = Candidate & {
+  profileImage: BlobStorageReference | null;
+};
+
+interface Props {
+  candidate: CandidateWithImage;
+  raceSlug: string;
+  electionSlug: string;
+}
+
+const { candidate, raceSlug, electionSlug } = Astro.props;
+
+const fullName = `${candidate.firstName} ${candidate.middleName ? candidate.middleName + " " : ""}${candidate.lastName}`;
+const imageUrl = candidate.profileImage
+  ? `/${candidate.profileImage.fileLocation}`
+  : null;
+---
+
+<div
+  class="border border-gray-200 rounded-lg overflow-hidden shadow hover:shadow-lg hover:-translate-y-1 transition-transform bg-white group p-6 transform-gpu flex flex-col items-center text-center h-full"
+>
+  <div
+    class="w-32 h-32 rounded-full overflow-hidden bg-gray-100 mb-4 flex items-center justify-center shrink-0"
+  >
+    {
+      imageUrl ? (
+        <img class="w-full h-full object-cover" src={imageUrl} alt={fullName} />
+      ) : (
+        <User size={48} class="text-gray-400" />
+      )
+    }
+  </div>
+
+  <h3
+    class="m-0 mb-2 text-xl font-bold text-gray-900 group-hover:text-secondary"
+  >
+    {fullName}
+  </h3>
+
+  <div class="mt-auto pt-4">
+    <a
+      href={`/elections/${electionSlug}/${raceSlug}/${candidate.slug}`}
+      class="text-secondary hover:text-primary font-medium inline-flex items-center"
+    >
+      View Profile
+      <ArrowRight size={16} stroke-width={2} class="ml-1" />
+    </a>
+  </div>
+</div>
