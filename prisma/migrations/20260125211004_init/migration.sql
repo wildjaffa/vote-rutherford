@@ -21,11 +21,23 @@ CREATE TABLE "races" (
     "description" TEXT NOT NULL,
     "electionId" UUID NOT NULL,
     "status" TEXT NOT NULL,
+    "raceTypeId" INTEGER NOT NULL,
     "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deletedAt" TIMESTAMPTZ(3),
 
     CONSTRAINT "races_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "race_types" (
+    "id" SERIAL NOT NULL,
+    "value" TEXT NOT NULL,
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deletedAt" TIMESTAMPTZ(3),
+
+    CONSTRAINT "race_types_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -227,6 +239,9 @@ ALTER TABLE "elections" ADD CONSTRAINT "elections_blobStorageReferenceId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "races" ADD CONSTRAINT "races_electionId_fkey" FOREIGN KEY ("electionId") REFERENCES "elections"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "races" ADD CONSTRAINT "races_raceTypeId_fkey" FOREIGN KEY ("raceTypeId") REFERENCES "race_types"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "candidates" ADD CONSTRAINT "candidates_raceId_fkey" FOREIGN KEY ("raceId") REFERENCES "races"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

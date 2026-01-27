@@ -2,7 +2,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL!,
+  connectionString: process.env.DATABASE_URL,
 });
 
 const prisma = new PrismaClient({
@@ -82,6 +82,30 @@ async function main() {
 
   console.log("✓ Created external link types");
 
+  const cityRaceType = await prisma.raceType.upsert({
+    where: { id: 1 },
+    update: {},
+    create: { value: "city" },
+  });
+
+  const countyRaceType = await prisma.raceType.upsert({
+    where: { id: 2 },
+    update: {},
+    create: { value: "county" },
+  });
+
+  const stateRaceType = await prisma.raceType.upsert({
+    where: { id: 3 },
+    update: {},
+    create: { value: "state" },
+  });
+
+  const federalRaceType = await prisma.raceType.upsert({
+    where: { id: 4 },
+    update: {},
+    create: { value: "federal" },
+  });
+
   // Create users
   const adminUser = await prisma.user.upsert({
     where: { email: "admin@rutherford.local" },
@@ -140,6 +164,7 @@ async function main() {
       description: "Vote for President of the United States",
       electionId: election.id,
       status: "active",
+      raceTypeId: federalRaceType.id,
     },
   });
 
@@ -149,6 +174,7 @@ async function main() {
       description: "Vote for U.S. Senator",
       electionId: election.id,
       status: "active",
+      raceTypeId: federalRaceType.id,
     },
   });
 
