@@ -1,0 +1,68 @@
+---
+import RaceType from "../enums/raceTypeEnum";
+import { Calendar, Users, ArrowRight } from "@lucide/astro";
+import type {
+  ElectionWithRacesAndCandidates,
+  RaceWithCandidates,
+} from "../lib/types";
+
+interface Props {
+  election: ElectionWithRacesAndCandidates;
+  race: RaceWithCandidates;
+}
+
+const { race, election } = Astro.props;
+
+// Map raceTypeId to race type label
+const getRaceTypeLabel = (raceTypeId: number): string => {
+  const typeLabels: Record<number, string> = {
+    [RaceType.city]: "City",
+    [RaceType.county]: "County",
+    [RaceType.state]: "State",
+    [RaceType.federal]: "Federal",
+  };
+  return typeLabels[raceTypeId] || "Unknown";
+};
+
+const typeLabel = getRaceTypeLabel(race.raceTypeId);
+---
+
+<div
+  class="border border-gray-200 rounded-lg overflow-hidden shadow hover:shadow-lg hover:-translate-y-1 transition-transform bg-white group p-6 transform-gpu"
+>
+  <div class="">
+    <span
+      class="inline-block bg-accent text-black px-3 py-2 rounded-md text-sm font-semibold uppercase tracking-wide"
+    >
+      {typeLabel}
+    </span>
+  </div>
+  <div class="pt-4">
+    <h3
+      class="m-0 mb-2 text-xl font-bold text-gray-900 group-hover:text-secondary"
+    >
+      {race.name}
+    </h3>
+    <p class="m-0 mb-3 text-gray-600 leading-relaxed">{race.description}</p>
+    <p class="mb-3">
+      <Calendar size="18" stroke-width={2} class="text-secondary inline mr-1" />
+      {
+        new Date(election.date).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      }<Users size="16" stroke-width={2} class="text-secondary inline ml-2" />
+      {race.candidates.length} Candidates
+    </p>
+    <a
+      href={`/elections/${election.id}/races/${race.id}/candidates`}
+      class="text-secondary hover:text-primary font-medium"
+      >View Candidates<ArrowRight
+        size="16"
+        stroke-width={2}
+        class="inline ml-1"
+      /></a
+    >
+  </div>
+</div>
