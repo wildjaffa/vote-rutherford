@@ -41,6 +41,8 @@ model Race {
   election    Election  @relation(fields: [electionId], references: [id])
   electionId  String    @db.Uuid
   status      String
+  raceType    RaceType  @relation(fields: [raceTypeId], references: [id])
+  raceTypeId  Int
   createdAt   DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime  @default(now()) @db.Timestamptz(3)
   deletedAt   DateTime? @db.Timestamptz(3)
@@ -49,6 +51,18 @@ model Race {
   policyQuestionsToRaces PolicyQuestionToRace[]
 
   @@map("races")
+}
+
+model RaceType {
+  id        Int       @id @default(autoincrement())
+  value     String
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
+  deletedAt DateTime? @db.Timestamptz(3)
+
+  races Race[]
+
+  @@map("race_types")
 }
 
 model Candidate {
