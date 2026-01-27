@@ -1,0 +1,71 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import prisma from "../../../lib/prisma";
+import RaceCard from "../../../components/RaceCard.astro";
+import type {
+  ElectionWithRacesAndCandidates,
+  RaceWithCandidates,
+} from "../../../lib/types";
+
+export async function getStaticPaths() {
+  const elections = await prisma.election.findMany();
+  return elections.map((election: ElectionWithRacesAndCandidates) => ({
+    params: { election: election.slug },
+  }));
+}
+
+const { election } = Astro.params;
+
+if (!election) {
+  return Astro.redirect("/404");
+}
+
+const electionData = await prisma.election.findUnique({
+  where: {
+    slug: election,
+  },
+  include: {
+    races: {
+      include: {
+        candidates: true,
+      },
+    },
+  },
+});
+
+if (!electionData) {
+  return Astro.redirect("/404");
+}
+
+// Cast to the correct type to ensure props match RaceCard requirements
+const typedElectionData = electionData as ElectionWithRacesAndCandidates;
+---
+
+<Layout title={`${typedElectionData.name} | Races`}>
+  <main class="container mx-auto px-4 py-8">
+    <div class="mb-12 text-center">
+      <h1 class="text-4xl font-bold text-gray-900 mb-4">
+        {typedElectionData.name}
+      </h1>
+      <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+        {typedElectionData.description}
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {
+        typedElectionData.races.length > 0 ? (
+          typedElectionData.races.map((race: RaceWithCandidates) => (
+            <RaceCard election={typedElectionData} race={race} />
+          ))
+        ) : (
+          <div class="col-span-full text-center py-12">
+            <p class="text-gray-500 text-lg">
+              No races found for this election.
+            </p>
+          </div>
+        )
+      }
+    </div>
+  </main>
+</Layout>
