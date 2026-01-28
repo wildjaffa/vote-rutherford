@@ -6,6 +6,7 @@ import type {
 } from "../../../../generated/prisma/browser";
 import Layout from "../../../../layouts/Layout.astro";
 import prisma from "../../../../lib/prisma";
+import { GET } from "../../../api/elections/[election]/races/[race]/candidates/[candidate].json.ts";
 
 export async function getStaticPaths() {
   const candidates = await prisma.candidate.findMany({
@@ -33,41 +34,12 @@ if (!election || !race || !candidate) {
   return Astro.redirect("/404");
 }
 
-const candidateData = await prisma.candidate.findFirst({
-  where: {
-    slug: candidate,
-    race: {
-      slug: race,
-      election: {
-        slug: election,
-      },
-    },
-  },
-  include: {
-    race: {
-      include: {
-        election: true,
-      },
-    },
-    profileImage: true,
-    historicalLink: true,
-    externalLinks: {
-      include: {
-        externalLinkType: true,
-      },
-    },
-    qualifications: {
-      include: {
-        qualificationType: true,
-      },
-    },
-    policyResponses: {
-      include: {
-        policyQuestion: true,
-      },
-    },
-  },
-});
+const response = await GET(Astro);
+if (response.status === 404) {
+  return Astro.redirect("/404");
+}
+
+const candidateData = await response.json();
 
 if (!candidateData) {
   return Astro.redirect("/404");

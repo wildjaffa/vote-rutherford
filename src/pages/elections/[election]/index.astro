@@ -2,6 +2,7 @@
 import Layout from "../../../layouts/Layout.astro";
 import prisma from "../../../lib/prisma";
 import RaceCard from "../../../components/RaceCard.astro";
+import { GET } from "../../api/elections/[election].json.ts";
 import type {
   ElectionWithRacesAndCandidates,
   RaceWithCandidates,
@@ -20,18 +21,12 @@ if (!election) {
   return Astro.redirect("/404");
 }
 
-const electionData = await prisma.election.findUnique({
-  where: {
-    slug: election,
-  },
-  include: {
-    races: {
-      include: {
-        candidates: true,
-      },
-    },
-  },
-});
+const response = await GET(Astro);
+if (response.status === 404) {
+  return Astro.redirect("/404");
+}
+
+const electionData = await response.json();
 
 if (!electionData) {
   return Astro.redirect("/404");

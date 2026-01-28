@@ -4,6 +4,7 @@ import prisma from "../../../../lib/prisma";
 import CandidateCard from "../../../../components/CandidateCard.astro";
 import { ArrowLeft } from "@lucide/astro";
 import type { RaceWithCandidates } from "../../../../lib/types";
+import { GET } from "../../../api/elections/[election]/races/[race].json.ts";
 import type {
   Candidate,
   CandidatePolicyResponse,
@@ -31,37 +32,16 @@ if (!election || !race) {
   return Astro.redirect("/404");
 }
 
-const raceData = await prisma.race.findFirst({
-  where: {
-    slug: race,
-    election: {
-      slug: election,
-    },
-  },
-  include: {
-    election: true,
-    candidates: {
-      include: {
-        profileImage: true,
-        policyResponses: {
-          include: {
-            policyQuestion: true,
-          },
-        },
-      },
-    },
-  },
-});
+const response = await GET(Astro);
+if (response.status === 404) {
+  return Astro.redirect("/404");
+}
+
+const { race: raceData, questions } = await response.json();
 
 if (!raceData) {
   return Astro.redirect("/404");
 }
-
-const questions = await prisma.policyQuestion.findMany({
-  where: {
-    electionId: raceData.electionId,
-  },
-});
 
 const { candidates } = raceData;
 ---
