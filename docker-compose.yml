@@ -1,25 +1,59 @@
+version: "3.8"
+
 services:
-  # The name of our service is "database"
-  # but you can use the name of your choice.
-  # Note: This may change the commands you are going to use a little bit.
   database:
-    # Official Postgres image from DockerHub (we use the last version)
-    image: "postgres:latest"
-
-    # By default, a Postgres database is running on the 5432 port.
-    # If we want to access the database from our computer (outside the container),
-    # we must share the port with our computer's port.
-    # The syntax is [port we want on our machine]:[port we want to retrieve in the container]
-    # Note: You are free to change your computer's port,
-    # but take into consideration that it will change the way
-    # you are connecting to your database.
+    image: postgres:16-alpine
+    container_name: vote-rutherford-db
+    restart: unless-stopped
     ports:
-      - 5432:5432
-
+      - "5432:5432"
     environment:
-      POSTGRES_USER: username # The PostgreSQL user (useful to connect to the database)
-      POSTGRES_PASSWORD: password # The PostgreSQL password (useful to connect to the database)
-      POSTGRES_DB: default_database # The PostgreSQL default database (automatically created at first launch)
-
+      POSTGRES_USER: username
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: default_database
     volumes:
-      - ./database_data:/var/lib/postgresql
+      - ./database_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U username -d default_database"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vote-rutherford-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: vote-rutherford-app
+    restart: unless-stopped
+    ports:
+      - "4321:4321"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://username:password@database:5432/default_database?schema=public
+      - HOST=0.0.0.0
+      - PORT=4321
+    volumes:
+      # Mount source code for hot-reload
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./prisma:/app/prisma
+      - ./astro.config.mjs:/app/astro.config.mjs
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./package.json:/app/package.json
+      # Prevent overwriting node_modules
+      - /app/node_modules
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - vote-rutherford-network
+    command: sh -c "npx prisma migrate deploy && npm run dev -- --host 0.0.0.0 --port 4321"
+
+networks:
+  vote-rutherford-network:
+    driver: bridge
+
+volumes:
+  database_data:
