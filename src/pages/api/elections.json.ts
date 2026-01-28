@@ -1,13 +1,12 @@
 import type { APIRoute } from "astro";
-import prisma from "../../lib/prisma";
+import { getCollection } from "astro:content";
 import type { ElectionWithRacesAndCandidates } from "../../lib/types";
 
 export const GET: APIRoute = async () => {
-  const elections = await prisma.election.findMany({
-    include: { races: { include: { candidates: true } } },
-  });
+  const elections = await getCollection("elections");
+  const data = elections.map((e) => e.data);
 
-  return new Response(JSON.stringify(elections), {
+  return new Response(JSON.stringify(data), {
     headers: { "Content-Type": "application/json" },
   });
 };
