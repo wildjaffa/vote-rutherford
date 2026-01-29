@@ -1,5 +1,13 @@
 {
-  "cSpell.words": ["fontsource", "lucide"],
+  "cSpell.words": [
+    "autoincrement",
+    "cuid",
+    "fontsource",
+    "lucide",
+    "prerendered",
+    "prerendering",
+    "Timestamptz"
+  ],
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "[astro]": {

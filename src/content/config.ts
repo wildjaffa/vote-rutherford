@@ -5,13 +5,12 @@ import prisma from "../lib/prisma";
 function prismaLoader<T extends { id: string }>(fetcher: () => Promise<T[]>) {
   return {
     name: "prisma-loader",
-    load: async ({ store }: { store: any }) => {
+    load: async (context: {
+      store: { set: (entry: { id: string; data: T }) => boolean };
+    }) => {
       const items = await fetcher();
       for (const item of items) {
-        store.set({
-          id: item.id,
-          data: item,
-        });
+        context.store.set({ id: item.id, data: item });
       }
     },
   };

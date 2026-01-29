@@ -1,0 +1,122 @@
+---
+import { Plus } from "@lucide/astro";
+import AdminLayout from "../../../../../layouts/AdminLayout.astro";
+import prisma from "../../../../../lib/prisma";
+import type { RaceWithCandidates } from "../../../../../lib/types";
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  return Astro.redirect("/admin/elections");
+}
+
+const election = await prisma.election.findUnique({
+  where: { slug },
+  include: {
+    races: {
+      where: {
+        deletedAt: null,
+      },
+      include: {
+        candidates: {
+          where: {
+            deletedAt: null,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    },
+  },
+});
+
+if (!election) {
+  return Astro.redirect("/admin/elections");
+}
+---
+
+<AdminLayout
+  title={`Races: ${election.name}`}
+  breadcrumbs={[
+    { label: "Elections", href: "/admin/elections" },
+    { label: election.name, href: `/admin/elections/${slug}/edit` },
+    { label: "Races" },
+  ]}
+>
+  <div class="space-y-6">
+    <!-- Create Button -->
+    <div class="flex justify-end">
+      <a
+        href={`/admin/elections/${slug}/races/create`}
+        class="inline-flex items-center px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors focus:ring-2 focus:ring-secondary focus:ring-offset-2"
+      >
+        <Plus size="18" stroke-width={2} class="mr-2" />
+        New Race
+      </a>
+    </div>
+
+    <!-- Races Table -->
+    {
+      election.races.length > 0 ? (
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-gray-200">
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  Name
+                </th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  Description
+                </th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  Candidates
+                </th>
+                <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {election.races.map((race: RaceWithCandidates) => (
+                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">
+                    {race.name}
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-600">
+                    {race.description.substring(0, 50)}
+                    {race.description.length > 50 && "..."}
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-600">
+                    {race.candidates.length} candidate
+                    {race.candidates.length !== 1 ? "s" : ""}
+                  </td>
+                  <td class="px-4 py-3 text-sm text-right space-x-2">
+                    <a
+                      href={`/admin/elections/${slug}/races/${race.slug}/edit`}
+                      class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-xs font-medium"
+                    >
+                      Edit
+                    </a>
+                    <a
+                      href={`/admin/elections/${slug}/races/${race.slug}/candidates`}
+                      class="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors text-xs font-medium"
+                    >
+                      Candidates
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div class="text-center py-12">
+          <p class="text-gray-500">No races yet. Create one to get started!</p>
+        </div>
+      )
+    }
+  </div>
+</AdminLayout>

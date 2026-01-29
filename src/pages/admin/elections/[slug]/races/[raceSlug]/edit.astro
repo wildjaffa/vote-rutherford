@@ -1,0 +1,190 @@
+---
+import { actions } from "astro:actions";
+import DeleteButton from "../../../../../../components/forms/DeleteButton.astro";
+import FormSelect from "../../../../../../components/forms/FormSelect.astro";
+import FormTextarea from "../../../../../../components/forms/FormTextarea.astro";
+import AdminLayout from "../../../../../../layouts/AdminLayout.astro";
+import prisma from "../../../../../../lib/prisma";
+import FormInput from "../../../../../../components/forms/FormInput.astro";
+
+export const prerender = false;
+
+const { slug: electionSlug, raceSlug } = Astro.params;
+
+if (!electionSlug || !raceSlug) {
+  return Astro.redirect("/admin/elections");
+}
+
+const race = await prisma.race.findFirst({
+  where: { slug: raceSlug, election: { slug: electionSlug } },
+  include: {
+    raceType: true,
+    election: true,
+  },
+});
+
+if (!race) {
+  return Astro.redirect(`/admin/elections/${electionSlug}/races`);
+}
+
+// Verify the race belongs to this election
+const election = race.election;
+
+if (!election || race.electionId !== election.id) {
+  return Astro.redirect(`/admin/elections/${electionSlug}/races`);
+}
+
+// Get race types for dropdown
+const raceTypes = await prisma.raceType.findMany();
+const raceTypeOptions = raceTypes.map((rt) => ({
+  value: rt.id.toString(),
+  label: rt.value,
+}));
+
+let error: string | null = null;
+let success: string | null = null;
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const name = formData.get("name") as string;
+    const raceType = parseInt(formData.get("raceType") as string);
+    const description = formData.get("description") as string;
+    const status = formData.get("status") as string;
+    const slug = formData.get("slug") as string;
+
+    const result = await Astro.callAction(actions.updateRace, {
+      id: race.id,
+      name: name || undefined,
+      raceType,
+      description: description || undefined,
+      status: status || undefined,
+      slug,
+    });
+
+    if (result.data) {
+      success = "Race updated successfully";
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to update race";
+  }
+}
+---
+
+<AdminLayout
+  title={`Edit Race: ${race.name}`}
+  breadcrumbs={[
+    { label: "Elections", href: "/admin/elections" },
+    { label: election.name, href: `/admin/elections/${electionSlug}/edit` },
+    { label: "Races", href: `/admin/elections/${electionSlug}/races` },
+    { label: race.name },
+  ]}
+>
+  <div class="space-y-6">
+    {
+      error && (
+        <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p class="text-sm font-medium text-red-800">{error}</p>
+        </div>
+      )
+    }
+
+    {
+      success && (
+        <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+          <p class="text-sm font-medium text-green-800">{success}</p>
+        </div>
+      )
+    }
+
+    <form method="POST" class="max-w-2xl space-y-6">
+      <FormInput
+        label="Race Name"
+        name="name"
+        type="text"
+        value={race.name}
+        placeholder="e.g., Mayor"
+      />
+
+      <FormInput
+        label="Slug"
+        name="slug"
+        type="text"
+        value={race.slug}
+        placeholder="e.g., mayor"
+      />
+
+      <FormSelect
+        label="Race Type"
+        name="raceType"
+        options={raceTypeOptions}
+        value={race.raceTypeId.toString()}
+      />
+
+      <FormSelect
+        label="Status"
+        name="status"
+        options={[
+          { value: "draft", label: "Draft" },
+          { value: "published", label: "Published" },
+        ]}
+        value={race.status}
+      />
+
+      <FormTextarea
+        label="Description"
+        name="description"
+        value={race.description}
+        placeholder="Enter race description..."
+      />
+
+      <div class="flex gap-3 justify-end pt-4 border-t border-gray-200">
+        <a
+          href={`/admin/elections/${electionSlug}/races`}
+          class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          Cancel
+        </a>
+        <button
+          type="submit"
+          class="inline-flex items-center px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors focus:ring-2 focus:ring-secondary focus:ring-offset-2"
+        >
+          Save Changes
+        </button>
+      </div>
+    </form>
+
+    <!-- Danger Zone -->
+    <div class="border-t border-gray-200 pt-6">
+      <h3 class="text-lg font-semibold text-red-900 mb-4">Danger Zone</h3>
+      <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p class="text-sm text-red-800 mb-4">
+          Deleting this race will archive it and hide it from public view.
+        </p>
+        <DeleteButton
+          itemName={race.name}
+          deleteUrl={`/api/admin/races/${race.id}/delete.json`}
+          redirectUrl={`/admin/elections/${electionSlug}/races`}
+        />
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { generateSlug } from "../../../../../../lib/slugUtils";
+
+  const nameInput = document.querySelector(
+    'input[name="name"]',
+  ) as HTMLInputElement;
+  const slugInput = document.querySelector(
+    'input[name="slug"]',
+  ) as HTMLInputElement;
+
+  if (nameInput && slugInput) {
+    nameInput.addEventListener("input", (e) => {
+      const value = (e.target as HTMLInputElement).value;
+      slugInput.value = generateSlug(value);
+    });
+  }
+</script>

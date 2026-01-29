@@ -126,7 +126,7 @@ model PolicyQuestion {
   id              String    @id @default(uuid()) @db.Uuid
   election        Election  @relation(fields: [electionId], references: [id])
   electionId      String    @db.Uuid
-  questiontext    String
+  questionText    String
   descriptionText String
   createdAt       DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime  @default(now()) @db.Timestamptz(3)
@@ -191,7 +191,7 @@ model CandidateQualification {
   qualification_description String
   qualificationType         QualificationType @relation(fields: [qualificationTypeId], references: [id])
   qualificationTypeId       Int
-  qaulification_url         String
+  qualification_url         String
   createdAt                 DateTime          @default(now()) @db.Timestamptz(3)
   updatedAt                 DateTime          @default(now()) @db.Timestamptz(3)
   deletedAt                 DateTime?         @db.Timestamptz(3)
