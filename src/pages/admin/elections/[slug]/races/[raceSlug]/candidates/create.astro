@@ -1,0 +1,135 @@
+---
+import FormInput from "../../../../../../../components/forms/FormInput.astro";
+import FormTextarea from "../../../../../../../components/forms/FormTextarea.astro";
+import AdminLayout from "../../../../../../../layouts/AdminLayout.astro";
+import prisma from "../../../../../../../lib/prisma";
+import { actions } from "astro:actions";
+
+export const prerender = false;
+
+const { slug: electionSlug, raceSlug } = Astro.params;
+
+if (!electionSlug || !raceSlug) {
+  return Astro.redirect("/admin/elections");
+}
+
+const race = await prisma.race.findFirst({
+  where: { slug: raceSlug, election: { slug: electionSlug } },
+  include: {
+    election: true,
+  },
+});
+
+if (!race) {
+  return Astro.redirect(`/admin/elections/${electionSlug}/races`);
+}
+
+// Verify the race belongs to this election
+const election = race.election;
+
+if (!election || race.electionId !== election.id) {
+  return Astro.redirect(`/admin/elections/${electionSlug}/races`);
+}
+
+let error: string | null = null;
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const firstName = formData.get("firstName") as string;
+    const lastName = formData.get("lastName") as string;
+    const birthYear = formData.get("birthYear") as string;
+    const biography = formData.get("biography") as string;
+
+    const result = await Astro.callAction(actions.createCandidate, {
+      raceId: race.id,
+      firstName: firstName,
+      lastName: lastName,
+      birthYear: birthYear ? parseInt(birthYear, 10) : undefined,
+      biography: biography || undefined,
+    });
+
+    if (result.data) {
+      return Astro.redirect(
+        `/admin/elections/${electionSlug}/races/${raceSlug}/candidates/${result.data.slug}/edit`,
+      );
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to create candidate";
+  }
+}
+---
+
+<AdminLayout
+  title="Create Candidate"
+  breadcrumbs={[
+    { label: "Elections", href: "/admin/elections" },
+    { label: election.name, href: `/admin/elections/${electionSlug}/edit` },
+    { label: "Races", href: `/admin/elections/${electionSlug}/races` },
+    {
+      label: race.name,
+      href: `/admin/elections/${electionSlug}/races/${raceSlug}/edit`,
+    },
+    {
+      label: "Candidates",
+      href: `/admin/elections/${electionSlug}/races/${raceSlug}/candidates`,
+    },
+    { label: "Create" },
+  ]}
+>
+  <form method="POST" class="max-w-2xl space-y-6">
+    {
+      error && (
+        <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p class="text-sm font-medium text-red-800">{error}</p>
+        </div>
+      )
+    }
+
+    <div class="grid grid-cols-2 gap-4">
+      <FormInput
+        label="First Name"
+        name="firstName"
+        type="text"
+        placeholder="First name"
+        required
+      />
+      <FormInput
+        label="Last Name"
+        name="lastName"
+        type="text"
+        placeholder="Last name"
+        required
+      />
+    </div>
+
+    <FormInput
+      label="Birth Year"
+      name="birthYear"
+      type="number"
+      placeholder="e.g., 1980"
+      min="1900"
+    />
+
+    <FormTextarea
+      label="Biography"
+      name="biography"
+      placeholder="Enter candidate biography..."
+    />
+
+    <div class="flex gap-3 justify-end pt-4">
+      <a
+        href={`/admin/elections/${electionSlug}/races/${raceSlug}/candidates`}
+        class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+      >
+        Cancel
+      </a>
+      <button
+        type="submit"
+        class="inline-flex items-center px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors focus:ring-2 focus:ring-secondary focus:ring-offset-2"
+      >
+        Create Candidate
+      </button>
+    </div>
+  </form>
+</AdminLayout>

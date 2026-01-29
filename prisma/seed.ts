@@ -241,7 +241,7 @@ async function main() {
         candidateId: candidate.id,
         qualification_description: "Bachelor of Arts in Political Science",
         qualificationTypeId: educationQualType.id,
-        qaulification_url: "https://example.edu/verify",
+        qualification_url: "https://example.edu/verify",
       },
     });
 
@@ -250,7 +250,7 @@ async function main() {
         candidateId: candidate.id,
         qualification_description: "10 years of experience in local politics",
         qualificationTypeId: politicalExperienceQualType.id,
-        qaulification_url: "https://example.gov/verify",
+        qualification_url: "https://example.gov/verify",
       },
     });
   }
@@ -262,7 +262,7 @@ async function main() {
     prisma.policyQuestion.create({
       data: {
         electionId: election.id,
-        questiontext: "What is your stance on healthcare reform?",
+        questionText: "What is your stance on healthcare reform?",
         descriptionText:
           "Please explain your position on making healthcare more accessible and affordable.",
       },
@@ -270,7 +270,7 @@ async function main() {
     prisma.policyQuestion.create({
       data: {
         electionId: election.id,
-        questiontext: "How would you address climate change?",
+        questionText: "How would you address climate change?",
         descriptionText:
           "Describe your plan for reducing carbon emissions and addressing environmental concerns.",
       },
@@ -278,7 +278,7 @@ async function main() {
     prisma.policyQuestion.create({
       data: {
         electionId: election.id,
-        questiontext: "What is your education policy?",
+        questionText: "What is your education policy?",
         descriptionText:
           "Explain your approach to improving K-12 and higher education.",
       },
@@ -315,7 +315,7 @@ async function main() {
           policyQuestionId: question.id,
           requestSentAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
           responseReceivedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), // 15 days ago
-          response: `This is ${candidate.firstName}'s detailed response to the policy question about ${question.questiontext.toLowerCase()}. They believe strongly in taking action on this important issue.`,
+          response: `This is ${candidate.firstName}'s detailed response to the policy question about ${question.questionText.toLowerCase()}. They believe strongly in taking action on this important issue.`,
         },
       });
 

@@ -1,0 +1,123 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import FormInput from "../../../components/forms/FormInput.astro";
+import FormTextarea from "../../../components/forms/FormTextarea.astro";
+import { actions } from "astro:actions";
+
+export const prerender = false;
+
+let error: string | null = null;
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const name = formData.get("name") as string;
+    const description = formData.get("description") as string;
+    const date = formData.get("date") as string;
+    const slug = formData.get("slug") as string;
+
+    const result = await Astro.callAction(actions.createElection, {
+      name,
+      description,
+      date,
+      slug,
+    });
+
+    if (result.data) {
+      return Astro.redirect(`/admin/elections/${result.data.id}/edit`);
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to create election";
+  }
+}
+---
+
+<AdminLayout
+  title="Create Election"
+  breadcrumbs={[
+    { label: "Elections", href: "/admin/elections" },
+    { label: "Create", href: "/admin/elections/create" },
+  ]}
+>
+  <form method="POST" class="max-w-2xl space-y-6">
+    {
+      error && (
+        <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p class="text-sm font-medium text-red-800">{error}</p>
+        </div>
+      )
+    }
+
+    <FormInput
+      label="Election Name"
+      name="name"
+      type="text"
+      placeholder="e.g., 2024 General Election"
+      required
+    />
+
+    <FormTextarea
+      label="Description"
+      name="description"
+      placeholder="Enter election description..."
+      required
+    />
+
+    <FormInput
+      label="Slug"
+      name="slug"
+      type="text"
+      placeholder="e.g., 2024-general-election"
+      required
+    />
+
+    <FormInput
+      label="Election Date"
+      name="date"
+      type="datetime-local"
+      required
+    />
+
+    <div class="flex gap-3 justify-end pt-4">
+      <a
+        href="/admin/elections"
+        class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+      >
+        Cancel
+      </a>
+      <button
+        type="submit"
+        class="inline-flex items-center px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors focus:ring-2 focus:ring-secondary focus:ring-offset-2"
+      >
+        Create Election
+      </button>
+    </div>
+  </form>
+</AdminLayout>
+
+<script>
+  // Auto-generate slug from name
+  function generateSlug(text: string): string {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/[^\w-]/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  const nameInput = document.querySelector(
+    'input[name="name"]',
+  ) as HTMLInputElement;
+  const slugInput = document.querySelector(
+    'input[name="slug"]',
+  ) as HTMLInputElement;
+
+  if (nameInput && slugInput) {
+    nameInput.addEventListener("input", (e) => {
+      const value = (e.target as HTMLInputElement).value;
+      slugInput.value = generateSlug(value);
+    });
+  }
+</script>

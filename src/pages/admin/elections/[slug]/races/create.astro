@@ -1,0 +1,153 @@
+---
+import AdminLayout from "../../../../../layouts/AdminLayout.astro";
+import FormInput from "../../../../../components/forms/FormInput.astro";
+import FormTextarea from "../../../../../components/forms/FormTextarea.astro";
+import FormSelect from "../../../../../components/forms/FormSelect.astro";
+import { actions } from "astro:actions";
+import prisma from "../../../../../lib/prisma";
+import type { RaceType } from "../../../../../generated/prisma/browser";
+
+export const prerender = false;
+
+const { slug: electionSlug } = Astro.params;
+
+if (!electionSlug) {
+  return Astro.redirect("/admin/elections");
+}
+
+const election = await prisma.election.findUnique({
+  where: { slug: electionSlug },
+});
+
+if (!election) {
+  return Astro.redirect("/admin/elections");
+}
+
+// Get race types for dropdown
+const raceTypes = await prisma.raceType.findMany();
+const raceTypeOptions = raceTypes.map((rt: RaceType) => ({
+  value: rt.id.toString(),
+  label: rt.value,
+}));
+
+let error: string | null = null;
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const name = formData.get("name") as string;
+    const raceType = parseInt(formData.get("raceType") as string);
+    const description = formData.get("description") as string;
+    const status = formData.get("status") as string;
+    const slug = formData.get("slug") as string;
+
+    const result = await Astro.callAction(actions.createRace, {
+      electionId: election.id,
+      name,
+      raceType,
+      description,
+      status,
+      slug,
+    });
+
+    if (result.data) {
+      return Astro.redirect(
+        `/admin/elections/${electionSlug}/races/${result.data.slug}/edit`,
+      );
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to create race";
+  }
+}
+---
+
+<AdminLayout
+  title="Create Race"
+  breadcrumbs={[
+    { label: "Elections", href: "/admin/elections" },
+    { label: election.name, href: `/admin/elections/${electionSlug}/edit` },
+    { label: "Races", href: `/admin/elections/${electionSlug}/races` },
+    { label: "Create" },
+  ]}
+>
+  <form method="POST" class="max-w-2xl space-y-6">
+    {
+      error && (
+        <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p class="text-sm font-medium text-red-800">{error}</p>
+        </div>
+      )
+    }
+
+    <FormInput
+      label="Race Name"
+      name="name"
+      type="text"
+      placeholder="e.g., Mayor"
+      required
+    />
+    <FormInput
+      label="Slug"
+      name="slug"
+      type="text"
+      placeholder="e.g., mayor"
+      required
+    />
+
+    <FormSelect
+      label="Race Type"
+      name="raceType"
+      options={raceTypeOptions}
+      required
+    />
+
+    <FormSelect
+      label="Status"
+      name="status"
+      options={[
+        { value: "draft", label: "Draft" },
+        { value: "published", label: "Published" },
+      ]}
+      required
+    />
+
+    <FormTextarea
+      label="Description"
+      name="description"
+      placeholder="Enter race description..."
+    />
+
+    <div class="flex gap-3 justify-end pt-4">
+      <a
+        href={`/admin/elections/${electionSlug}/races`}
+        class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+      >
+        Cancel
+      </a>
+      <button
+        type="submit"
+        class="inline-flex items-center px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors focus:ring-2 focus:ring-secondary focus:ring-offset-2"
+      >
+        Create Race
+      </button>
+    </div>
+  </form>
+</AdminLayout>
+
+<script>
+  import { generateSlug } from "../../../../../lib/slugUtils";
+
+  const nameInput = document.querySelector(
+    'input[name="name"]',
+  ) as HTMLInputElement;
+  const slugInput = document.querySelector(
+    'input[name="slug"]',
+  ) as HTMLInputElement;
+
+  if (nameInput && slugInput) {
+    nameInput.addEventListener("input", (e) => {
+      const value = (e.target as HTMLInputElement).value;
+      slugInput.value = generateSlug(value);
+    });
+  }
+</script>

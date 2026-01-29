@@ -1,0 +1,125 @@
+---
+import { Plus } from "@lucide/astro";
+import AdminLayout from "../../../../../../../layouts/AdminLayout.astro";
+import prisma from "../../../../../../../lib/prisma";
+import type { Candidate } from "../../../../../../../generated/prisma/browser";
+
+export const prerender = false;
+
+const { slug: electionSlug, raceSlug } = Astro.params;
+
+if (!electionSlug || !raceSlug) {
+  return Astro.redirect("/admin/elections");
+}
+
+const race = await prisma.race.findFirst({
+  where: { slug: raceSlug, election: { slug: electionSlug } },
+  include: {
+    candidates: {
+      where: {
+        deletedAt: null,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    },
+    election: true,
+  },
+});
+
+if (!race) {
+  return Astro.redirect(`/admin/elections/${electionSlug}/races`);
+}
+
+// Verify the race belongs to this election
+const election = race.election;
+
+if (!election || race.electionId !== election.id) {
+  return Astro.redirect(`/admin/elections/${electionSlug}/races`);
+}
+---
+
+<AdminLayout
+  title={`Candidates: ${race.name}`}
+  breadcrumbs={[
+    { label: "Elections", href: "/admin/elections" },
+    { label: election.name, href: `/admin/elections/${electionSlug}/edit` },
+    { label: "Races", href: `/admin/elections/${electionSlug}/races` },
+    {
+      label: race.name,
+      href: `/admin/elections/${electionSlug}/races/${raceSlug}/edit`,
+    },
+    { label: "Candidates" },
+  ]}
+>
+  <div class="space-y-6">
+    <!-- Create Button -->
+    <div class="flex justify-end">
+      <a
+        href={`/admin/elections/${electionSlug}/races/${raceSlug}/candidates/create`}
+        class="inline-flex items-center px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors focus:ring-2 focus:ring-secondary focus:ring-offset-2"
+      >
+        <Plus size="18" stroke-width={2} class="mr-2" />
+        New Candidate
+      </a>
+    </div>
+
+    <!-- Candidates Table -->
+    {
+      race.candidates.length > 0 ? (
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-gray-200">
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  Name
+                </th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  Birth Year
+                </th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  Bio
+                </th>
+                <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {race.candidates.map((candidate: Candidate) => (
+                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">
+                    {candidate.firstName} {candidate.lastName}
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-600">
+                    {candidate.birthYear || "-"}
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-600">
+                    {candidate.biography
+                      ? candidate.biography.substring(0, 50) +
+                        (candidate.biography.length > 50 ? "..." : "")
+                      : "-"}
+                  </td>
+                  <td class="px-4 py-3 text-sm text-right space-x-2">
+                    <a
+                      href={`/admin/elections/${electionSlug}/races/${raceSlug}/candidates/${candidate.slug}/edit`}
+                      class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-xs font-medium"
+                    >
+                      Edit
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div class="text-center py-12">
+          <p class="text-gray-500">
+            No candidates yet. Create one to get started!
+          </p>
+        </div>
+      )
+    }
+  </div>
+</AdminLayout>
