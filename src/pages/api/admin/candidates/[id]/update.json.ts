@@ -1,6 +1,8 @@
 import type { APIRoute } from "astro";
-import prisma from "../../../../../lib/prisma";
+import prisma, { withUserContext } from "../../../../../lib/prisma";
 import { canManageCandidate } from "../../../../../lib/permissions";
+
+const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
 
 export const prerender = false;
 
@@ -46,22 +48,24 @@ export const PUT: APIRoute = async ({ params, request }) => {
       biographyRedacted,
     } = body;
 
-    // Update candidate
-    const candidate = await prisma.candidate.update({
-      where: { id },
-      data: {
-        ...(firstName && { firstName }),
-        ...(middleName !== undefined && { middleName: middleName || null }),
-        ...(lastName && { lastName }),
-        ...(birthYear !== undefined && {
-          birthYear: birthYear ? parseInt(birthYear) : null,
-        }),
-        ...(biography !== undefined && { biography: biography || null }),
-        ...(biographyRedacted !== undefined && {
-          biographyRedacted: biographyRedacted || null,
-        }),
-        updatedAt: new Date(),
-      },
+    // Update candidate with user context for audit logging
+    const candidate = await withUserContext(SYSTEM_USER_ID, async () => {
+      return prisma.candidate.update({
+        where: { id },
+        data: {
+          ...(firstName && { firstName }),
+          ...(middleName !== undefined && { middleName: middleName || null }),
+          ...(lastName && { lastName }),
+          ...(birthYear !== undefined && {
+            birthYear: birthYear ? parseInt(birthYear) : null,
+          }),
+          ...(biography !== undefined && { biography: biography || null }),
+          ...(biographyRedacted !== undefined && {
+            biographyRedacted: biographyRedacted || null,
+          }),
+          updatedAt: new Date(),
+        },
+      });
     });
 
     return new Response(JSON.stringify(candidate), {

@@ -1,6 +1,8 @@
 import type { APIRoute } from "astro";
-import prisma from "../../../../../lib/prisma";
+import prisma, { withUserContext } from "../../../../../lib/prisma";
 import { canManageElection } from "../../../../../lib/permissions";
+
+const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
 
 export const prerender = false;
 
@@ -36,12 +38,14 @@ export const DELETE: APIRoute = async ({ params }) => {
       });
     }
 
-    // Soft delete by setting deletedAt timestamp
-    await prisma.election.update({
-      where: { id },
-      data: {
-        deletedAt: new Date(),
-      },
+    // Soft delete by setting deletedAt timestamp with user context for audit logging
+    await withUserContext(SYSTEM_USER_ID, async () => {
+      return prisma.election.update({
+        where: { id },
+        data: {
+          deletedAt: new Date(),
+        },
+      });
     });
 
     return new Response(

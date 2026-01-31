@@ -1,6 +1,8 @@
 import type { APIRoute } from "astro";
-import prisma from "../../../../lib/prisma";
+import prisma, { withUserContext } from "../../../../lib/prisma";
 import { canManageRace } from "../../../../lib/permissions";
+
+const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
 
 export const prerender = false;
 
@@ -51,17 +53,19 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Create candidate
-    const candidate = await prisma.candidate.create({
-      data: {
-        firstName,
-        middleName: middleName || null,
-        lastName,
-        raceId,
-        birthYear: birthYear ? parseInt(birthYear) : null,
-        biography: biography || null,
-        biographyRedacted: biographyRedacted || null,
-      },
+    // Create candidate with user context for audit logging
+    const candidate = await withUserContext(SYSTEM_USER_ID, async () => {
+      return prisma.candidate.create({
+        data: {
+          firstName,
+          middleName: middleName || null,
+          lastName,
+          raceId,
+          birthYear: birthYear ? parseInt(birthYear) : null,
+          biography: biography || null,
+          biographyRedacted: biographyRedacted || null,
+        },
+      });
     });
 
     return new Response(JSON.stringify(candidate), {

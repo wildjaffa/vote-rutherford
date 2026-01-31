@@ -2,23 +2,25 @@ import { defineCollection } from "astro:content";
 import prisma from "../lib/prisma";
 
 // Custom loader to fetch from Prisma
-function prismaLoader<T extends { id: string }>(fetcher: () => Promise<T[]>) {
-  return {
-    name: "prisma-loader",
-    load: async (context: {
-      store: { set: (entry: { id: string; data: T }) => boolean };
-    }) => {
-      const items = await fetcher();
-      for (const item of items) {
-        context.store.set({ id: item.id, data: item });
-      }
-    },
-  };
-}
+// function prismaLoader<T extends { id: string }>(fetcher: () => Promise<T[]>) {
+//   return {
+//     name: "prisma-loader",
+//     load: async (context: {
+//       store: { set: (entry: { id: string; data: T }) => boolean };
+//     }) => {
+//       const items = await fetcher();
+//       for (const item of items) {
+//         context.store.set({ id: item.id, data: item });
+//       }
+//     },
+//   };
+// }
+
+await prisma.$connect();
 
 const elections = defineCollection({
-  loader: prismaLoader(async () => {
-    return prisma.election.findMany({
+  loader: async () => {
+    return await prisma.election.findMany({
       include: {
         races: {
           include: {
@@ -28,12 +30,12 @@ const elections = defineCollection({
         policyQuestions: true,
       },
     });
-  }),
+  },
 });
 
 const races = defineCollection({
-  loader: prismaLoader(async () => {
-    return prisma.race.findMany({
+  loader: async () => {
+    return await prisma.race.findMany({
       include: {
         election: true,
         candidates: {
@@ -48,12 +50,12 @@ const races = defineCollection({
         },
       },
     });
-  }),
+  },
 });
 
 const candidates = defineCollection({
-  loader: prismaLoader(async () => {
-    return prisma.candidate.findMany({
+  loader: async () => {
+    return await prisma.candidate.findMany({
       include: {
         race: {
           include: {
@@ -79,8 +81,10 @@ const candidates = defineCollection({
         },
       },
     });
-  }),
+  },
 });
+
+await prisma.$disconnect();
 
 export const collections = {
   elections,

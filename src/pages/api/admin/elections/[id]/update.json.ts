@@ -1,6 +1,8 @@
 import type { APIRoute } from "astro";
-import prisma from "../../../../../lib/prisma";
+import prisma, { withUserContext } from "../../../../../lib/prisma";
 import { canManageElection } from "../../../../../lib/permissions";
+
+const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
 
 export const prerender = false;
 
@@ -39,16 +41,18 @@ export const PUT: APIRoute = async ({ params, request }) => {
     const body = await request.json();
     const { name, description, date, slug } = body;
 
-    // Update election
-    const election = await prisma.election.update({
-      where: { id },
-      data: {
-        ...(name && { name }),
-        ...(description && { description }),
-        ...(date && { date: new Date(date) }),
-        ...(slug && { slug }),
-        updatedAt: new Date(),
-      },
+    // Update election with user context for audit logging
+    const election = await withUserContext(SYSTEM_USER_ID, async () => {
+      return prisma.election.update({
+        where: { id },
+        data: {
+          ...(name && { name }),
+          ...(description && { description }),
+          ...(date && { date: new Date(date) }),
+          ...(slug && { slug }),
+          updatedAt: new Date(),
+        },
+      });
     });
 
     return new Response(JSON.stringify(election), {

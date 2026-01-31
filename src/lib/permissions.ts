@@ -23,11 +23,11 @@ export async function canManageElections(): Promise<boolean> {
  * Check if the current user can manage a specific election
  * Future: Check if user is admin or assigned to this election
  */
-export async function canManageElection(electionId: string): Promise<boolean> {
+export async function canManageElection(_electionId: string): Promise<boolean> {
   // TODO: Implement authentication check
   // const session = await getSession();
   // if (session?.user?.userType === 'admin') return true;
-  // return session?.user?.elections?.some(e => e.id === electionId) ?? false;
+  // return session?.user?.elections?.some(e => e.id === _electionId) ?? false;
   return true;
 }
 
@@ -35,9 +35,9 @@ export async function canManageElection(electionId: string): Promise<boolean> {
  * Check if the current user can manage a specific race
  * Future: Check if user can manage the race's parent election
  */
-export async function canManageRace(raceId: string): Promise<boolean> {
+export async function canManageRace(_raceId: string): Promise<boolean> {
   // TODO: Implement authentication check
-  // const race = await prisma.race.findUnique({ where: { id: raceId } });
+  // const race = await prisma.race.findUnique({ where: { id: _raceId } });
   // return canManageElection(race.electionId);
   return true;
 }
@@ -47,11 +47,11 @@ export async function canManageRace(raceId: string): Promise<boolean> {
  * Future: Check if user can manage the candidate's parent race/election
  */
 export async function canManageCandidate(
-  candidateId: string,
+  _candidateId: string,
 ): Promise<boolean> {
   // TODO: Implement authentication check
   // const candidate = await prisma.candidate.findUnique({
-  //   where: { id: candidateId },
+  //   where: { id: _candidateId },
   //   include: { race: true }
   // });
   // return canManageElection(candidate.race.electionId);

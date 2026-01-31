@@ -1,17 +1,17 @@
 ---
 import Layout from "../../../layouts/Layout.astro";
-import prisma from "../../../lib/prisma";
 import RaceCard from "../../../components/RaceCard.astro";
 import { GET } from "../../api/elections/[election].json.ts";
 import type {
   ElectionWithRacesAndCandidates,
   RaceWithCandidates,
 } from "../../../lib/types";
+import { getCollection } from "astro:content";
 
 export async function getStaticPaths() {
-  const elections = await prisma.election.findMany();
+  const elections = await getCollection("elections");
   return elections.map((election: ElectionWithRacesAndCandidates) => ({
-    params: { election: election.slug },
+    params: { election: election.data.slug },
   }));
 }
 
