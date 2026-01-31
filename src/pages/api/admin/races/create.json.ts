@@ -1,6 +1,8 @@
 import type { APIRoute } from "astro";
-import prisma from "../../../../lib/prisma";
+import prisma, { withUserContext } from "../../../../lib/prisma";
 import { canManageElection } from "../../../../lib/permissions";
+
+const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
 
 export const prerender = false;
 
@@ -44,15 +46,17 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Create race
-    const race = await prisma.race.create({
-      data: {
-        name,
-        description,
-        electionId,
-        raceTypeId: parseInt(raceTypeId),
-        status,
-      },
+    // Create race with user context for audit logging
+    const race = await withUserContext(SYSTEM_USER_ID, async () => {
+      return prisma.race.create({
+        data: {
+          name,
+          description,
+          electionId,
+          raceTypeId: parseInt(raceTypeId),
+          status,
+        },
+      });
     });
 
     return new Response(JSON.stringify(race), {

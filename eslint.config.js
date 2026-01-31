@@ -2,10 +2,16 @@ import eslint from "@eslint/js";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
-import eslintPluginAstro from 'eslint-plugin-astro';
+import eslintPluginAstro from "eslint-plugin-astro";
 
 export default defineConfig([
-  globalIgnores(["dist", "node_modules/*", "build", "./src/lib/api/v1.d.ts"]),
+  globalIgnores([
+    "dist",
+    "node_modules/*",
+    "build",
+    ".astro",
+    "./src/lib/api/v1.d.ts",
+  ]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
@@ -22,9 +28,7 @@ export default defineConfig([
   },
   {
     files: ["**/*.astro"],
-    extends: [
-      ...eslintPluginAstro.configs.recommended,
-    ],
+    extends: [...eslintPluginAstro.configs.recommended],
     languageOptions: {
       ecmaVersion: "latest",
       globals: globals.browser,

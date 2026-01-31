@@ -1,4 +1,5 @@
 ---
+import { getCollection } from "astro:content";
 import type {
   CandidatePolicyResponse,
   CandidateExternalLink,
@@ -6,27 +7,34 @@ import type {
   Candidate,
 } from "../../../../generated/prisma/browser";
 import Layout from "../../../../layouts/Layout.astro";
-import prisma from "../../../../lib/prisma";
 import { GET } from "../../../api/elections/[election]/races/[race]/candidates/[candidate].json.ts";
 
 export async function getStaticPaths() {
-  const candidates = await prisma.candidate.findMany({
-    include: {
-      race: {
-        include: {
-          election: true,
-        },
-      },
-    },
-  });
+  const races = await getCollection("races");
+  const elections = await getCollection("elections");
+  const candidates = await getCollection("candidates");
 
-  return candidates.map((candidate: Candidate) => ({
-    params: {
-      election: candidate.race.election.slug,
-      race: candidate.race.slug,
-      candidate: candidate.slug,
-    },
-  }));
+  return candidates.map((candidate: Candidate) => {
+    const race = races.find((r) => r.id === candidate.data.raceId);
+    if (!race) {
+      throw new Error(
+        `Race not found for candidate ID: ${candidate.id} ${candidate.data.raceId}`,
+      );
+    }
+    const election = elections.find((e) => e.id === race.data.electionId);
+    if (!election) {
+      throw new Error(
+        `Election not found for candidate ID: ${candidate.id} ${candidate.data.raceId}`,
+      );
+    }
+    return {
+      params: {
+        election: election.data.slug,
+        race: race.data.slug,
+        candidate: candidate.data.slug,
+      },
+    };
+  });
 }
 
 const { election, race, candidate } = Astro.params;

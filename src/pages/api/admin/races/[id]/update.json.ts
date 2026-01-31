@@ -1,6 +1,8 @@
 import type { APIRoute } from "astro";
-import prisma from "../../../../../lib/prisma";
+import prisma, { withUserContext } from "../../../../../lib/prisma";
 import { canManageRace } from "../../../../../lib/permissions";
+
+const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
 
 export const prerender = false;
 
@@ -39,16 +41,36 @@ export const PUT: APIRoute = async ({ params, request }) => {
     const body = await request.json();
     const { name, description, raceTypeId, status } = body;
 
-    // Update race
-    const race = await prisma.race.update({
-      where: { id },
-      data: {
-        ...(name && { name }),
-        ...(description && { description }),
-        ...(raceTypeId && { raceTypeId: parseInt(raceTypeId) }),
-        ...(status && { status }),
-        updatedAt: new Date(),
-      },
+    // Debug: inspect prisma instance before update
+    try {
+      console.log(
+        "update.json.ts prisma keys",
+        Object.keys(prisma).slice(0, 20),
+      );
+      console.log("prisma.race exists?", typeof (prisma as any).race);
+    } catch (e) {
+      /* ignore */
+    }
+
+    // Update race with user context for audit logging
+    const race = await withUserContext(SYSTEM_USER_ID, async () => {
+      // Debug: mark entering operation
+      try {
+        console.log("about to call prisma.race.update for id", id);
+      } catch (e) {
+        /* ignore */
+      }
+
+      return prisma.race.update({
+        where: { id },
+        data: {
+          ...(name && { name }),
+          ...(description && { description }),
+          ...(raceTypeId && { raceTypeId: parseInt(raceTypeId) }),
+          ...(status && { status }),
+          updatedAt: new Date(),
+        },
+      });
     });
 
     return new Response(JSON.stringify(race), {

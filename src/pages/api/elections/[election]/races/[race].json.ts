@@ -46,7 +46,7 @@ export const GET: APIRoute = async ({ params }) => {
   });
 };
 
-export type GetRaceResponse = {
+export interface GetRaceResponse {
   race: RaceWithCandidates;
   questions: PolicyQuestion[];
-};
+}

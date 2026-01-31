@@ -13,6 +13,12 @@ datasource db {
   provider = "postgresql"
 }
 
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
 model Election {
   id            String                @id @default(uuid()) @db.Uuid
   name          String
@@ -285,3 +291,21 @@ model BlobStorageType {
 
   @@map("blob_storage_types")
 }
+
+model AuditLog {
+  id            String       @id @default(uuid()) @db.Uuid
+  entityType    String
+  entityId      String       @db.Uuid
+  userId        String       @db.Uuid
+  action        AuditAction
+  beforeState   Json?
+  afterState    Json
+  previousHash  String?
+  currentHash   String
+  createdAt     DateTime     @default(now()) @db.Timestamptz(3)
+  deletedAt     DateTime?    @db.Timestamptz(3)
+
+  @@index([entityId, entityType])
+  @@map("audit_logs")
+}
+
