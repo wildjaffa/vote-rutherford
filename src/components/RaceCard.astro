@@ -1,17 +1,15 @@
 ---
 import RaceType from "../enums/raceTypeEnum";
 import { Calendar, Users, ArrowRight } from "@lucide/astro";
-import type {
-  ElectionWithRacesAndCandidates,
-  RaceWithCandidates,
-} from "../lib/types";
+import type { Candidate, Election, Race } from "../generated/prisma/browser";
 
 interface Props {
-  election: ElectionWithRacesAndCandidates;
-  race: RaceWithCandidates;
+  election: Election;
+  race: Race;
+  candidates: Candidate[];
 }
 
-const { race, election } = Astro.props;
+const { race, election, candidates } = Astro.props;
 
 // Map raceTypeId to race type label
 const getRaceTypeLabel = (raceTypeId: number): string => {
@@ -53,7 +51,7 @@ const typeLabel = getRaceTypeLabel(race.raceTypeId);
           day: "numeric",
         })
       }<Users size="16" stroke-width={2} class="text-secondary inline ml-2" />
-      {race.candidates.length} Candidates
+      {candidates.length} Candidates
     </p>
     <a
       href={`/elections/${election.slug}/${race.slug}`}

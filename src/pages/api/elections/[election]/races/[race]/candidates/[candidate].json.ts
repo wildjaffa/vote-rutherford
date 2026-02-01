@@ -1,17 +1,8 @@
 import type { APIRoute } from "astro";
-import { getCollection } from "astro:content";
 import type { Candidate } from "../../../../../../../generated/prisma/client";
+import prisma from "../../../../../../../lib/prisma";
 
-export const getStaticPaths = async () => {
-  const candidates = await getCollection("candidates");
-  return candidates.map((candidate) => ({
-    params: {
-      election: candidate.data.race.election.slug,
-      race: candidate.data.race.slug,
-      candidate: candidate.data.slug,
-    },
-  }));
-};
+export const prerender = false;
 
 export const GET: APIRoute = async ({ params }) => {
   const { election, race, candidate: candidateSlug } = params;
@@ -20,19 +11,23 @@ export const GET: APIRoute = async ({ params }) => {
     return new Response(null, { status: 404 });
   }
 
-  const candidates = await getCollection("candidates");
-  const candidate = candidates.find(
-    (c) =>
-      c.data.slug === candidateSlug &&
-      c.data.race.slug === race &&
-      c.data.race.election.slug === election,
-  );
+  const candidate = await prisma.candidate.findFirst({
+    where: {
+      slug: candidateSlug,
+      race: {
+        slug: race,
+        election: {
+          slug: election,
+        },
+      },
+    },
+  });
 
   if (!candidate) {
     return new Response(null, { status: 404 });
   }
 
-  return new Response(JSON.stringify(candidate.data), {
+  return new Response(JSON.stringify(candidate), {
     headers: { "Content-Type": "application/json" },
   });
 };

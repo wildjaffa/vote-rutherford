@@ -2,34 +2,10 @@
 import Layout from "../../../../layouts/Layout.astro";
 import CandidateCard from "../../../../components/CandidateCard.astro";
 import { ArrowLeft } from "@lucide/astro";
-import { GET } from "../../../api/elections/[election]/races/[race].json.ts";
-import type {
-  Candidate,
-  CandidatePolicyResponse,
-  Race,
-} from "../../../../generated/prisma/browser";
 import type { PolicyQuestion } from "../../../../generated/prisma/client";
-import { getCollection } from "astro:content";
+import prisma from "../../../../lib/prisma";
 
-export async function getStaticPaths() {
-  const races = await getCollection("races");
-  const elections = await getCollection("elections");
-
-  return races.map((race: Race) => {
-    const election = elections.find((e) => e.id === race.data.electionId);
-    if (!election) {
-      throw new Error(
-        `Election not found for race ID: ${race.id} ${race.data.electionId}`,
-      );
-    }
-    return {
-      params: {
-        election: election.data.slug,
-        race: race.data.slug,
-      },
-    };
-  });
-}
+export const prerender = false;
 
 const { election, race } = Astro.params;
 
@@ -37,17 +13,27 @@ if (!election || !race) {
   return Astro.redirect("/404");
 }
 
-const response = await GET(Astro);
-if (response.status === 404) {
+const raceData = await prisma.race.findFirst({
+  where: {
+    slug: race,
+    election: { slug: election },
+  },
+  include: {
+    election: { include: { policyQuestions: true } },
+    candidates: {
+      include: {
+        profileImage: true,
+        policyResponses: true,
+      },
+    },
+  },
+});
+
+if (raceData === null) {
   return Astro.redirect("/404");
 }
 
-const { race: raceData, questions } = await response.json();
-
-if (!raceData) {
-  return Astro.redirect("/404");
-}
-
+const questions = raceData.election.policyQuestions;
 const { candidates } = raceData;
 ---
 
@@ -76,11 +62,12 @@ const { candidates } = raceData;
       {
         candidates.length > 0 ? (
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {candidates.map((candidate: Candidate) => (
+            {candidates.map((candidate) => (
               <CandidateCard
                 candidate={candidate}
                 raceSlug={raceData.slug}
                 electionSlug={raceData.election.slug}
+                profileImage={candidate.profileImage}
               />
             ))}
           </div>
@@ -121,10 +108,9 @@ const { candidates } = raceData;
                     <h4 class="text-sm font-medium text-gray-700 uppercase tracking-wider mb-3">
                       Candidate Responses
                     </h4>
-                    {candidates.map((candidate: Candidate) => {
+                    {candidates.map((candidate) => {
                       const response = candidate.policyResponses.find(
-                        (r: CandidatePolicyResponse) =>
-                          r.policyQuestionId === question.id,
+                        (r) => r.policyQuestionId === question.id,
                       );
 
                       return (

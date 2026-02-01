@@ -1,41 +1,8 @@
 ---
-import { getCollection } from "astro:content";
-import type {
-  CandidatePolicyResponse,
-  CandidateExternalLink,
-  CandidateQualification,
-  Candidate,
-} from "../../../../generated/prisma/browser";
 import Layout from "../../../../layouts/Layout.astro";
-import { GET } from "../../../api/elections/[election]/races/[race]/candidates/[candidate].json.ts";
+import prisma from "../../../../lib/prisma";
 
-export async function getStaticPaths() {
-  const races = await getCollection("races");
-  const elections = await getCollection("elections");
-  const candidates = await getCollection("candidates");
-
-  return candidates.map((candidate: Candidate) => {
-    const race = races.find((r) => r.id === candidate.data.raceId);
-    if (!race) {
-      throw new Error(
-        `Race not found for candidate ID: ${candidate.id} ${candidate.data.raceId}`,
-      );
-    }
-    const election = elections.find((e) => e.id === race.data.electionId);
-    if (!election) {
-      throw new Error(
-        `Election not found for candidate ID: ${candidate.id} ${candidate.data.raceId}`,
-      );
-    }
-    return {
-      params: {
-        election: election.data.slug,
-        race: race.data.slug,
-        candidate: candidate.data.slug,
-      },
-    };
-  });
-}
+export const prerender = false;
 
 const { election, race, candidate } = Astro.params;
 
@@ -43,12 +10,33 @@ if (!election || !race || !candidate) {
   return Astro.redirect("/404");
 }
 
-const response = await GET(Astro);
-if (response.status === 404) {
-  return Astro.redirect("/404");
-}
-
-const candidateData = await response.json();
+const candidateData = await prisma.candidate.findFirst({
+  where: {
+    slug: candidate,
+    race: {
+      slug: race,
+      election: {
+        slug: election,
+      },
+    },
+  },
+  include: {
+    profileImage: true,
+    qualifications: { include: { qualificationType: true } },
+    race: {
+      include: {
+        election: true,
+      },
+    },
+    externalLinks: { include: { externalLinkType: true } },
+    policyResponses: {
+      include: {
+        policyQuestion: true,
+        clarifications: true,
+      },
+    },
+  },
+});
 
 if (!candidateData) {
   return Astro.redirect("/404");
@@ -122,21 +110,19 @@ const imageUrl = candidateData.profileImage
                   Qualifications
                 </h3>
                 <ul class="list-disc list-inside text-gray-600 space-y-1">
-                  {candidateData.qualifications.map(
-                    (qual: CandidateQualification) => (
-                      <li>
-                        <span class="font-medium">
-                          {qual.qualificationType.value === "education"
-                            ? "Education"
-                            : qual.qualificationType.value === "work_experience"
-                              ? "Experience"
-                              : "Qualification"}
-                          :
-                        </span>{" "}
-                        {qual.qualification_description}
-                      </li>
-                    ),
-                  )}
+                  {candidateData.qualifications.map((qual) => (
+                    <li>
+                      <span class="font-medium">
+                        {qual.qualificationType.value === "education"
+                          ? "Education"
+                          : qual.qualificationType.value === "work_experience"
+                            ? "Experience"
+                            : "Qualification"}
+                        :
+                      </span>{" "}
+                      {qual.qualification_description}
+                    </li>
+                  ))}
                 </ul>
               </div>
             )
@@ -145,18 +131,16 @@ const imageUrl = candidateData.profileImage
           {
             candidateData.externalLinks.length > 0 && (
               <div class="mt-6 flex space-x-4">
-                {candidateData.externalLinks.map(
-                  (link: CandidateExternalLink) => (
-                    <a
-                      href={link.hyperlink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="text-blue-600 hover:text-blue-800 capitalize"
-                    >
-                      {link.externalLinkType.value}
-                    </a>
-                  ),
-                )}
+                {candidateData.externalLinks.map((link) => (
+                  <a
+                    href={link.hyperlink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-blue-600 hover:text-blue-800 capitalize"
+                  >
+                    {link.externalLinkType.value}
+                  </a>
+                ))}
               </div>
             )
           }
@@ -171,21 +155,19 @@ const imageUrl = candidateData.profileImage
             Policy Positions
           </h2>
           <div class="space-y-6">
-            {candidateData.policyResponses.map(
-              (resp: CandidatePolicyResponse) => (
-                <div class="border-b border-gray-200 pb-4 last:border-0 last:pb-0">
-                  <h3 class="text-lg font-semibold text-indigo-600 mb-2">
-                    {resp.policyQuestion.questionText}
-                  </h3>
-                  <p class="text-gray-700 italic mb-2">
-                    "{resp.policyQuestion.descriptionText}"
-                  </p>
-                  <div class="bg-gray-50 p-4 rounded-md">
-                    <p class="text-gray-800">{resp.response}</p>
-                  </div>
+            {candidateData.policyResponses.map((resp) => (
+              <div class="border-b border-gray-200 pb-4 last:border-0 last:pb-0">
+                <h3 class="text-lg font-semibold text-indigo-600 mb-2">
+                  {resp.policyQuestion.questionText}
+                </h3>
+                <p class="text-gray-700 italic mb-2">
+                  "{resp.policyQuestion.descriptionText}"
+                </p>
+                <div class="bg-gray-50 p-4 rounded-md">
+                  <p class="text-gray-800">{resp.response}</p>
                 </div>
-              ),
-            )}
+              </div>
+            ))}
           </div>
         </div>
       )
