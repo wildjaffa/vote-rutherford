@@ -1,13 +1,7 @@
 import type { APIRoute } from "astro";
-import { getCollection } from "astro:content";
-import type { ElectionWithRacesAndCandidates } from "../../../lib/types";
+import prisma from "../../../lib/prisma";
 
-export const getStaticPaths = async () => {
-  const elections = await getCollection("elections");
-  return elections.map((election) => ({
-    params: { election: election.data.slug },
-  }));
-};
+export const prerender = false;
 
 export const GET: APIRoute = async ({ params }) => {
   const { election: slug } = params;
@@ -16,16 +10,17 @@ export const GET: APIRoute = async ({ params }) => {
     return new Response(null, { status: 404 });
   }
 
-  const elections = await getCollection("elections");
-  const electionData = elections.find((e) => e.data.slug === slug);
-
-  if (!electionData) {
+  const election = await prisma.election.findUnique({
+    where: { slug },
+    include: {
+      races: true,
+    },
+  });
+  if (!election) {
     return new Response(null, { status: 404 });
   }
 
-  return new Response(JSON.stringify(electionData.data), {
+  return new Response(JSON.stringify(election), {
     headers: { "Content-Type": "application/json" },
   });
 };
-
-export type GetElectionResponse = ElectionWithRacesAndCandidates;

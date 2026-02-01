@@ -10,7 +10,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 enum AuditAction {
@@ -20,40 +20,40 @@ enum AuditAction {
 }
 
 model Election {
-  id            String                @id @default(uuid()) @db.Uuid
+  id            String                @id @default(uuid())
   name          String
   slug          String                @unique @default(cuid())
   description   String
-  date          DateTime              @db.Timestamptz(3)
+  date          DateTime
   headerImage   BlobStorageReference? @relation("ElectionHeaderImage", fields: [headerImageId], references: [id])
-  headerImageId String?               @db.Uuid
-  createdAt     DateTime              @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime              @default(now()) @db.Timestamptz(3)
-  deletedAt     DateTime?             @db.Timestamptz(3)
-  archivedAt    DateTime?             @db.Timestamptz(3)
+  headerImageId String?               
+  createdAt     DateTime              @default(now()) 
+  updatedAt     DateTime              @default(now()) 
+  deletedAt     DateTime?             
+  archivedAt    DateTime?             
 
   races                  Race[]
   policyQuestions        PolicyQuestion[]
   usersToElections       UserToElection[]
   blobStorageReference   BlobStorageReference? @relation(fields: [blobStorageReferenceId], references: [id])
-  blobStorageReferenceId String?               @db.Uuid
+  blobStorageReferenceId String?               
 
   @@map("elections")
 }
 
 model Race {
-  id          String    @id @default(uuid()) @db.Uuid
+  id          String    @id @default(uuid()) 
   name        String
   slug        String                @default(cuid())
   description String
   election    Election  @relation(fields: [electionId], references: [id])
-  electionId  String    @db.Uuid
+  electionId  String    
   status      String
   raceType    RaceType  @relation(fields: [raceTypeId], references: [id])
   raceTypeId  Int
-  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime  @default(now()) @db.Timestamptz(3)
-  deletedAt   DateTime? @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) 
+  updatedAt   DateTime  @default(now()) 
+  deletedAt   DateTime? 
 
   candidates             Candidate[]
   policyQuestionsToRaces PolicyQuestionToRace[]
@@ -65,9 +65,9 @@ model Race {
 model RaceType {
   id        Int       @id @default(autoincrement())
   value     String
-  createdAt DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
-  deletedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) 
+  updatedAt DateTime  @default(now()) 
+  deletedAt DateTime? 
 
   races Race[]
 
@@ -75,9 +75,9 @@ model RaceType {
 }
 
 model Candidate {
-  id                String                @id @default(uuid()) @db.Uuid
+  id                String                @id @default(uuid()) 
   race              Race                  @relation(fields: [raceId], references: [id])
-  raceId            String                @db.Uuid
+  raceId            String                
   firstName         String
   middleName        String?
   lastName          String
@@ -86,12 +86,12 @@ model Candidate {
   biography         String?
   biographyRedacted String?
   profileImage      BlobStorageReference? @relation("CandidateProfileImage", fields: [profileImageId], references: [id])
-  profileImageId    String?               @db.Uuid
+  profileImageId    String?               
   historicalLink    Candidate?            @relation("HistoricalLink", fields: [historicalLinkId], references: [id])
-  historicalLinkId  String?               @db.Uuid
-  createdAt         DateTime              @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime              @default(now()) @db.Timestamptz(3)
-  deletedAt         DateTime?             @db.Timestamptz(3)
+  historicalLinkId  String?               
+  createdAt         DateTime              @default(now()) 
+  updatedAt         DateTime              @default(now()) 
+  deletedAt         DateTime?             
 
   externalLinks   CandidateExternalLink[]
   policyResponses CandidatePolicyResponse[]
@@ -103,15 +103,15 @@ model Candidate {
 }
 
 model CandidateExternalLink {
-  id                 String           @id @default(uuid()) @db.Uuid
+  id                 String           @id @default(uuid()) 
   candidate          Candidate        @relation(fields: [candidate_id], references: [id])
-  candidate_id       String           @db.Uuid
+  candidate_id       String           
   hyperlink          String
   externalLinkType   ExternalLinkType @relation(fields: [externalLinkTypeId], references: [id])
   externalLinkTypeId Int
-  createdAt          DateTime         @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime         @default(now()) @db.Timestamptz(3)
-  deletedAt          DateTime?        @db.Timestamptz(3)
+  createdAt          DateTime         @default(now()) 
+  updatedAt          DateTime         @default(now()) 
+  deletedAt          DateTime?        
 
   @@map("candidate_external_links")
 }
@@ -119,9 +119,9 @@ model CandidateExternalLink {
 model ExternalLinkType {
   id        Int       @id @default(autoincrement())
   value     String
-  createdAt DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
-  deletedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) 
+  updatedAt DateTime  @default(now()) 
+  deletedAt DateTime? 
 
   CandidateExternalLinks CandidateExternalLink[]
 
@@ -129,14 +129,14 @@ model ExternalLinkType {
 }
 
 model PolicyQuestion {
-  id              String    @id @default(uuid()) @db.Uuid
+  id              String    @id @default(uuid()) 
   election        Election  @relation(fields: [electionId], references: [id])
-  electionId      String    @db.Uuid
+  electionId      String    
   questionText    String
   descriptionText String
-  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime  @default(now()) @db.Timestamptz(3)
-  deletedAt       DateTime? @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) 
+  updatedAt       DateTime  @default(now()) 
+  deletedAt       DateTime? 
 
   PolicyQuestionsToRaces   PolicyQuestionToRace[]
   candidatePolicyResponses CandidatePolicyResponse[]
@@ -145,31 +145,31 @@ model PolicyQuestion {
 }
 
 model PolicyQuestionToRace {
-  id               String         @id @default(uuid()) @db.Uuid
+  id               String         @id @default(uuid()) 
   policyQuestion   PolicyQuestion @relation(fields: [policyQuestionId], references: [id])
-  policyQuestionId String         @db.Uuid
+  policyQuestionId String         
   race             Race           @relation(fields: [raceId], references: [id])
-  raceId           String         @db.Uuid
-  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
-  updatedAt        DateTime       @default(now()) @db.Timestamptz(3)
-  deletedAt        DateTime?      @db.Timestamptz(3)
+  raceId           String         
+  createdAt        DateTime       @default(now()) 
+  updatedAt        DateTime       @default(now()) 
+  deletedAt        DateTime?      
 
   @@map("policy_questions_to_races")
 }
 
 model CandidatePolicyResponse {
-  id                 String         @id @default(uuid()) @db.Uuid
+  id                 String         @id @default(uuid()) 
   candidate          Candidate      @relation(fields: [candidateId], references: [id])
-  candidateId        String         @db.Uuid
+  candidateId        String         
   policyQuestion     PolicyQuestion @relation(fields: [policyQuestionId], references: [id])
-  policyQuestionId   String         @db.Uuid
-  requestSentAt      DateTime       @db.Timestamptz(3)
-  responseReceivedAt DateTime?      @db.Timestamptz(3)
+  policyQuestionId   String         
+  requestSentAt      DateTime       
+  responseReceivedAt DateTime?      
   response           String
   responseRedacted   String?
-  createdAt          DateTime       @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime       @default(now()) @db.Timestamptz(3)
-  deletedAt          DateTime?      @db.Timestamptz(3)
+  createdAt          DateTime       @default(now()) 
+  updatedAt          DateTime       @default(now()) 
+  deletedAt          DateTime?      
 
   clarifications CandidatePolicyResponseClarification[]
 
@@ -177,30 +177,30 @@ model CandidatePolicyResponse {
 }
 
 model CandidatePolicyResponseClarification {
-  id                        String                  @id @default(uuid()) @db.Uuid
+  id                        String                  @id @default(uuid()) 
   candidatePolicyResponse   CandidatePolicyResponse @relation(fields: [candidatePolicyResponseId], references: [id])
-  candidatePolicyResponseId String                  @db.Uuid
+  candidatePolicyResponseId String                  
   clarification             String
   clarificationRedacted     String?
-  clarificationReceivedAt   DateTime?               @db.Timestamptz(3)
-  createdAt                 DateTime                @default(now()) @db.Timestamptz(3)
-  updatedAt                 DateTime                @default(now()) @db.Timestamptz(3)
-  deletedAt                 DateTime?               @db.Timestamptz(3)
+  clarificationReceivedAt   DateTime?               
+  createdAt                 DateTime                @default(now()) 
+  updatedAt                 DateTime                @default(now()) 
+  deletedAt                 DateTime?               
 
   @@map("candidate_policy_response_clarifications")
 }
 
 model CandidateQualification {
-  id                        String            @id @default(uuid()) @db.Uuid
+  id                        String            @id @default(uuid()) 
   candidate                 Candidate         @relation(fields: [candidateId], references: [id])
-  candidateId               String            @db.Uuid
+  candidateId               String            
   qualification_description String
   qualificationType         QualificationType @relation(fields: [qualificationTypeId], references: [id])
   qualificationTypeId       Int
   qualification_url         String
-  createdAt                 DateTime          @default(now()) @db.Timestamptz(3)
-  updatedAt                 DateTime          @default(now()) @db.Timestamptz(3)
-  deletedAt                 DateTime?         @db.Timestamptz(3)
+  createdAt                 DateTime          @default(now()) 
+  updatedAt                 DateTime          @default(now()) 
+  deletedAt                 DateTime?         
 
   @@map("candidate_qualifications")
 }
@@ -208,16 +208,16 @@ model CandidateQualification {
 model QualificationType {
   id                      Int                      @id @default(autoincrement())
   value                   String
-  createdAt               DateTime                 @default(now()) @db.Timestamptz(3)
-  updatedAt               DateTime                 @default(now()) @db.Timestamptz(3)
-  deletedAt               DateTime?                @db.Timestamptz(3)
+  createdAt               DateTime                 @default(now()) 
+  updatedAt               DateTime                 @default(now()) 
+  deletedAt               DateTime?                
   candidateQualifications CandidateQualification[]
 
   @@map("qualification_types")
 }
 
 model User {
-  id             String                @id @default(uuid()) @db.Uuid
+  id             String                @id @default(uuid()) 
   firstName      String
   middleName     String?
   lastName       String
@@ -226,10 +226,10 @@ model User {
   userType       UserType              @relation(fields: [userTypeId], references: [id])
   userTypeId     Int
   profileImage   BlobStorageReference? @relation("UserProfileImage", fields: [profileImageId], references: [id])
-  profileImageId String?               @db.Uuid
-  createdAt      DateTime              @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime              @default(now()) @db.Timestamptz(3)
-  deletedAt      DateTime?             @db.Timestamptz(3)
+  profileImageId String?               
+  createdAt      DateTime              @default(now()) 
+  updatedAt      DateTime              @default(now()) 
+  deletedAt      DateTime?             
 
   usersToElections UserToElection[]
 
@@ -239,9 +239,9 @@ model User {
 model UserType {
   id        Int       @id @default(autoincrement())
   value     String
-  createdAt DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
-  deletedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) 
+  updatedAt DateTime  @default(now()) 
+  deletedAt DateTime? 
 
   Users User[]
 
@@ -249,28 +249,28 @@ model UserType {
 }
 
 model UserToElection {
-  id         String    @id @default(uuid()) @db.Uuid
+  id         String    @id @default(uuid()) 
   user       User      @relation(fields: [userId], references: [id])
-  userId     String    @db.Uuid
+  userId     String    
   election   Election  @relation(fields: [electionId], references: [id])
-  electionId String    @db.Uuid
-  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt  DateTime  @default(now()) @db.Timestamptz(3)
-  deletedAt  DateTime? @db.Timestamptz(3)
+  electionId String    
+  createdAt  DateTime  @default(now()) 
+  updatedAt  DateTime  @default(now()) 
+  deletedAt  DateTime? 
 
   @@map("users_to_elections")
 }
 
 model BlobStorageReference {
-  id                String          @id @default(uuid()) @db.Uuid
+  id                String          @id @default(uuid()) 
   fileType          String
   fileName          String
   fileLocation      String
   blobStorageType   BlobStorageType @relation(fields: [blobStorageTypeId], references: [id])
   blobStorageTypeId Int
-  createdAt         DateTime        @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime        @default(now()) @db.Timestamptz(3)
-  deletedAt         DateTime?       @db.Timestamptz(3)
+  createdAt         DateTime        @default(now()) 
+  updatedAt         DateTime        @default(now()) 
+  deletedAt         DateTime?       
 
   Users                  User[]      @relation("UserProfileImage")
   ElectionsHeaderImage   Election[]  @relation("ElectionHeaderImage")
@@ -283,9 +283,9 @@ model BlobStorageReference {
 model BlobStorageType {
   id        Int       @id @default(autoincrement())
   value     String
-  createdAt DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
-  deletedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) 
+  updatedAt DateTime  @default(now()) 
+  deletedAt DateTime? 
 
   BlobStorageReferences BlobStorageReference[]
 
@@ -293,17 +293,17 @@ model BlobStorageType {
 }
 
 model AuditLog {
-  id            String       @id @default(uuid()) @db.Uuid
+  id            String       @id @default(uuid()) 
   entityType    String
-  entityId      String       @db.Uuid
-  userId        String       @db.Uuid
+  entityId      String       
+  userId        String       
   action        AuditAction
   beforeState   Json?
   afterState    Json
   previousHash  String?
   currentHash   String
-  createdAt     DateTime     @default(now()) @db.Timestamptz(3)
-  deletedAt     DateTime?    @db.Timestamptz(3)
+  createdAt     DateTime     @default(now()) 
+  deletedAt     DateTime?    
 
   @@index([entityId, entityType])
   @@map("audit_logs")

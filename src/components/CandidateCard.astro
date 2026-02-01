@@ -5,22 +5,17 @@ import type {
   BlobStorageReference,
 } from "../generated/prisma/client";
 
-export type CandidateWithImage = Candidate & {
-  profileImage: BlobStorageReference | null;
-};
-
 interface Props {
-  candidate: CandidateWithImage;
+  candidate: Candidate;
   raceSlug: string;
   electionSlug: string;
+  profileImage?: BlobStorageReference | null;
 }
 
-const { candidate, raceSlug, electionSlug } = Astro.props;
+const { candidate, raceSlug, electionSlug, profileImage } = Astro.props;
 
 const fullName = `${candidate.firstName} ${candidate.middleName ? candidate.middleName + " " : ""}${candidate.lastName}`;
-const imageUrl = candidate.profileImage
-  ? `/${candidate.profileImage.fileLocation}`
-  : null;
+const imageUrl = profileImage ? `/${profileImage.fileLocation}` : null;
 ---
 
 <div

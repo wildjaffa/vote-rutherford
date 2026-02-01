@@ -10,6 +10,7 @@ export default defineConfig({
   // - Most pages prerendered at build time (default)
   // - Opt-out of prerendering with `export const prerender = false` on specific pages
   // - Server-side functionality (Astro actions, API routes) on demand
+  output: "static",
   adapter: node({
     mode: "standalone",
   }),

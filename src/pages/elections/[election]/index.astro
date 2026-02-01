@@ -1,19 +1,9 @@
 ---
 import Layout from "../../../layouts/Layout.astro";
 import RaceCard from "../../../components/RaceCard.astro";
-import { GET } from "../../api/elections/[election].json.ts";
-import type {
-  ElectionWithRacesAndCandidates,
-  RaceWithCandidates,
-} from "../../../lib/types";
-import { getCollection } from "astro:content";
+import prisma from "../../../lib/prisma";
 
-export async function getStaticPaths() {
-  const elections = await getCollection("elections");
-  return elections.map((election: ElectionWithRacesAndCandidates) => ({
-    params: { election: election.data.slug },
-  }));
-}
+export const prerender = false;
 
 const { election } = Astro.params;
 
@@ -21,37 +11,46 @@ if (!election) {
   return Astro.redirect("/404");
 }
 
-const response = await GET(Astro);
-if (response.status === 404) {
-  return Astro.redirect("/404");
-}
-
-const electionData = await response.json();
+const electionData = await prisma.election.findUnique({
+  where: { slug: election },
+  include: {
+    races: {
+      include: {
+        candidates: {
+          include: {
+            profileImage: true,
+          },
+        },
+      },
+    },
+  },
+});
 
 if (!electionData) {
   return Astro.redirect("/404");
 }
-
-// Cast to the correct type to ensure props match RaceCard requirements
-const typedElectionData = electionData as ElectionWithRacesAndCandidates;
 ---
 
-<Layout title={`${typedElectionData.name} | Races`}>
+<Layout title={`${electionData.name} | Races`}>
   <main class="container mx-auto px-4 py-8">
     <div class="mb-12 text-center">
       <h1 class="text-4xl font-bold text-gray-900 mb-4">
-        {typedElectionData.name}
+        {electionData.name}
       </h1>
       <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-        {typedElectionData.description}
+        {electionData.description}
       </p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {
-        typedElectionData.races.length > 0 ? (
-          typedElectionData.races.map((race: RaceWithCandidates) => (
-            <RaceCard election={typedElectionData} race={race} />
+        electionData.races.length > 0 ? (
+          electionData.races.map((race) => (
+            <RaceCard
+              election={electionData}
+              race={race}
+              candidates={race.candidates}
+            />
           ))
         ) : (
           <div class="col-span-full text-center py-12">

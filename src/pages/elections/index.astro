@@ -1,13 +1,14 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import ElectionCard from "../../components/ElectionCard.astro";
-import type { ElectionWithRacesAndCandidates } from "../../lib/types";
-import { GET } from "../api/elections.json.ts";
+import prisma from "../../lib/prisma";
 
 // Fetch all elections ordered by date (newest first)
 // Include races to get the count for the card
-const response = await GET(Astro);
-const elections: ElectionWithRacesAndCandidates[] = await response.json();
+const elections = await prisma.election.findMany({
+  orderBy: { date: "desc" },
+  include: { races: true },
+});
 ---
 
 <Layout title="Elections">
@@ -22,8 +23,8 @@ const elections: ElectionWithRacesAndCandidates[] = await response.json();
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {
         elections.length > 0 ? (
-          elections.map((election: ElectionWithRacesAndCandidates) => (
-            <ElectionCard election={election} />
+          elections.map((election) => (
+            <ElectionCard election={election} races={election.races} />
           ))
         ) : (
           <div class="col-span-full text-center py-12">

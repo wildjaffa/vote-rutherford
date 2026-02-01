@@ -1,28 +1,36 @@
 ---
 import "@fontsource/sorts-mill-goudy";
 import "@fontsource-variable/montserrat";
-import type {
-  ElectionWithRacesAndCandidates,
-  RaceWithCandidates,
-} from "../lib/types";
-import { GET } from "../pages/api/elections.json.ts";
+
 import "../styles/global.css";
 import RaceCard from "./RaceCard.astro";
+import prisma from "../lib/prisma";
 
-const electionsResponse = await GET(Astro);
-const elections: ElectionWithRacesAndCandidates[] =
-  await electionsResponse.json();
+const elections = await prisma.election.findMany({
+  orderBy: { date: "desc" },
+  include: {
+    races: {
+      include: {
+        candidates: true,
+      },
+    },
+  },
+});
 ---
 
 <div id="container">
   {
-    elections.map((election: ElectionWithRacesAndCandidates) => (
+    elections.map((election) => (
       <div class="election-section">
         <h2>{election.name}</h2>
         <p>{election.description}</p>
         <div class="grid grid-cols-2 gap-4">
-          {election.races.map((race: RaceWithCandidates) => (
-            <RaceCard race={race} election={election} />
+          {election.races.map((race) => (
+            <RaceCard
+              race={race}
+              election={election}
+              candidates={race.candidates}
+            />
           ))}
         </div>
       </div>

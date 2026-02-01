@@ -1,12 +1,13 @@
 ---
 import { Calendar, Layers, ArrowRight } from "@lucide/astro";
-import type { ElectionWithRacesAndCandidates } from "../lib/types";
+import type { Election, Race } from "../generated/prisma/browser";
 
 interface Props {
-  election: ElectionWithRacesAndCandidates;
+  election: Election;
+  races: Race[];
 }
 
-const { election } = Astro.props;
+const { election, races } = Astro.props;
 
 // Formatting the date
 const formattedDate = new Date(election.date).toLocaleDateString("en-US", {
@@ -38,8 +39,8 @@ const formattedDate = new Date(election.date).toLocaleDateString("en-US", {
     <div class="flex items-center text-sm text-gray-500">
       <Layers size={16} class="mr-1.5" />
       <span class="font-medium"
-        >{election.races.length}
-        {election.races.length === 1 ? "Race" : "Races"}</span
+        >{races.length}
+        {races.length === 1 ? "Race" : "Races"}</span
       >
     </div>
 
