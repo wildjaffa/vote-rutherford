@@ -6,6 +6,8 @@ import "../styles/global.css";
 import RaceCard from "./RaceCard.astro";
 import prisma from "../lib/prisma";
 
+export const prerender = false;
+
 const elections = await prisma.election.findMany({
   orderBy: { date: "desc" },
   include: {

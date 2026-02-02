@@ -16,3 +16,4 @@ pnpm-debug.log*
 database_data
 *.md
 !README.md
+*.db
