@@ -1,5 +1,6 @@
 ---
 import Layout from "../../../../layouts/Layout.astro";
+import { convertKeyToPublicUrl } from "../../../../lib/blobStorage";
 import prisma from "../../../../lib/prisma";
 
 export const prerender = false;
@@ -43,9 +44,9 @@ if (!candidateData) {
 }
 
 const fullName = `${candidateData.firstName} ${candidateData.middleName ? candidateData.middleName + " " : ""}${candidateData.lastName}`;
-const imageUrl = candidateData.profileImage
-  ? `/${candidateData.profileImage.fileLocation}`
-  : null;
+const imageUrl = convertKeyToPublicUrl(
+  candidateData.profileImage?.fileLocation,
+);
 ---
 
 <Layout title={`${fullName} | ${candidateData.race.election.name}`}>

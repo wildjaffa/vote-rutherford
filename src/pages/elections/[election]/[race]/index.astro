@@ -4,6 +4,7 @@ import CandidateCard from "../../../../components/CandidateCard.astro";
 import { ArrowLeft } from "@lucide/astro";
 import type { PolicyQuestion } from "../../../../generated/prisma/client";
 import prisma from "../../../../lib/prisma";
+import { convertKeyToPublicUrl } from "../../../../lib/blobStorage";
 
 export const prerender = false;
 
@@ -119,7 +120,9 @@ const { candidates } = raceData;
                             <div class="h-8 w-8 rounded-full bg-gray-200 overflow-hidden shrink-0">
                               {candidate.profileImage ? (
                                 <img
-                                  src={`/${candidate.profileImage.fileLocation}`}
+                                  src={convertKeyToPublicUrl(
+                                    candidate.profileImage.fileLocation,
+                                  )}
                                   alt={candidate.lastName}
                                   class="h-full w-full object-cover"
                                 />
