@@ -9,8 +9,11 @@ if (!connectionString) {
   throw new Error("DATABASE_URL is not defined");
 }
 
+const authToken = process.env.AUTH_TOKEN || import.meta.env.AUTH_TOKEN;
+
 const adapter = new PrismaLibSql({
   url: connectionString,
+  authToken: authToken,
 });
 
 // Fixed UUID placeholder for system/unknown users
