@@ -1,5 +1,6 @@
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
+import type { Config } from "@libsql/client";
 import { createAuditExtension } from "../../prisma/auditExtension";
 
 const connectionString =
@@ -8,13 +9,21 @@ const connectionString =
 if (!connectionString) {
   throw new Error("DATABASE_URL is not defined");
 }
-
-const authToken = process.env.AUTH_TOKEN || import.meta.env.AUTH_TOKEN;
-
-const adapter = new PrismaLibSql({
+const config: Config = {
   url: connectionString,
-  authToken: authToken,
-});
+};
+config.authToken = process.env.AUTH_TOKEN || import.meta.env.AUTH_TOKEN;
+if (process.env.SYNC_INTERVAL || import.meta.env.SYNC_INTERVAL) {
+  config.syncInterval = Number(
+    process.env.SYNC_INTERVAL || import.meta.env.SYNC_INTERVAL,
+  );
+}
+config.syncUrl = process.env.SYNC_URL || import.meta.env.SYNC_URL;
+if (config.syncUrl && !config.syncInterval) {
+  config.syncInterval = 60; // Default to 1 minute, sync interval is in seconds
+}
+
+const adapter = new PrismaLibSql(config);
 
 // Fixed UUID placeholder for system/unknown users
 const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";

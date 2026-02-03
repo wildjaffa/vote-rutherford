@@ -3,6 +3,8 @@
     "autoincrement",
     "cuid",
     "fontsource",
+    "iconify",
+    "libsql",
     "lucide",
     "prerendered",
     "prerendering",
