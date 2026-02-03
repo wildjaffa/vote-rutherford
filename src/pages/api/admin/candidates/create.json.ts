@@ -17,6 +17,7 @@ export const POST: APIRoute = async ({ request }) => {
       birthYear,
       biography,
       biographyRedacted,
+      profileImageId,
     } = body;
 
     // Validate required fields
@@ -55,6 +56,16 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Create candidate with user context for audit logging
     const candidate = await withUserContext(SYSTEM_USER_ID, async () => {
+      // If a profileImageId was provided, verify it exists
+      if (profileImageId) {
+        const blob = await prisma.blobStorageReference.findUnique({
+          where: { id: profileImageId },
+        });
+        if (!blob) {
+          throw new Error("profileImageId not found");
+        }
+      }
+
       return prisma.candidate.create({
         data: {
           firstName,
@@ -64,6 +75,7 @@ export const POST: APIRoute = async ({ request }) => {
           birthYear: birthYear ? parseInt(birthYear) : null,
           biography: biography || null,
           biographyRedacted: biographyRedacted || null,
+          ...(profileImageId && { profileImageId }),
         },
       });
     });

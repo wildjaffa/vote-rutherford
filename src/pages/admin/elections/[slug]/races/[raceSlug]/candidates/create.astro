@@ -40,6 +40,7 @@ if (Astro.request.method === "POST") {
     const lastName = formData.get("lastName") as string;
     const birthYear = formData.get("birthYear") as string;
     const biography = formData.get("biography") as string;
+    const profileImageId = formData.get("profileImageId") as string;
 
     const result = await Astro.callAction(actions.createCandidate, {
       raceId: race.id,
@@ -47,6 +48,7 @@ if (Astro.request.method === "POST") {
       lastName: lastName,
       birthYear: birthYear ? parseInt(birthYear, 10) : undefined,
       biography: biography || undefined,
+      profileImageId: profileImageId || undefined,
     });
 
     if (result.data) {
@@ -117,6 +119,20 @@ if (Astro.request.method === "POST") {
       placeholder="Enter candidate biography..."
     />
 
+    <div>
+      <label class="block text-sm font-medium text-gray-700"
+        >Profile Image</label
+      >
+      <input
+        type="file"
+        accept="image/*"
+        id="profileImageInput"
+        class="mt-1 block w-full"
+      />
+      <input type="hidden" name="profileImageId" id="profileImageId" />
+      <p id="profileImageStatus" class="text-xs text-gray-500 mt-1"></p>
+    </div>
+
     <div class="flex gap-3 justify-end pt-4">
       <a
         href={`/admin/elections/${electionSlug}/races/${raceSlug}/candidates`}
@@ -131,5 +147,44 @@ if (Astro.request.method === "POST") {
         Create Candidate
       </button>
     </div>
+
+    <script type="module">
+      const input = document.getElementById("profileImageInput");
+      const hidden = document.getElementById("profileImageId");
+      const status = document.getElementById("profileImageStatus");
+
+      input.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (!file.type.startsWith("image/")) {
+          status.textContent = "Only images allowed";
+          return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          status.textContent = "File must be <= 5 MB";
+          return;
+        }
+        status.textContent = "Uploading...";
+        const fd = new FormData();
+        fd.append("file", file);
+        try {
+          const res = await fetch("/api/admin/blobs/upload.json", {
+            method: "POST",
+            body: fd,
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            status.textContent = err.error || "Upload failed";
+            return;
+          }
+          const data = await res.json();
+          hidden.value = data.id;
+          status.textContent = "Uploaded";
+        } catch (err) {
+          console.error(err);
+          status.textContent = "Upload failed";
+        }
+      });
+    </script>
   </form>
 </AdminLayout>

@@ -9,6 +9,7 @@ export const createCandidate = defineAction({
     lastName: z.string().min(1, "Last name is required"),
     birthYear: z.number().optional(),
     biography: z.string().optional(),
+    profileImageId: z.string().optional(),
   }),
   handler: async (input, context) => {
     const url = new URL(
@@ -41,6 +42,7 @@ export const updateCandidate = defineAction({
     lastName: z.string().optional(),
     birthYear: z.number().optional(),
     biography: z.string().optional(),
+    profileImageId: z.string().optional(),
   }),
   handler: async (input, context) => {
     const { id, ...data } = input;

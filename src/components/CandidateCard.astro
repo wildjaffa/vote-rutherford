@@ -4,6 +4,7 @@ import type {
   Candidate,
   BlobStorageReference,
 } from "../generated/prisma/client";
+import { convertKeyToPublicUrl } from "../lib/blobStorage";
 
 interface Props {
   candidate: Candidate;
@@ -15,7 +16,7 @@ interface Props {
 const { candidate, raceSlug, electionSlug, profileImage } = Astro.props;
 
 const fullName = `${candidate.firstName} ${candidate.middleName ? candidate.middleName + " " : ""}${candidate.lastName}`;
-const imageUrl = profileImage ? `/${profileImage.fileLocation}` : null;
+const imageUrl = convertKeyToPublicUrl(profileImage?.fileLocation);
 ---
 
 <div
