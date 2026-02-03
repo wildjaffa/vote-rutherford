@@ -26,3 +26,6 @@ pnpm-debug.log*
 
 /src/generated/prisma
 *.db
+*.db-info
+*.db-shm
+*.db-wal
