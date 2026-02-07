@@ -4,7 +4,7 @@ import type { Config } from "@libsql/client";
 import { createAuditExtension } from "../../prisma/auditExtension";
 
 const connectionString =
-  process.env.DATABASE_URL || import.meta.env.DATABASE_URL;
+  process.env.DATABASE_URL || (import.meta.env && import.meta.env.DATABASE_URL);
 
 if (!connectionString) {
   throw new Error("DATABASE_URL is not defined");
@@ -12,13 +12,19 @@ if (!connectionString) {
 const config: Config = {
   url: connectionString,
 };
-config.authToken = process.env.AUTH_TOKEN || import.meta.env.AUTH_TOKEN;
-if (process.env.SYNC_INTERVAL || import.meta.env.SYNC_INTERVAL) {
+config.authToken =
+  process.env.AUTH_TOKEN || (import.meta.env && import.meta.env.AUTH_TOKEN);
+if (
+  process.env.SYNC_INTERVAL ||
+  (import.meta.env && import.meta.env.SYNC_INTERVAL)
+) {
   config.syncInterval = Number(
-    process.env.SYNC_INTERVAL || import.meta.env.SYNC_INTERVAL,
+    process.env.SYNC_INTERVAL ||
+      (import.meta.env && import.meta.env.SYNC_INTERVAL),
   );
 }
-config.syncUrl = process.env.SYNC_URL || import.meta.env.SYNC_URL;
+config.syncUrl =
+  process.env.SYNC_URL || (import.meta.env && import.meta.env.SYNC_URL);
 if (config.syncUrl && !config.syncInterval) {
   config.syncInterval = 60; // Default to 1 minute, sync interval is in seconds
 }
