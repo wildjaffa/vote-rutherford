@@ -309,3 +309,63 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+
+enum DistrictType {
+  US_HOUSE
+  STATE_SENATE
+  STATE_HOUSE
+  JUDICIAL
+  COUNTY
+  MUNICIPAL
+  SCHOOL
+  ROAD
+  PRECINCT
+}
+
+model District {
+  id        String       @id @default(uuid())
+  name      String
+  number    Int?
+  type      DistrictType
+  meta      Json?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @default(now())
+  deletedAt DateTime?
+
+  voterAddresses DistrictToVoterAddress[]
+  
+  @@map("districts")
+  @@unique([type, name, number])
+}
+
+model VoterAddress {
+  id                String  @id @default(uuid())
+  address           String
+  normalizedAddress String
+  city              String?
+  zip               String?
+  latitude          Float
+  longitude         Float
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  districts DistrictToVoterAddress[]
+
+  @@map("voter_addresses")
+  @@index([normalizedAddress])
+}
+
+model DistrictToVoterAddress {
+  id             String       @id @default(uuid())
+  district       District     @relation(fields: [districtId], references: [id])
+  districtId     String
+  voterAddress   VoterAddress @relation(fields: [voterAddressId], references: [id])
+  voterAddressId String
+
+  createdAt DateTime @default(now())
+
+  @@unique([districtId, voterAddressId])
+  @@map("districts_to_voter_addresses")
+}

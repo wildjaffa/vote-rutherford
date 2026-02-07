@@ -6,7 +6,10 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "import:addresses": "tsx voter-data-parsing/parseVoterData.ts",
+    "import:addresses:dry-run": "tsx voter-data-parsing/parseVoterData.ts --dry-run",
+    "import:addresses:verbose": "tsx voter-data-parsing/parseVoterData.ts --verbose"
   },
   "overrides": {
     "@libsql/client": "^0.17.0"
@@ -23,8 +26,10 @@
     "@prisma/adapter-libsql": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "@tailwindcss/vite": "^4.1.18",
+    "@turf/turf": "^7.3.3",
     "astro": "^5.17.1",
     "astro-icon": "^1.1.5",
+    "csv-parser": "^3.2.0",
     "dotenv": "^17.2.3",
     "formidable": "^3.5.4",
     "pg": "^8.17.2",

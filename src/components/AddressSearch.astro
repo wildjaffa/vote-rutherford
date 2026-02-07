@@ -1,0 +1,144 @@
+---
+
+---
+
+<div class="relative w-full max-w-md mx-auto">
+  <div class="relative">
+    <input
+      type="text"
+      id="address-search"
+      placeholder="Search for your address..."
+      class="w-full px-4 py-2 text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all duration-200"
+      autocomplete="off"
+    />
+    <div
+      id="loading-indicator"
+      class="absolute right-3 top-1/2 -translate-y-1/2 hidden"
+    >
+      <svg
+        class="animate-spin h-5 w-5 text-gray-500"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"></circle>
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        ></path>
+      </svg>
+    </div>
+  </div>
+
+  <ul
+    id="search-results"
+    class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden"
+  >
+  </ul>
+</div>
+
+<script>
+  import type { AddressSearchResult } from "../lib/addressLookup";
+
+  const input = document.getElementById("address-search") as HTMLInputElement;
+  const resultsList = document.getElementById(
+    "search-results",
+  ) as HTMLUListElement;
+  const loadingIndicator = document.getElementById(
+    "loading-indicator",
+  ) as HTMLDivElement;
+
+  let debounceTimer: ReturnType<typeof setTimeout>;
+
+  const handleSelect = (result: AddressSearchResult) => {
+    console.log("Selected address:", result);
+    input.value = result.address;
+    resultsList.classList.add("hidden");
+    resultsList.innerHTML = "";
+  };
+
+  const updateResults = (results: AddressSearchResult[]) => {
+    resultsList.innerHTML = "";
+
+    if (results.length === 0) {
+      const li = document.createElement("li");
+      li.className = "px-4 py-2 text-gray-500 italic";
+      li.textContent = "No addresses found";
+      resultsList.appendChild(li);
+    } else {
+      results.forEach((result) => {
+        const li = document.createElement("li");
+        li.className =
+          "px-4 py-2 hover:bg-gray-100 cursor-pointer text-gray-900 border-b border-gray-100 last:border-0";
+
+        const mainText = document.createElement("div");
+        mainText.className = "font-medium";
+        mainText.textContent = result.address;
+
+        const subText = document.createElement("div");
+        subText.className = "text-sm text-gray-500";
+        subText.textContent = [result.city, result.zip]
+          .filter(Boolean)
+          .join(", ");
+
+        li.appendChild(mainText);
+        li.appendChild(subText);
+
+        li.addEventListener("click", () => handleSelect(result));
+        resultsList.appendChild(li);
+      });
+    }
+
+    resultsList.classList.remove("hidden");
+  };
+
+  const performSearch = async (query: string) => {
+    if (!query.trim()) {
+      resultsList.classList.add("hidden");
+      return;
+    }
+
+    loadingIndicator.classList.remove("hidden");
+
+    try {
+      const response = await fetch(
+        `/api/addresses/lookup?q=${encodeURIComponent(query)}`,
+      );
+      if (!response.ok) throw new Error("Search failed");
+
+      const data: { results: AddressSearchResult[] } = await response.json();
+      updateResults(data.results);
+    } catch (error) {
+      console.error("Search error:", error);
+      // Optionally show error state in UI
+    } finally {
+      loadingIndicator.classList.add("hidden");
+    }
+  };
+
+  input?.addEventListener("input", (e) => {
+    const query = (e.target as HTMLInputElement).value;
+
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      performSearch(query);
+    }, 300); // 300ms debounce
+  });
+
+  // Close results when clicking outside
+  document.addEventListener("click", (e) => {
+    if (
+      !input.contains(e.target as Node) &&
+      !resultsList.contains(e.target as Node)
+    ) {
+      resultsList.classList.add("hidden");
+    }
+  });
+</script>
