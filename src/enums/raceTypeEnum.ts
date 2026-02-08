@@ -1,8 +1,8 @@
 const RaceType = {
-  city: 0,
-  county: 1,
-  state: 2,
-  federal: 3,
+  city: 1,
+  county: 2,
+  state: 3,
+  federal: 4,
 } as const;
 
 export type ExportSize = (typeof RaceType)[keyof typeof RaceType];
