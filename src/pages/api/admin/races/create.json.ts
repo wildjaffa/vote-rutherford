@@ -9,7 +9,8 @@ export const prerender = false;
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { name, description, electionId, raceTypeId, status } = body;
+    const { name, description, electionId, raceTypeId, status, districtId } =
+      body;
 
     // Validate required fields
     if (!name || !description || !electionId || !raceTypeId || !status) {
@@ -55,6 +56,7 @@ export const POST: APIRoute = async ({ request }) => {
           electionId,
           raceTypeId: parseInt(raceTypeId),
           status,
+          ...(districtId && { districtId }),
         },
       });
     });

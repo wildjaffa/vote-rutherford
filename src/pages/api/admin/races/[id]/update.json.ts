@@ -39,7 +39,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     }
 
     const body = await request.json();
-    const { name, description, raceTypeId, status } = body;
+    const { name, description, raceTypeId, status, districtId } = body;
 
     // Debug: inspect prisma instance before update
     try {
@@ -47,8 +47,9 @@ export const PUT: APIRoute = async ({ params, request }) => {
         "update.json.ts prisma keys",
         Object.keys(prisma).slice(0, 20),
       );
-      console.log("prisma.race exists?", typeof (prisma as any).race);
+      console.log("prisma.race exists?", typeof prisma.race);
     } catch (e) {
+      console.error("Error inspecting prisma instance:", e);
       /* ignore */
     }
 
@@ -58,6 +59,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
       try {
         console.log("about to call prisma.race.update for id", id);
       } catch (e) {
+        console.error("Error before prisma update:", e);
         /* ignore */
       }
 
@@ -68,6 +70,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
           ...(description && { description }),
           ...(raceTypeId && { raceTypeId: parseInt(raceTypeId) }),
           ...(status && { status }),
+          ...(districtId && { districtId }),
           updatedAt: new Date(),
         },
       });

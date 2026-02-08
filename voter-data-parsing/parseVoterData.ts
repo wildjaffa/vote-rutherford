@@ -10,6 +10,14 @@ import { normalizeAddress } from "../src/lib/utils/addressNormalizer";
 import prisma from "../src/lib/prisma";
 import { Prisma } from "../src/generated/prisma/client";
 
+// {"OBJECTID":"40546","ESN":"261","CITY":"MURFREESBORO","GlobalID":"{4D96048E-F2E2-4DD6-9054-4430D03D5335}","Shape.STArea()":"1,869,993,867.68","Shape.STLength()":"1,237,601.61"}
+interface MunicipalMeta {
+  OBJECTID: string;
+  ESN: string;
+  CITY: string;
+  GlobalID: string;
+}
+
 /**
  * Voter Address Parsing & Import Script
  */
@@ -67,6 +75,8 @@ interface CsvRow {
   Post_City: string;
   State: string;
   Zip_Code: string;
+  Building?: string;
+  Unit?: string;
   [key: string]: string;
 }
 
@@ -111,6 +121,55 @@ async function loadLayers(): Promise<LoadedLayer[]> {
   return layers;
 }
 
+function districtKey(type: DistrictType, name: string, number: number | null) {
+  return `${type}:${String(name).trim()}:${number ?? 0}`;
+}
+
+async function ensureDistricts(layers: LoadedLayer[]) {
+  const map = new Map<string, string>();
+
+  for (const layer of layers) {
+    console.log(`Ensuring districts for layer: ${layer.type}`);
+    for (const feature of layer.features) {
+      const info = extractDistrictInfo(feature.properties, layer.type);
+      const key = districtKey(layer.type, info.name, info.number);
+      if (map.has(key)) continue;
+
+      try {
+        console.log(`Upserting district: ${info.name} (${layer.type})`);
+        const district = await prisma.district.upsert({
+          where: {
+            type_name_number: {
+              type: layer.type,
+              name: info.name,
+              number: info.number ?? 0,
+            },
+          },
+          update: {
+            meta: feature.properties,
+          },
+          create: {
+            type: layer.type,
+            name: info.name,
+            number: info.number,
+            meta: feature.properties,
+          },
+        });
+
+        console.log(`  ✓ Upserted with ID: ${district.id}`);
+        map.set(key, district.id);
+      } catch (e) {
+        console.error(
+          `Failed to upsert district ${info.name} (${layer.type}):`,
+          e,
+        );
+      }
+    }
+  }
+
+  return map;
+}
+
 function extractDistrictInfo(
   props: DistrictProperties,
   type: DistrictType,
@@ -121,6 +180,10 @@ function extractDistrictInfo(
   if (type === DistrictType.PRECINCT) {
     name = props.Precinct || props.NAME || "Unknown Precinct";
     number = props.DISTRICT ? Number(props.DISTRICT) : null;
+  } else if (type === DistrictType.MUNICIPAL) {
+    const meta = props as unknown as MunicipalMeta;
+    name = meta.CITY || props.NAME || "Unknown Municipality";
+    number = meta.ESN ? Number(meta.ESN) : null;
   } else {
     name =
       props.NAME || props.DISTRICT
@@ -136,7 +199,10 @@ function extractDistrictInfo(
   return { name: String(name).trim(), number };
 }
 
-async function processAddresses(layers: LoadedLayer[]) {
+async function processAddresses(
+  layers: LoadedLayer[],
+  districtIdMap: Map<string, string>,
+) {
   const stream = createReadStream(CSV_FILE).pipe(
     csv(),
   ) as unknown as AsyncIterable<CsvRow>;
@@ -151,13 +217,21 @@ async function processAddresses(layers: LoadedLayer[]) {
 
     if (isNaN(lat) || isNaN(lon)) continue;
 
-    const addressRaw = [row.Add_Number, row.StNam_Full, row.Post_City]
+    const addressRaw = [
+      row.Add_Number,
+      row.StNam_Full,
+      row.Building,
+      row.Unit,
+      row.Post_City,
+    ]
       .filter(Boolean)
       .join(" ");
 
     const fullAddress = [
       row.Add_Number,
       row.StNam_Full,
+      row.Building,
+      row.Unit,
       row.Post_City,
       row.State,
       row.Zip_Code,
@@ -170,6 +244,7 @@ async function processAddresses(layers: LoadedLayer[]) {
     const districtConnects: Prisma.DistrictToVoterAddressCreateWithoutVoterAddressInput[] =
       [];
     const point = turf.point([lon, lat]);
+    const addedDistrictIds = new Set<string>();
 
     for (const layer of layers) {
       for (const feature of layer.features) {
@@ -188,26 +263,16 @@ async function processAddresses(layers: LoadedLayer[]) {
 
           if (turf.booleanPointInPolygon(point, poly)) {
             const info = extractDistrictInfo(feature.properties, layer.type);
-
-            districtConnects.push({
-              district: {
-                connectOrCreate: {
-                  where: {
-                    type_name_number: {
-                      type: layer.type,
-                      name: info.name,
-                      number: info.number ?? 0,
-                    },
-                  },
-                  create: {
-                    type: layer.type,
-                    name: info.name,
-                    number: info.number,
-                    meta: feature.properties,
-                  },
+            const key = districtKey(layer.type, info.name, info.number);
+            const id = districtIdMap.get(key);
+            if (id && !addedDistrictIds.has(id)) {
+              addedDistrictIds.add(id);
+              districtConnects.push({
+                district: {
+                  connect: { id },
                 },
-              },
-            });
+              });
+            }
             break;
           }
         } catch (e) {
@@ -272,12 +337,14 @@ async function main() {
     if (DRY_RUN) console.log("⚠️ DRY RUN MODE");
 
     const layers = await loadLayers();
-    if (layers.length === 0)
+    if (layers.length === 0) {
       console.warn(
         "No layers loaded. Ensure GeoJSON files are in voter-data-parsing/",
       );
+    }
 
-    await processAddresses(layers);
+    const districtIdMap = await ensureDistricts(layers);
+    await processAddresses(layers, districtIdMap);
 
     console.log("Done.");
   } catch (e) {

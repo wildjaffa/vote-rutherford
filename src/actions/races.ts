@@ -6,10 +6,11 @@ export const createRace = defineAction({
   input: z.object({
     electionId: z.string(),
     name: z.string().min(1, "Race name is required"),
-    raceType: z.number().min(0, "Race type is required"),
+    raceTypeId: z.number().min(0, "Race type is required"),
     description: z.string().optional(),
     status: z.string().min(1, "Status is required"),
     slug: z.string().min(1, "Slug is required"),
+    districtId: z.string().optional(),
   }),
   handler: async (input, context) => {
     const url = new URL("/api/admin/races/create.json", context.request.url);
@@ -40,6 +41,7 @@ export const updateRace = defineAction({
     description: z.string().optional(),
     status: z.string().optional(),
     slug: z.string().optional(),
+    districtId: z.string().optional(),
   }),
   handler: async (input, context) => {
     const { id, ...data } = input;

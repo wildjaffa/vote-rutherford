@@ -51,6 +51,8 @@ model Race {
   status      String
   raceType    RaceType  @relation(fields: [raceTypeId], references: [id])
   raceTypeId  Int
+  district    District? @relation(fields: [districtId], references: [id])
+  districtId  String?
   createdAt   DateTime  @default(now()) 
   updatedAt   DateTime  @default(now()) 
   deletedAt   DateTime? 
@@ -333,6 +335,7 @@ model District {
   deletedAt DateTime?
 
   voterAddresses DistrictToVoterAddress[]
+  races          Race[]
   
   @@map("districts")
   @@unique([type, name, number])
