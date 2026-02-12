@@ -10,6 +10,7 @@ interface Props {
   href?: string;
   target?: string;
   rel?: string;
+  id?: string;
 }
 
 const {
@@ -43,11 +44,22 @@ const buttonClass =
 
 {
   href ? (
-    <a href={href} target={target} rel={rel} class={buttonClass}>
+    <a
+      id={Astro.props.id}
+      href={href}
+      target={target}
+      rel={rel}
+      class={buttonClass}
+    >
       <slot />
     </a>
   ) : (
-    <button type={type} disabled={disabled} class={buttonClass}>
+    <button
+      id={Astro.props.id}
+      type={type}
+      disabled={disabled}
+      class={buttonClass}
+    >
       <slot />
     </button>
   )

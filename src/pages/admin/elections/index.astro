@@ -2,7 +2,6 @@
 import { Plus } from "@lucide/astro";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import prisma from "../../../lib/prisma";
-import type { Election } from "../../../generated/prisma/browser";
 
 export const prerender = false;
 
@@ -58,7 +57,7 @@ const elections = await prisma.election.findMany({
               </tr>
             </thead>
             <tbody>
-              {elections.map((election: Election) => (
+              {elections.map((election) => (
                 <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td class="px-4 py-3 text-sm font-medium text-gray-900">
                     {election.name}

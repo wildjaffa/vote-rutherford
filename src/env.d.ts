@@ -6,6 +6,7 @@ interface ImportMetaEnv {
   readonly R2_SECRET_ACCESS_KEY?: string;
   readonly R2_BUCKET?: string;
   readonly R2_PUBLIC_URL?: string;
+  readonly FIREBASE_SERVICE_ACCOUNT_64: string;
 }
 
 interface ImportMeta {
