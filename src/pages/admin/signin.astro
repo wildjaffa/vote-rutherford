@@ -1,0 +1,61 @@
+---
+import { getAuth } from "firebase-admin/auth";
+import Layout from "../../layouts/Layout.astro";
+import Button from "../../components/Button.astro";
+import { app } from "../../firebase/server";
+
+export const prerender = false;
+
+/* Check if the user is authenticated */
+const auth = getAuth(app);
+if (Astro.cookies.has("__session")) {
+  const sessionCookie = Astro.cookies.get("__session")!.value;
+  const decodedCookie = await auth.verifySessionCookie(sessionCookie);
+  if (decodedCookie) {
+    return Astro.redirect("/dashboard");
+  }
+}
+---
+
+<Layout title="Sign in">
+  <div class="flex flex-col items-center justify-center min-h-[50vh] space-y-8">
+    <h1>Sign in</h1>
+    <Button
+      class="max-w-50 cursor-pointer"
+      id="google-btn"
+      variant="primary"
+      size="md">Sign in with Email</Button
+    >
+  </div>
+</Layout>
+<script>
+  import {
+    getAuth,
+    GoogleAuthProvider,
+    inMemoryPersistence,
+    signInWithPopup,
+  } from "firebase/auth";
+  import { app } from "../../firebase/client";
+
+  const auth = getAuth(app);
+  // This will prevent the browser from storing session data
+  auth.setPersistence(inMemoryPersistence);
+
+  const googleSignin = document.querySelector(
+    "#google-btn",
+  ) as HTMLButtonElement;
+  googleSignin.addEventListener("click", async () => {
+    const provider = new GoogleAuthProvider();
+    const userCredential = await signInWithPopup(auth, provider);
+    const idToken = await userCredential.user.getIdToken();
+    const res = await fetch("/api/auth/signin", {
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
+    });
+
+    if (res.redirected) {
+      window.location.assign(res.url);
+    }
+  });
+</script>

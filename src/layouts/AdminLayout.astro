@@ -1,6 +1,7 @@
 ---
-import { Home, Vote } from "@lucide/astro";
+import { House, Vote, LogOut } from "@lucide/astro";
 import Layout from "./Layout.astro";
+import Button from "../components/Button.astro";
 
 interface Props {
   title: string;
@@ -16,13 +17,26 @@ const { title, breadcrumbs = [] } = Astro.props;
     <div class="container mx-auto px-4 py-4">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold">Admin Dashboard</h1>
-        <a
-          href="/"
-          class="inline-flex items-center px-4 py-2 bg-white text-secondary rounded-lg hover:bg-gray-100 transition-colors"
-        >
-          <Home size="16" stroke-width={2} class="mr-2" />
-          Back to Site
-        </a>
+        <div>
+          <Button
+            class="inline-flex items-center"
+            href="/"
+            variant="secondary"
+            size="md"
+          >
+            <House size="16" stroke-width={2} class="mr-2" />
+            Back to Site
+          </Button>
+          <Button
+            class="inline-flex items-center ml-4"
+            href="/api/auth/signout"
+            variant="secondary"
+            size="md"
+          >
+            <LogOut size="16" stroke-width={2} class="mr-2" />
+            Sign Out
+          </Button>
+        </div>
       </div>
     </div>
   </div>
