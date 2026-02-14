@@ -1,7 +1,48 @@
 @import "tailwindcss";
+@import "@fontsource-variable/montserrat";
 
 @theme {
-  --color-primary: #002D65;
+  --color-primary: #002d65;
   --color-secondary: #318171;
   --color-accent: #e2a336;
+}
+
+/* h1 {
+  font-family: "Montserrat", var(--font-sans);
+} */
+
+/* Toast Animations */
+.toast {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.toast-enter {
+  animation: toastSlideIn 0.3s ease-out forwards;
+}
+
+.toast-exit {
+  animation: toastSlideOut 0.3s ease-in forwards;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
 }

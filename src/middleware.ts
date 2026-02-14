@@ -5,7 +5,10 @@ import { getAuth } from "firebase-admin/auth";
 const authentication = defineMiddleware(async (context, next) => {
   const pathName = context.url.pathname;
   // Check if the request is for an admin page
-  if (!pathName.startsWith("/admin") || pathName === "/admin/signin") {
+  if (
+    (!pathName.startsWith("/admin") && !pathName.startsWith("/api/admin/")) ||
+    pathName === "/admin/signin"
+  ) {
     return next();
   }
 
