@@ -36,6 +36,7 @@
     "firebase-admin": "^13.6.1",
     "formidable": "^3.5.4",
     "pg": "^8.17.2",
+    "simple-icons-astro": "^16.1.0",
     "tailwindcss": "^4.1.18"
   },
   "devDependencies": {

@@ -1,15 +1,20 @@
 @import "tailwindcss";
 @import "@fontsource-variable/montserrat";
+@import "@fontsource/sorts-mill-goudy";
 
 @theme {
   --color-primary: #002d65;
   --color-secondary: #318171;
   --color-accent: #e2a336;
+
+  --font-sans: "Montserrat Variable", sans-serif;
+
+  --default-font-family: var(--font-sans);
 }
 
-/* h1 {
-  font-family: "Montserrat", var(--font-sans);
-} */
+.sorts-mill-goudy {
+  font-family: "Sorts Mill Goudy", serif;
+}
 
 /* Toast Animations */
 .toast {

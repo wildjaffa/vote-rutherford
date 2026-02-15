@@ -1,6 +1,4 @@
-import { PrismaClient } from "../src/generated/prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "../src/lib/prisma";
 
 async function verifyBallotLogic() {
   console.log("🧪 Starting My Ballot Logic Verification...\n");
