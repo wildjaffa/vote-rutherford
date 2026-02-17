@@ -6,6 +6,8 @@ import FormTextarea from "../../../../../../../../components/forms/FormTextarea.
 import AdminLayout from "../../../../../../../../layouts/AdminLayout.astro";
 import prisma from "../../../../../../../../lib/prisma";
 import { convertKeyToPublicUrl } from "../../../../../../../../lib/blobStorage";
+import { Facebook, Instagram, Threads, X, Youtube } from "simple-icons-astro";
+import { Linkedin, Globe } from "@lucide/astro";
 
 export const prerender = false;
 
@@ -23,6 +25,7 @@ const candidate = await prisma.candidate.findFirst({
   include: {
     race: { include: { election: true } },
     profileImage: true,
+    externalLinks: { include: { externalLinkType: true } },
   },
 });
 
@@ -50,19 +53,22 @@ let success: string | null = null;
 if (Astro.request.method === "POST") {
   try {
     const formData = await Astro.request.formData();
-    const firstName = formData.get("firstName") as string;
-    const lastName = formData.get("lastName") as string;
-    const birthYear = formData.get("birthYear") as string;
-    const biography = formData.get("biography") as string;
-    const profileImageId = formData.get("profileImageId") as string;
 
     const result = await Astro.callAction(actions.updateCandidate, {
       id: candidate.id,
-      firstName: firstName || undefined,
-      lastName: lastName || undefined,
-      birthYear: birthYear ? parseInt(birthYear, 10) : undefined,
-      biography: biography || undefined,
-      profileImageId: profileImageId || undefined,
+      firstName: formData.get("firstName") as string,
+      lastName: formData.get("lastName") as string,
+      birthYear: (formData.get("birthYear") as string) || undefined, // Schema handles string -> number coercion
+      biography: (formData.get("biography") as string) || undefined,
+      profileImageId: (formData.get("profileImageId") as string) || undefined,
+      slug: candidateSlug,
+      facebookUrl: (formData.get("facebookUrl") as string) || undefined,
+      xUrl: (formData.get("xUrl") as string) || undefined,
+      instagramUrl: (formData.get("instagramUrl") as string) || undefined,
+      linkedInUrl: (formData.get("linkedInUrl") as string) || undefined,
+      youtubeUrl: (formData.get("youtubeUrl") as string) || undefined,
+      threadsUrl: (formData.get("threadsUrl") as string) || undefined,
+      websiteUrl: (formData.get("websiteUrl") as string) || undefined,
     });
 
     if (result.error) {
@@ -112,7 +118,7 @@ const profileImageUrl = convertKeyToPublicUrl(
   <div class="space-y-6">
     {
       error && (
-        <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div class="rounded-lg border border-red-200 bg-red-50 p-4">
           <p class="text-sm font-medium text-red-800">{error}</p>
         </div>
       )
@@ -120,7 +126,7 @@ const profileImageUrl = convertKeyToPublicUrl(
 
     {
       success && (
-        <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+        <div class="rounded-lg border border-green-200 bg-green-50 p-4">
           <p class="text-sm font-medium text-green-800">{success}</p>
         </div>
       )
@@ -160,6 +166,76 @@ const profileImageUrl = convertKeyToPublicUrl(
         placeholder="Enter candidate biography..."
       />
 
+      <FormInput
+        label="Facebook URL"
+        name="facebookUrl"
+        type="url"
+        value={candidate.externalLinks.find(
+          (link) => link.externalLinkType.value === "Facebook",
+        )?.hyperlink || ""}
+        placeholder="Facebook URL"><Facebook slot="start" /></FormInput
+      >
+
+      <FormInput
+        label="X URL"
+        name="xUrl"
+        type="url"
+        value={candidate.externalLinks.find(
+          (link) => link.externalLinkType.value === "X",
+        )?.hyperlink || ""}
+        placeholder="X URL"><X slot="start" /></FormInput
+      >
+
+      <FormInput
+        label="Instagram URL"
+        name="instagramUrl"
+        type="url"
+        value={candidate.externalLinks.find(
+          (link) => link.externalLinkType.value === "Instagram",
+        )?.hyperlink || ""}
+        placeholder="Instagram URL"><Instagram slot="start" /></FormInput
+      >
+
+      <FormInput
+        label="LinkedIn URL"
+        name="linkedInUrl"
+        type="url"
+        value={candidate.externalLinks.find(
+          (link) => link.externalLinkType.value === "LinkedIn",
+        )?.hyperlink || ""}
+        placeholder="LinkedIn URL"><Linkedin slot="start" /></FormInput
+      >
+
+      <FormInput
+        label="YouTube URL"
+        name="youtubeUrl"
+        type="url"
+        value={candidate.externalLinks.find(
+          (link) => link.externalLinkType.value === "YouTube",
+        )?.hyperlink || ""}
+        placeholder="YouTube URL"><Youtube slot="start" /></FormInput
+      >
+
+      <FormInput
+        label="Threads URL"
+        name="threadsUrl"
+        type="url"
+        value={candidate.externalLinks.find(
+          (link) => link.externalLinkType.value === "Threads",
+        )?.hyperlink || ""}
+        placeholder="Threads URL"><Threads slot="start" /></FormInput
+      >
+
+      <FormInput
+        label="Website URL"
+        name="websiteUrl"
+        type="url"
+        value={candidate.externalLinks.find(
+          (link) => link.externalLinkType.value === "Website",
+        )?.hyperlink || ""}
+        placeholder="Website URL"><Globe slot="start" /></FormInput
+      >
+
       <div>
         <label class="block text-sm font-medium text-gray-700"
           >Profile Image</label
@@ -169,7 +245,7 @@ const profileImageUrl = convertKeyToPublicUrl(
             <img
               src={profileImageUrl}
               alt="Profile"
-              class="w-24 h-24 object-cover rounded-md mb-2"
+              class="mb-2 h-24 w-24 rounded-md object-cover"
             />
           )
         }
@@ -177,7 +253,7 @@ const profileImageUrl = convertKeyToPublicUrl(
           type="file"
           accept="image/*"
           id="profileImageInput"
-          class="mt-1 block bg-primary border border-gray-300 rounded-md"
+          class="bg-primary mt-1 block rounded-md border border-gray-300"
         />
         <input
           type="hidden"
@@ -185,19 +261,19 @@ const profileImageUrl = convertKeyToPublicUrl(
           id="profileImageId"
           value={candidate.profileImageId || ""}
         />
-        <p id="profileImageStatus" class="text-xs text-gray-500 mt-1"></p>
+        <p id="profileImageStatus" class="mt-1 text-xs text-gray-500"></p>
       </div>
 
-      <div class="flex gap-3 justify-end pt-4 border-t border-gray-200">
+      <div class="flex justify-end gap-3 border-t border-gray-200 pt-4">
         <a
           href={`/admin/elections/${electionSlug}/races/${raceSlug}/candidates`}
-          class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
         >
           Cancel
         </a>
         <button
           type="submit"
-          class="inline-flex items-center px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors focus:ring-2 focus:ring-secondary focus:ring-offset-2"
+          class="bg-secondary hover:bg-secondary/90 focus:ring-secondary inline-flex items-center rounded-lg px-4 py-2 text-white transition-colors focus:ring-2 focus:ring-offset-2"
         >
           Save Changes
         </button>
@@ -245,9 +321,9 @@ const profileImageUrl = convertKeyToPublicUrl(
 
     <!-- Danger Zone -->
     <div class="border-t border-gray-200 pt-6">
-      <h3 class="text-lg font-semibold text-red-900 mb-4">Danger Zone</h3>
-      <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p class="text-sm text-red-800 mb-4">
+      <h3 class="mb-4 text-lg font-semibold text-red-900">Danger Zone</h3>
+      <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+        <p class="mb-4 text-sm text-red-800">
           Deleting this candidate will archive them and hide them from public
           view.
         </p>

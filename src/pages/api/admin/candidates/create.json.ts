@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import prisma, { withUserContext } from "../../../../lib/prisma";
 import { canManageRace } from "../../../../lib/permissions";
+import { UpsertCandidate } from "../../../../lib/models/upsertCandidate";
 
 const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
 
@@ -9,6 +10,23 @@ export const prerender = false;
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
+
+    const validator = new UpsertCandidate();
+    const validation = validator.validate(body);
+
+    if (!validation.success || !validation.data) {
+      return new Response(
+        JSON.stringify({
+          error: "Validation failed",
+          details: validation.errors,
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const {
       firstName,
       middleName,
@@ -18,13 +36,13 @@ export const POST: APIRoute = async ({ request }) => {
       biography,
       biographyRedacted,
       profileImageId,
-    } = body;
+    } = validation.data;
 
-    // Validate required fields
-    if (!firstName || !lastName || !raceId) {
+    // Validate required fields explicitly if needed, though schema handles most
+    if (!raceId) {
       return new Response(
         JSON.stringify({
-          error: "Missing required fields: firstName, lastName, raceId",
+          error: "Missing required fields: raceId",
         }),
         {
           status: 400,
@@ -72,8 +90,8 @@ export const POST: APIRoute = async ({ request }) => {
           middleName: middleName || null,
           lastName,
           raceId,
-          birthYear: birthYear ? parseInt(birthYear) : null,
-          biography: biography || null,
+          birthYear: birthYear || null,
+          biography: biography || null, // null is valid
           biographyRedacted: biographyRedacted || null,
           ...(profileImageId && { profileImageId }),
         },

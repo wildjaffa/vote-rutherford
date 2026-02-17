@@ -4,6 +4,8 @@ import FormTextarea from "../../../../../../../components/forms/FormTextarea.ast
 import AdminLayout from "../../../../../../../layouts/AdminLayout.astro";
 import prisma from "../../../../../../../lib/prisma";
 import { actions } from "astro:actions";
+import { Facebook, Instagram, Threads, X, Youtube } from "simple-icons-astro";
+import { Linkedin, Globe } from "@lucide/astro";
 
 export const prerender = false;
 
@@ -36,19 +38,21 @@ let error: string | null = null;
 if (Astro.request.method === "POST") {
   try {
     const formData = await Astro.request.formData();
-    const firstName = formData.get("firstName") as string;
-    const lastName = formData.get("lastName") as string;
-    const birthYear = formData.get("birthYear") as string;
-    const biography = formData.get("biography") as string;
-    const profileImageId = formData.get("profileImageId") as string;
 
     const result = await Astro.callAction(actions.createCandidate, {
-      raceId: race.id,
-      firstName: firstName,
-      lastName: lastName,
-      birthYear: birthYear ? parseInt(birthYear, 10) : undefined,
-      biography: biography || undefined,
-      profileImageId: profileImageId || undefined,
+      firstName: formData.get("firstName") as string,
+      lastName: formData.get("lastName") as string,
+      birthYear: (formData.get("birthYear") as string) || undefined, // Schema handles string -> number coercion
+      biography: (formData.get("biography") as string) || undefined,
+      profileImageId: (formData.get("profileImageId") as string) || undefined,
+      slug: formData.get("slug") as string,
+      facebookUrl: (formData.get("facebookUrl") as string) || undefined,
+      xUrl: (formData.get("xUrl") as string) || undefined,
+      instagramUrl: (formData.get("instagramUrl") as string) || undefined,
+      linkedInUrl: (formData.get("linkedInUrl") as string) || undefined,
+      youtubeUrl: (formData.get("youtubeUrl") as string) || undefined,
+      threadsUrl: (formData.get("threadsUrl") as string) || undefined,
+      websiteUrl: (formData.get("websiteUrl") as string) || undefined,
     });
 
     if (result.data) {
@@ -82,7 +86,7 @@ if (Astro.request.method === "POST") {
   <form method="POST" class="max-w-2xl space-y-6">
     {
       error && (
-        <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div class="rounded-lg border border-red-200 bg-red-50 p-4">
           <p class="text-sm font-medium text-red-800">{error}</p>
         </div>
       )
@@ -106,6 +110,14 @@ if (Astro.request.method === "POST") {
     </div>
 
     <FormInput
+      label="Slug"
+      name="slug"
+      type="text"
+      placeholder="e.g., mayor"
+      required
+    />
+
+    <FormInput
       label="Birth Year"
       name="birthYear"
       type="number"
@@ -119,6 +131,52 @@ if (Astro.request.method === "POST") {
       placeholder="Enter candidate biography..."
     />
 
+    <FormInput
+      label="Facebook URL"
+      name="facebookUrl"
+      type="url"
+      placeholder="Facebook URL"><Facebook slot="start" /></FormInput
+    >
+
+    <FormInput label="X URL" name="xUrl" type="url" placeholder="X URL"
+      ><X slot="start" /></FormInput
+    >
+
+    <FormInput
+      label="Instagram URL"
+      name="instagramUrl"
+      type="url"
+      placeholder="Instagram URL"><Instagram slot="start" /></FormInput
+    >
+
+    <FormInput
+      label="LinkedIn URL"
+      name="linkedInUrl"
+      type="url"
+      placeholder="LinkedIn URL"><Linkedin slot="start" /></FormInput
+    >
+
+    <FormInput
+      label="YouTube URL"
+      name="youtubeUrl"
+      type="url"
+      placeholder="YouTube URL"><Youtube slot="start" /></FormInput
+    >
+
+    <FormInput
+      label="Threads URL"
+      name="threadsUrl"
+      type="url"
+      placeholder="Threads URL"><Threads slot="start" /></FormInput
+    >
+
+    <FormInput
+      label="Website URL"
+      name="websiteUrl"
+      type="url"
+      placeholder="Website URL"><Globe slot="start" /></FormInput
+    >
+
     <div>
       <label class="block text-sm font-medium text-gray-700"
         >Profile Image</label
@@ -130,19 +188,19 @@ if (Astro.request.method === "POST") {
         class="mt-1 block w-full"
       />
       <input type="hidden" name="profileImageId" id="profileImageId" />
-      <p id="profileImageStatus" class="text-xs text-gray-500 mt-1"></p>
+      <p id="profileImageStatus" class="mt-1 text-xs text-gray-500"></p>
     </div>
 
-    <div class="flex gap-3 justify-end pt-4">
+    <div class="flex justify-end gap-3 pt-4">
       <a
         href={`/admin/elections/${electionSlug}/races/${raceSlug}/candidates`}
-        class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
       >
         Cancel
       </a>
       <button
         type="submit"
-        class="inline-flex items-center px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors focus:ring-2 focus:ring-secondary focus:ring-offset-2"
+        class="bg-secondary hover:bg-secondary/90 focus:ring-secondary inline-flex items-center rounded-lg px-4 py-2 text-white transition-colors focus:ring-2 focus:ring-offset-2"
       >
         Create Candidate
       </button>
@@ -188,3 +246,28 @@ if (Astro.request.method === "POST") {
     </script>
   </form>
 </AdminLayout>
+
+<script>
+  import { generateSlug } from "../../../../../../../lib/slugUtils";
+
+  const firstNameInput = document.querySelector(
+    'input[name="firstName"]',
+  ) as HTMLInputElement;
+  const lastNameInput = document.querySelector(
+    'input[name="lastName"]',
+  ) as HTMLInputElement;
+  const slugInput = document.querySelector(
+    'input[name="slug"]',
+  ) as HTMLInputElement;
+
+  if (firstNameInput && lastNameInput && slugInput) {
+    firstNameInput.addEventListener("input", (e) => {
+      const value = (e.target as HTMLInputElement).value;
+      slugInput.value = generateSlug(value, lastNameInput.value);
+    });
+    lastNameInput.addEventListener("input", (e) => {
+      const value = (e.target as HTMLInputElement).value;
+      slugInput.value = generateSlug(firstNameInput.value, value);
+    });
+  }
+</script>
