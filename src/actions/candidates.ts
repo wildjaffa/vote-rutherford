@@ -1,16 +1,10 @@
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
+import { upsertCandidateSchema } from "../lib/models/upsertCandidate";
 
 export const createCandidate = defineAction({
   accept: "json",
-  input: z.object({
-    raceId: z.string(),
-    firstName: z.string().min(1, "First name is required"),
-    lastName: z.string().min(1, "Last name is required"),
-    birthYear: z.number().optional(),
-    biography: z.string().optional(),
-    profileImageId: z.string().optional(),
-  }),
+  input: upsertCandidateSchema,
   handler: async (input, context) => {
     const url = new URL(
       "/api/admin/candidates/create.json",
@@ -36,14 +30,7 @@ export const createCandidate = defineAction({
 
 export const updateCandidate = defineAction({
   accept: "json",
-  input: z.object({
-    id: z.string(),
-    firstName: z.string().optional(),
-    lastName: z.string().optional(),
-    birthYear: z.number().optional(),
-    biography: z.string().optional(),
-    profileImageId: z.string().optional(),
-  }),
+  input: upsertCandidateSchema.extend({ id: z.string() }),
   handler: async (input, context) => {
     const { id, ...data } = input;
     const url = new URL(

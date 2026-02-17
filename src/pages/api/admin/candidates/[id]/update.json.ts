@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import prisma, { withUserContext } from "../../../../../lib/prisma";
 import { canManageCandidate } from "../../../../../lib/permissions";
+import { UpsertCandidate } from "../../../../../lib/models/upsertCandidate";
 
 const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
 
@@ -39,6 +40,23 @@ export const PUT: APIRoute = async ({ params, request }) => {
     }
 
     const body = await request.json();
+
+    const validator = new UpsertCandidate();
+    const validation = validator.validate(body);
+
+    if (!validation.success || !validation.data) {
+      return new Response(
+        JSON.stringify({
+          error: "Validation failed",
+          details: validation.errors,
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const {
       firstName,
       middleName,
@@ -47,7 +65,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
       biography,
       biographyRedacted,
       profileImageId,
-    } = body;
+    } = validation.data;
 
     // Update candidate with user context for audit logging
     const candidate = await withUserContext(SYSTEM_USER_ID, async () => {
@@ -90,9 +108,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
             ...(firstName && { firstName }),
             ...(middleName !== undefined && { middleName: middleName || null }),
             ...(lastName && { lastName }),
-            ...(birthYear !== undefined && {
-              birthYear: birthYear ? parseInt(birthYear) : null,
-            }),
+            ...(birthYear !== undefined && { birthYear: birthYear || null }),
             ...(biography !== undefined && { biography: biography || null }),
             ...(biographyRedacted !== undefined && {
               biographyRedacted: biographyRedacted || null,
@@ -110,14 +126,11 @@ export const PUT: APIRoute = async ({ params, request }) => {
           ...(firstName && { firstName }),
           ...(middleName !== undefined && { middleName: middleName || null }),
           ...(lastName && { lastName }),
-          ...(birthYear !== undefined && {
-            birthYear: birthYear ? parseInt(birthYear) : null,
-          }),
+          ...(birthYear !== undefined && { birthYear: birthYear || null }),
           ...(biography !== undefined && { biography: biography || null }),
           ...(biographyRedacted !== undefined && {
             biographyRedacted: biographyRedacted || null,
           }),
-          profileImageId,
           updatedAt: new Date(),
         },
       });
