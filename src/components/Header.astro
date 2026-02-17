@@ -3,17 +3,17 @@ import { Image } from "astro:assets";
 import Logo from "../assets/Logo.png";
 import Button from "./Button.astro";
 import "../styles/global.css";
-import { Menu, X } from "@lucide/astro";
+import { Menu, X } from "../lib/icons";
 ---
 
 <header
-  class="relative flex items-center justify-between p-1 bg-secondary shadow-md w-full"
+  class="bg-secondary relative flex w-full items-center justify-between p-1 shadow-md"
 >
   <a href="/"
     ><Image
       src={Logo}
       alt="Vote Rutherford Logo"
-      class="sm:w-40 w-30"
+      class="w-30 sm:w-40"
       fetchpriority={"low"}
       loading={"eager"}
     /></a
@@ -23,15 +23,15 @@ import { Menu, X } from "@lucide/astro";
   <nav class="hidden sm:block">
     <ul class="flex space-x-4">
       <li class="pr-2">
-        <a href="/" class="text-white hover:text-accent">Find Your Ballot</a>
+        <a href="/" class="hover:text-accent text-white">Find Your Ballot</a>
       </li>
       <li class="pr-2">
-        <a href="/elections" class="text-white hover:text-accent"
+        <a href="/elections" class="hover:text-accent text-white"
           >Upcoming Races</a
         >
       </li>
       <li class="pr-2">
-        <a href="/about" class="text-white hover:text-accent">About</a>
+        <a href="/about" class="hover:text-accent text-white">About</a>
       </li>
       <li class="pr-4">
         <Button
@@ -47,29 +47,29 @@ import { Menu, X } from "@lucide/astro";
   <!-- Mobile Hamburger Button -->
   <button
     id="menu-toggle"
-    class="sm:hidden flex items-center justify-center w-8 h-8"
+    class="flex h-8 w-8 items-center justify-center sm:hidden"
     aria-label="Toggle menu"
   >
-    <Menu class="w-6 h-6 text-white menu-icon" id="menu-icon" />
-    <X class="w-6 h-6 text-white x-icon hidden" id="x-icon" />
+    <Menu class="menu-icon h-6 w-6 text-white" id="menu-icon" />
+    <X class="x-icon hidden h-6 w-6 text-white" id="x-icon" />
   </button>
 
   <!-- Mobile Navigation -->
   <nav
     id="mobile-menu"
-    class="hidden absolute top-full left-0 right-0 bg-secondary shadow-md sm:hidden"
+    class="bg-secondary absolute top-full right-0 left-0 hidden shadow-md sm:hidden"
   >
     <div class="border-b border-white/20"></div>
     <ul
-      class="flex flex-col space-y-4 p-4 transition-opacity duration-300 opacity-0"
+      class="flex flex-col space-y-4 p-4 opacity-0 transition-opacity duration-300"
       id="mobile-menu-list"
     >
-      <li><a href="/" class="text-white hover:text-accent block">Home</a></li>
+      <li><a href="/" class="hover:text-accent block text-white">Home</a></li>
       <li>
-        <a href="/about" class="text-white hover:text-accent block">About</a>
+        <a href="/about" class="hover:text-accent block text-white">About</a>
       </li>
       <li>
-        <a href="/contact" class="text-white hover:text-accent block">Contact</a
+        <a href="/contact" class="hover:text-accent block text-white">Contact</a
         >
       </li>
       <li>

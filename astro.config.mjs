@@ -1,8 +1,8 @@
 // @ts-check
 import { defineConfig } from "astro/config";
 import tailwindcss from "@tailwindcss/vite";
-import icon from "astro-icon";
 import node from "@astrojs/node";
+import EntryShakingPlugin from "vite-plugin-entry-shaking";
 
 // https://astro.build/config
 export default defineConfig({
@@ -19,15 +19,14 @@ export default defineConfig({
     port: 4321,
   },
 
-  integrations: [
-    icon({
-      include: {
-        lucide: ["*"],
-      },
-    }),
-  ],
+  integrations: [],
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [
+      tailwindcss(),
+      EntryShakingPlugin({
+        targets: ["@lucide/astro", "simple-icons-astro"],
+      }),
+    ],
     server: {
       watch: {
         ignored: [
