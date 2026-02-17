@@ -1,14 +1,14 @@
 ---
 import "../styles/global.css";
-import {ExternalLink} from "@lucide/astro";
+import { ExternalLink } from "../lib/icons";
 ---
 
-<footer class="bg-secondary text-white mt-12 shadow-md">
-  <div class="max-w-6xl mx-auto px-4 py-8">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<footer class="bg-secondary mt-12 text-white shadow-md">
+  <div class="mx-auto max-w-6xl px-4 py-8">
+    <div class="grid grid-cols-1 gap-8 md:grid-cols-3">
       <!-- About Section -->
       <div>
-        <h3 class="text-lg font-bold text-accent mb-4">
+        <h3 class="text-accent mb-4 text-lg font-bold">
           About Vote Rutherford
         </h3>
         <p class="text-sm text-gray-200">
@@ -19,7 +19,7 @@ import {ExternalLink} from "@lucide/astro";
 
       <!-- Quick Links -->
       <div>
-        <h3 class="text-lg font-bold text-accent mb-4">Quick Links</h3>
+        <h3 class="text-accent mb-4 text-lg font-bold">Quick Links</h3>
         <ul class="space-y-2 text-sm">
           <li>
             <a href="/" class="hover:text-accent transition-colors">Home</a>
@@ -40,7 +40,7 @@ import {ExternalLink} from "@lucide/astro";
 
       <!-- Resources -->
       <div>
-        <h3 class="text-lg font-bold text-accent mb-4">Resources</h3>
+        <h3 class="text-accent mb-4 text-lg font-bold">Resources</h3>
         <ul class="space-y-2 text-sm">
           <li>
             <a
@@ -48,7 +48,10 @@ import {ExternalLink} from "@lucide/astro";
               target="_blank"
               rel="noopener noreferrer"
               class="hover:text-accent transition-colors"
-              >Rutherford County Site<ExternalLink class="ml-1 inline align-text-top" size="13" /></a
+              >Rutherford County Site<ExternalLink
+                class="ml-1 inline align-text-top"
+                size="13"
+              /></a
             >
           </li>
           <li>
@@ -57,7 +60,10 @@ import {ExternalLink} from "@lucide/astro";
               target="_blank"
               rel="noopener noreferrer"
               class="hover:text-accent transition-colors"
-              >Register to Vote<ExternalLink class="ml-1 inline align-text-top" size="13" />
+              >Register to Vote<ExternalLink
+                class="ml-1 inline align-text-top"
+                size="13"
+              />
             </a>
           </li>
           <li>
@@ -66,7 +72,10 @@ import {ExternalLink} from "@lucide/astro";
               target="_blank"
               rel="noopener noreferrer"
               class="hover:text-accent transition-colors"
-              >Tennessee Voter Information<ExternalLink class="ml-1 inline align-text-top" size="13" />
+              >Tennessee Voter Information<ExternalLink
+                class="ml-1 inline align-text-top"
+                size="13"
+              />
             </a>
           </li>
         </ul>
@@ -75,7 +84,7 @@ import {ExternalLink} from "@lucide/astro";
 
     <!-- Bottom Section -->
     <div
-      class="border-t border-white/20 mt-8 pt-8 text-center text-sm text-gray-300"
+      class="mt-8 border-t border-white/20 pt-8 text-center text-sm text-gray-300"
     >
       <p>
         &copy; {new Date().getFullYear()} Vote Rutherford. All rights reserved.
