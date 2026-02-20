@@ -1,9 +1,8 @@
 ---
 import Layout from "../../../../layouts/Layout.astro";
-// import { convertKeyToPublicUrl } from "../../../../lib/blobStorage";
 import prisma from "../../../../lib/prisma";
-import { User, Facebook, Threads } from "../../../../lib/icons";
-import Image from "astro/components/Image.astro";
+import CandidateProfilePicture from "../../../../components/CandidateProfilePicture.astro";
+import { linkTypeToIcon } from "../../../../lib/icons";
 
 export const prerender = false;
 
@@ -29,9 +28,13 @@ const candidateData = await prisma.candidate.findFirst({
     race: {
       include: {
         election: true,
+        candidates: { include: { profileImage: true } },
       },
     },
-    externalLinks: { include: { externalLinkType: true } },
+    externalLinks: {
+      include: { externalLinkType: true },
+      orderBy: { externalLinkType: { value: "asc" } },
+    },
     policyResponses: {
       include: {
         policyQuestion: true,
@@ -45,11 +48,11 @@ if (!candidateData) {
   return Astro.redirect("/404");
 }
 
+const otherCandidates = candidateData.race.candidates.filter(
+  (c) => c.id !== candidateData.id,
+);
+
 const fullName = `${candidateData.firstName} ${candidateData.middleName ? candidateData.middleName + " " : ""}${candidateData.lastName}`;
-const imageUrl = null; // "https://placehold.net/2-800x600.png";
-// const imageUrl = convertKeyToPublicUrl(
-//   candidateData.profileImage?.fileLocation,
-// );
 ---
 
 <Layout title={`${fullName} | ${candidateData.race.election.name}`}>
@@ -64,33 +67,34 @@ const imageUrl = null; // "https://placehold.net/2-800x600.png";
           <div
             class="border-primary z-10 h-23 w-23 shrink-0 overflow-hidden rounded-full border-8 bg-white md:h-30 md:w-30"
           >
-            {
-              imageUrl ? (
-                <Image src={imageUrl} alt={fullName} loading={"eager"} />
-              ) : (
-                <User class="h-full w-full" />
-              )
-            }
+            <CandidateProfilePicture
+              candidate={candidateData}
+              profileImage={candidateData.profileImage}
+            />
           </div>
           <div
             class="bg-primary border-accent -ml-18 flex h-18 w-[90%] flex-col justify-center rounded-2xl border-6 border-l-0 px-4 font-bold text-white md:h-20 md:px-6"
           >
             <div class="ml-16">
               <h2 class="text-2xl md:text-3xl">{fullName}</h2>
-              <p class="text-md md:text-lg">Independent</p>
+              <p class="text-md md:text-lg">{candidateData.partyAffiliation}</p>
             </div>
           </div>
         </div>
-        <h2
-          class="w-full content-end justify-end text-end text-xl font-semibold md:w-[90%]"
+        {
+          candidateData.policyResponses.map(response => (
+            <h2
+          class="w-full content-end justify-end text-end text-xl font-semibold md:w-[90%] pt-4"
         >
-          Tell us about your campaign.
+          {response.policyQuestion.questionText}
         </h2>
         <div class="bg-primary h-1 w-full md:w-[90%]"></div>
         <p class="mt-4 w-full text-gray-700">
-          Share your background, qualifications, and vision for the community.
-          Voters want to know why you're running and what you stand for.
+          {response.response}
         </p>
+          ))
+        }
+       
       </div>
       <div
         class="bg-primary inset-x-auto order-last col-span-12 rounded-4xl py-4 md:order-0 md:col-span-4"
@@ -109,8 +113,20 @@ const imageUrl = null; // "https://placehold.net/2-800x600.png";
           </ul>
 
           <div class="flex gap-1">
-            <a href="https://google.com"> <Facebook /></a>
-            <a href="https://google.com"> <Threads /></a>
+            {
+              candidateData.externalLinks.map((externalLink) => {
+                const Icon =
+                  linkTypeToIcon[externalLink.externalLinkType.value];
+                if (!Icon) {
+                  return null;
+                }
+                return (
+                  <a href={externalLink.hyperlink}>
+                    <Icon />
+                  </a>
+                );
+              })
+            }
           </div>
         </div>
         <div class="row-auto text-center text-3xl font-bold text-white">
@@ -142,24 +158,26 @@ const imageUrl = null; // "https://placehold.net/2-800x600.png";
           class="row-auto mx-auto mt-2 flex w-[90%] flex-col gap-2 rounded-4xl bg-white p-4"
         >
           <ul>
-            <li class="inline">
-              <!-- <Image
-                alt="candidate-image"
-                src={ironMan}
-                class="inline h-8 w-8 rounded-full"
-              /><a class="text-secondary inline pl-2 underline" href="#"
-                >Jane Goodall</a
-              > -->
-            </li>
-            <li>
-              <!-- <Image
-                alt="candidate-image"
-                src={ironMan}
-                class="inline h-8 w-8 rounded-full"
-              /><a class="text-secondary inline pl-2 underline" href="#"
-                >Joe Goodall</a
-              > -->
-            </li>
+            {
+              otherCandidates.map((otherCandidate) => (
+                <li>
+                  <a
+                    class="text-secondary flex items-center pl-2 underline"
+                    href={`/elections/${election}/${race}/${otherCandidate.slug}`}
+                  >
+                    <div class="h-8 w-8 overflow-hidden rounded-full">
+                      <CandidateProfilePicture
+                        candidate={otherCandidate}
+                        profileImage={otherCandidate.profileImage}
+                      />
+                    </div>
+                    <span class="pl-2">
+                      {otherCandidate.firstName} {otherCandidate.lastName}
+                    </span>
+                  </a>
+                </li>
+              ))
+            }
           </ul>
         </div>
       </div>

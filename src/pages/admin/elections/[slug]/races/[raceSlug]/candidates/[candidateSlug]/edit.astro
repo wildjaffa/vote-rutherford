@@ -2,19 +2,11 @@
 import { actions } from "astro:actions";
 import DeleteButton from "../../../../../../../../components/forms/DeleteButton.astro";
 import FormInput from "../../../../../../../../components/forms/FormInput.astro";
-import FormTextarea from "../../../../../../../../components/forms/FormTextarea.astro";
 import AdminLayout from "../../../../../../../../layouts/AdminLayout.astro";
+import FormExternalLinkInput from "../../../../../../../../components/forms/FormExternalLinkInput.astro";
+import FormCandidatePolicyResponseInput from "../../../../../../../../components/forms/FormCandidatePolicyResponseInput.astro";
 import prisma from "../../../../../../../../lib/prisma";
 import { convertKeyToPublicUrl } from "../../../../../../../../lib/blobStorage";
-import {
-  Facebook,
-  Instagram,
-  Threads,
-  X,
-  Youtube,
-  Linkedin,
-  Globe,
-} from "../../../../../../../../lib/icons";
 
 export const prerender = false;
 
@@ -30,9 +22,23 @@ const candidate = await prisma.candidate.findFirst({
     race: { slug: raceSlug, election: { slug: electionSlug } },
   },
   include: {
-    race: { include: { election: true } },
+    race: {
+      include: {
+        election: {
+          include: {
+            policyQuestions: true,
+          },
+        },
+        policyQuestionsToRaces: true,
+      },
+    },
     profileImage: true,
     externalLinks: { include: { externalLinkType: true } },
+    policyResponses: {
+      include: {
+        clarifications: true,
+      },
+    },
   },
 });
 
@@ -54,28 +60,78 @@ if (!election || race.electionId !== election.id) {
   return Astro.redirect(`/admin/elections/${electionSlug}/races`);
 }
 
+const prioritizedQuestionIds = race.policyQuestionsToRaces.map(
+  (p) => p.policyQuestionId,
+);
+
+const questions = election.policyQuestions.map((q) => ({
+  ...q,
+  isPrioritized: prioritizedQuestionIds.includes(q.id),
+}));
+
 let error: string | null = null;
 let success: string | null = null;
 
 if (Astro.request.method === "POST") {
   try {
     const formData = await Astro.request.formData();
+    console.log("Form Data:", Object.fromEntries(formData.entries())); // Debug log
+    const externalLinksUrls = formData.getAll("link-url") as string[];
+    const externalLinksTypes = formData.getAll("link-type") as string[];
+    const externalLinksTexts = formData.getAll("link-displayText") as string[];
+    const externalLinksIds = formData.getAll("link-id") as string[];
+
+    const externalLinks = externalLinksUrls
+      .map((url, i) => ({
+        url,
+        type: externalLinksTypes[i] as string,
+        displayText: externalLinksTexts[i] || null,
+        id: externalLinksIds[i] || undefined,
+      }))
+      .filter((l) => l.url);
+
+    const responseIds = formData.getAll("response-id") as string[];
+    const responseQuestionIds = formData.getAll(
+      "response-question-id",
+    ) as string[];
+    const responseTexts = formData.getAll("response-text") as string[];
+
+    const policyResponses = responseQuestionIds
+      .map((questionId, i) => {
+        const clarificationIds = formData.getAll(
+          `clarification-id-${questionId}`,
+        ) as string[];
+        const clarificationTexts = formData.getAll(
+          `clarification-text-${questionId}`,
+        ) as string[];
+
+        const clarifications = clarificationTexts
+          .map((text, j) => ({
+            id: clarificationIds[j] || undefined,
+            clarificationText: text,
+          }))
+          .filter((c) => c.clarificationText.trim());
+
+        return {
+          id: responseIds[i] || undefined,
+          questionId,
+          responseText: responseTexts[i] || "",
+          clarifications,
+        };
+      })
+      .filter((r) => r.responseText.trim() || r.clarifications?.length);
 
     const result = await Astro.callAction(actions.updateCandidate, {
       id: candidate.id,
       firstName: formData.get("firstName") as string,
       lastName: formData.get("lastName") as string,
+      partyAffiliation: formData.get("partyAffiliation") as string,
       birthYear: (formData.get("birthYear") as string) || undefined, // Schema handles string -> number coercion
       biography: (formData.get("biography") as string) || undefined,
       profileImageId: (formData.get("profileImageId") as string) || undefined,
       slug: candidateSlug,
-      facebookUrl: (formData.get("facebookUrl") as string) || undefined,
-      xUrl: (formData.get("xUrl") as string) || undefined,
-      instagramUrl: (formData.get("instagramUrl") as string) || undefined,
-      linkedInUrl: (formData.get("linkedInUrl") as string) || undefined,
-      youtubeUrl: (formData.get("youtubeUrl") as string) || undefined,
-      threadsUrl: (formData.get("threadsUrl") as string) || undefined,
-      websiteUrl: (formData.get("websiteUrl") as string) || undefined,
+      externalLinks,
+      policyResponses,
     });
 
     if (result.error) {
@@ -88,6 +144,7 @@ if (Astro.request.method === "POST") {
         include: {
           race: true,
           profileImage: true,
+          externalLinks: { include: { externalLinkType: true } },
         },
       });
       if (updatedCandidate) {
@@ -147,6 +204,7 @@ const profileImageUrl = convertKeyToPublicUrl(
           type="text"
           value={candidate.firstName}
           placeholder="First name"
+          required
         />
         <FormInput
           label="Last Name"
@@ -154,94 +212,50 @@ const profileImageUrl = convertKeyToPublicUrl(
           type="text"
           value={candidate.lastName}
           placeholder="Last name"
+          required
+        />
+
+        <FormInput
+          label="Party Affiliation"
+          name="partyAffiliation"
+          type="text"
+          value={candidate.partyAffiliation || ""}
+          placeholder="e.g., Moose Party"
+          required
+        />
+        <FormInput
+          label="Birth Year"
+          name="birthYear"
+          type="number"
+          value={candidate.birthYear || ""}
+          placeholder="e.g., 1980"
+          min="1900"
         />
       </div>
 
-      <FormInput
-        label="Birth Year"
-        name="birthYear"
-        type="number"
-        value={candidate.birthYear || ""}
-        placeholder="e.g., 1980"
-        min="1900"
+      <FormExternalLinkInput
+        links={candidate.externalLinks.map((l) => ({
+          id: l.id,
+          type: l.externalLinkType.value,
+          url: l.hyperlink,
+          displayText: l.displayText,
+        }))}
       />
 
-      <FormTextarea
-        label="Biography"
-        name="biography"
-        value={candidate.biography || ""}
-        placeholder="Enter candidate biography..."
+      <hr class="border-gray-200" />
+
+      <FormCandidatePolicyResponseInput
+        questions={questions}
+        existingResponses={candidate.policyResponses.map((r) => ({
+          id: r.id,
+          policyQuestionId: r.policyQuestionId,
+          response: r.response,
+          clarifications: r.clarifications.map((c) => ({
+            id: c.id,
+            clarification: c.clarification,
+          })),
+        }))}
       />
-
-      <FormInput
-        label="Facebook URL"
-        name="facebookUrl"
-        type="url"
-        value={candidate.externalLinks.find(
-          (link) => link.externalLinkType.value === "Facebook",
-        )?.hyperlink || ""}
-        placeholder="Facebook URL"><Facebook slot="start" /></FormInput
-      >
-
-      <FormInput
-        label="X URL"
-        name="xUrl"
-        type="url"
-        value={candidate.externalLinks.find(
-          (link) => link.externalLinkType.value === "X",
-        )?.hyperlink || ""}
-        placeholder="X URL"><X slot="start" /></FormInput
-      >
-
-      <FormInput
-        label="Instagram URL"
-        name="instagramUrl"
-        type="url"
-        value={candidate.externalLinks.find(
-          (link) => link.externalLinkType.value === "Instagram",
-        )?.hyperlink || ""}
-        placeholder="Instagram URL"><Instagram slot="start" /></FormInput
-      >
-
-      <FormInput
-        label="LinkedIn URL"
-        name="linkedInUrl"
-        type="url"
-        value={candidate.externalLinks.find(
-          (link) => link.externalLinkType.value === "LinkedIn",
-        )?.hyperlink || ""}
-        placeholder="LinkedIn URL"><Linkedin slot="start" /></FormInput
-      >
-
-      <FormInput
-        label="YouTube URL"
-        name="youtubeUrl"
-        type="url"
-        value={candidate.externalLinks.find(
-          (link) => link.externalLinkType.value === "YouTube",
-        )?.hyperlink || ""}
-        placeholder="YouTube URL"><Youtube slot="start" /></FormInput
-      >
-
-      <FormInput
-        label="Threads URL"
-        name="threadsUrl"
-        type="url"
-        value={candidate.externalLinks.find(
-          (link) => link.externalLinkType.value === "Threads",
-        )?.hyperlink || ""}
-        placeholder="Threads URL"><Threads slot="start" /></FormInput
-      >
-
-      <FormInput
-        label="Website URL"
-        name="websiteUrl"
-        type="url"
-        value={candidate.externalLinks.find(
-          (link) => link.externalLinkType.value === "Website",
-        )?.hyperlink || ""}
-        placeholder="Website URL"><Globe slot="start" /></FormInput
-      >
 
       <div>
         <label class="block text-sm font-medium text-gray-700"

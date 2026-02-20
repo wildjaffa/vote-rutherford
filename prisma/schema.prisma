@@ -85,8 +85,7 @@ model Candidate {
   lastName          String
   slug              String                @default(cuid())
   birthYear         Int?
-  biography         String?
-  biographyRedacted String?
+  partyAffiliation  String?
   profileImage      BlobStorageReference? @relation("CandidateProfileImage", fields: [profileImageId], references: [id])
   profileImageId    String?               
   historicalLink    Candidate?            @relation("HistoricalLink", fields: [historicalLinkId], references: [id])
@@ -109,6 +108,7 @@ model CandidateExternalLink {
   candidate          Candidate        @relation(fields: [candidate_id], references: [id])
   candidate_id       String           
   hyperlink          String
+  displayText        String?
   externalLinkType   ExternalLinkType @relation(fields: [externalLinkTypeId], references: [id])
   externalLinkTypeId Int
   createdAt          DateTime         @default(now()) 
@@ -136,6 +136,7 @@ model PolicyQuestion {
   electionId      String    
   questionText    String
   descriptionText String
+  order           Int       @default(0)
   createdAt       DateTime  @default(now()) 
   updatedAt       DateTime  @default(now()) 
   deletedAt       DateTime? 

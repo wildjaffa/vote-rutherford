@@ -1,0 +1,59 @@
+---
+interface Props {
+  allQuestions: {
+    id: string;
+    questionText: string;
+  }[];
+  selectedQuestionIds?: string[];
+}
+
+const { allQuestions = [], selectedQuestionIds = [] } = Astro.props;
+---
+
+<div class="space-y-4">
+  <label class="block text-sm font-medium text-gray-700"
+    >Link Policy Questions to this Race</label
+  >
+  <p class="text-xs text-gray-500 italic">
+    Select which election-level policy questions are most relevant to this
+    specific race. These will be prioritized on the candidate forms.
+  </p>
+
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    {
+      allQuestions.map((q) => (
+        <label class="hover:border-secondary has-[:checked]:border-secondary has-[:checked]:ring-secondary relative flex cursor-pointer items-start rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-colors focus:outline-none has-[:checked]:ring-1">
+          <div class="flex h-5 items-center">
+            <input
+              type="checkbox"
+              name="policy-question-ids"
+              value={q.id}
+              checked={selectedQuestionIds.includes(q.id)}
+              class="text-secondary focus:ring-secondary h-4 w-4 rounded border-gray-300"
+            />
+          </div>
+          <div class="ml-3 text-sm">
+            <span class="font-medium text-gray-900">{q.questionText}</span>
+          </div>
+        </label>
+      ))
+    }
+  </div>
+
+  {
+    allQuestions.length === 0 && (
+      <div class="rounded-md bg-yellow-50 p-4">
+        <div class="flex">
+          <div class="ml-3">
+            <p class="text-sm font-medium text-yellow-800">
+              No policy questions found for this election.
+            </p>
+            <p class="mt-1 text-sm text-yellow-700">
+              You should add questions to the election first.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+</div>

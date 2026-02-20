@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+import { Constants } from "../src/constants";
 import prisma from "../src/lib/prisma";
 
 async function main() {
@@ -56,20 +56,51 @@ async function main() {
   // Create external link types
   const websiteLink = await prisma.externalLinkType.upsert({
     where: { id: 1 },
-    update: {},
-    create: { value: "website" },
-  });
-
-  const twitterLink = await prisma.externalLinkType.upsert({
-    where: { id: 2 },
-    update: {},
-    create: { value: "twitter" },
+    update: { value: Constants.WEBSITE_LINK_TYPE },
+    create: { value: Constants.WEBSITE_LINK_TYPE },
   });
 
   const facebookLink = await prisma.externalLinkType.upsert({
+    where: { id: 2 },
+    update: { value: Constants.FACEBOOK_LINK_TYPE },
+    create: { value: Constants.FACEBOOK_LINK_TYPE },
+  });
+
+  // additional social / external link types
+  const xLink = await prisma.externalLinkType.upsert({
     where: { id: 3 },
-    update: {},
-    create: { value: "facebook" },
+    update: { value: Constants.X_LINK_TYPE },
+    create: { value: Constants.X_LINK_TYPE },
+  });
+
+  const instagramLink = await prisma.externalLinkType.upsert({
+    where: { id: 4 },
+    update: { value: Constants.INSTAGRAM_LINK_TYPE },
+    create: { value: Constants.INSTAGRAM_LINK_TYPE },
+  });
+
+  const linkedInLink = await prisma.externalLinkType.upsert({
+    where: { id: 5 },
+    update: { value: Constants.LINKEDIN_LINK_TYPE },
+    create: { value: Constants.LINKEDIN_LINK_TYPE },
+  });
+
+  const youtubeLink = await prisma.externalLinkType.upsert({
+    where: { id: 6 },
+    update: { value: Constants.YOUTUBE_LINK_TYPE },
+    create: { value: Constants.YOUTUBE_LINK_TYPE },
+  });
+
+  const threadsLink = await prisma.externalLinkType.upsert({
+    where: { id: 7 },
+    update: { value: Constants.THREADS_LINK_TYPE },
+    create: { value: Constants.THREADS_LINK_TYPE },
+  });
+
+  const wikipediaLink = await prisma.externalLinkType.upsert({
+    where: { id: 8 },
+    update: { value: Constants.WIKIPEDIA_LINK_TYPE },
+    create: { value: Constants.WIKIPEDIA_LINK_TYPE },
   });
 
   console.log("✓ Created external link types");
@@ -201,7 +232,6 @@ async function main() {
         firstName: candidateValue.firstName,
         lastName: candidateValue.lastName,
         birthYear: candidateValue.birthYear,
-        biography: `${candidateValue.firstName} ${candidateValue.lastName} is a dedicated public servant with years of experience in local government.`,
         profileImageId: profileImage.id,
         raceId: i < 2 ? presidentialRace.id : senateRace.id,
         slug: `${candidateValue.firstName.toLowerCase()}-${candidateValue.lastName.toLowerCase()}`,
@@ -212,8 +242,28 @@ async function main() {
               externalLinkTypeId: websiteLink.id,
             },
             {
-              hyperlink: `https://twitter.com/${candidateValue.firstName.toLowerCase()}`,
-              externalLinkTypeId: twitterLink.id,
+              hyperlink: `https://facebook.com/${candidateValue.firstName.toLowerCase()}`,
+              externalLinkTypeId: facebookLink.id,
+            },
+            {
+              hyperlink: `https://x.com/${candidateValue.firstName.toLowerCase()}`,
+              externalLinkTypeId: xLink.id,
+            },
+            {
+              hyperlink: `https://instagram.com/${candidateValue.firstName.toLowerCase()}`,
+              externalLinkTypeId: instagramLink.id,
+            },
+            {
+              hyperlink: `https://linkedin.com/in/${candidateValue.firstName.toLowerCase()}`,
+              externalLinkTypeId: linkedInLink.id,
+            },
+            {
+              hyperlink: `https://youtube.com/${candidateValue.firstName.toLowerCase()}`,
+              externalLinkTypeId: youtubeLink.id,
+            },
+            {
+              hyperlink: `https://threads.net/${candidateValue.firstName.toLowerCase()}`,
+              externalLinkTypeId: threadsLink.id,
             },
           ],
         },
@@ -256,6 +306,7 @@ async function main() {
         questionText: "What is your stance on healthcare reform?",
         descriptionText:
           "Please explain your position on making healthcare more accessible and affordable.",
+        order: 1,
       },
     }),
     prisma.policyQuestion.create({
@@ -264,6 +315,7 @@ async function main() {
         questionText: "How would you address climate change?",
         descriptionText:
           "Describe your plan for reducing carbon emissions and addressing environmental concerns.",
+        order: 2,
       },
     }),
     prisma.policyQuestion.create({
@@ -272,6 +324,7 @@ async function main() {
         questionText: "What is your education policy?",
         descriptionText:
           "Explain your approach to improving K-12 and higher education.",
+        order: 3,
       },
     }),
   ]);

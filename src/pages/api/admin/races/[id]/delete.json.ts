@@ -1,8 +1,5 @@
 import type { APIRoute } from "astro";
-import prisma, { withUserContext } from "../../../../../lib/prisma";
-import { canManageRace } from "../../../../../lib/permissions";
-
-const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
+import { deleteRace } from "../../../../../lib/services/races";
 
 export const prerender = false;
 
@@ -17,44 +14,26 @@ export const DELETE: APIRoute = async ({ params }) => {
       });
     }
 
-    // Check permissions
-    const hasPermission = await canManageRace(id);
-    if (!hasPermission) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Verify race exists
-    const existingRace = await prisma.race.findUnique({
-      where: { id },
-    });
-
-    if (!existingRace) {
-      return new Response(JSON.stringify({ error: "Race not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Soft delete by setting deletedAt timestamp with user context for audit logging
-    await withUserContext(SYSTEM_USER_ID, async () => {
-      return prisma.race.update({
-        where: { id },
-        data: {
-          deletedAt: new Date(),
+    try {
+      await deleteRace(id);
+      return new Response(
+        JSON.stringify({ success: true, message: "Race deleted" }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
         },
-      });
-    });
-
-    return new Response(
-      JSON.stringify({ success: true, message: "Race deleted" }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      },
-    );
+      );
+    } catch (error: any) {
+      console.error("Error deleting race:", error);
+      const status = error.code === 403 ? 403 : error.code === 404 ? 404 : 500;
+      return new Response(
+        JSON.stringify({
+          error: error.message || "Failed to delete race",
+          details: error.details,
+        }),
+        { status, headers: { "Content-Type": "application/json" } },
+      );
+    }
   } catch (error) {
     console.error("Error deleting race:", error);
     return new Response(

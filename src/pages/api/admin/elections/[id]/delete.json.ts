@@ -1,8 +1,5 @@
 import type { APIRoute } from "astro";
-import prisma, { withUserContext } from "../../../../../lib/prisma";
-import { canManageElection } from "../../../../../lib/permissions";
-
-const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
+import { deleteElection } from "../../../../../lib/services/elections";
 
 export const prerender = false;
 
@@ -17,44 +14,26 @@ export const DELETE: APIRoute = async ({ params }) => {
       });
     }
 
-    // Check permissions
-    const hasPermission = await canManageElection(id);
-    if (!hasPermission) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Verify election exists
-    const existingElection = await prisma.election.findUnique({
-      where: { id },
-    });
-
-    if (!existingElection) {
-      return new Response(JSON.stringify({ error: "Election not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Soft delete by setting deletedAt timestamp with user context for audit logging
-    await withUserContext(SYSTEM_USER_ID, async () => {
-      return prisma.election.update({
-        where: { id },
-        data: {
-          deletedAt: new Date(),
+    try {
+      await deleteElection(id);
+      return new Response(
+        JSON.stringify({ success: true, message: "Election deleted" }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
         },
-      });
-    });
-
-    return new Response(
-      JSON.stringify({ success: true, message: "Election deleted" }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      },
-    );
+      );
+    } catch (error: any) {
+      console.error("Error deleting election:", error);
+      const status = error.code === 403 ? 403 : error.code === 404 ? 404 : 500;
+      return new Response(
+        JSON.stringify({
+          error: error.message || "Failed to delete election",
+          details: error.details,
+        }),
+        { status, headers: { "Content-Type": "application/json" } },
+      );
+    }
   } catch (error) {
     console.error("Error deleting election:", error);
     return new Response(

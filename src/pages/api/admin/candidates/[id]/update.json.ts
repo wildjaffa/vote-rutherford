@@ -1,9 +1,4 @@
 import type { APIRoute } from "astro";
-import prisma, { withUserContext } from "../../../../../lib/prisma";
-import { canManageCandidate } from "../../../../../lib/permissions";
-import { UpsertCandidate } from "../../../../../lib/models/upsertCandidate";
-
-const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
 
 export const prerender = false;
 
@@ -18,128 +13,31 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
-    // Check permissions
-    const hasPermission = await canManageCandidate(id);
-    if (!hasPermission) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Verify candidate exists
-    const existingCandidate = await prisma.candidate.findUnique({
-      where: { id },
-    });
-
-    if (!existingCandidate) {
-      return new Response(JSON.stringify({ error: "Candidate not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
+    // delegate to service layer, which already handles permission, validation, etc
     const body = await request.json();
-
-    const validator = new UpsertCandidate();
-    const validation = validator.validate(body);
-
-    if (!validation.success || !validation.data) {
+    try {
+      const candidate =
+        await import("../../../../../lib/services/candidates").then((m) =>
+          m.updateCandidate(id, body),
+        );
+      return new Response(JSON.stringify(candidate), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error: any) {
+      console.error("Error updating candidate:", error);
+      const status = error.code === 403 ? 403 : error.code === 404 ? 404 : 500;
       return new Response(
         JSON.stringify({
-          error: "Validation failed",
-          details: validation.errors,
+          error: error.message || "Failed to update candidate",
+          details: error.details,
         }),
         {
-          status: 400,
+          status,
           headers: { "Content-Type": "application/json" },
         },
       );
     }
-
-    const {
-      firstName,
-      middleName,
-      lastName,
-      birthYear,
-      biography,
-      biographyRedacted,
-      profileImageId,
-    } = validation.data;
-
-    // Update candidate with user context for audit logging
-    const candidate = await withUserContext(SYSTEM_USER_ID, async () => {
-      // Handle profile image change (optional)
-      if (profileImageId !== undefined) {
-        if (profileImageId) {
-          const blob = await prisma.blobStorageReference.findUnique({
-            where: { id: profileImageId },
-          });
-          if (!blob) throw new Error("profileImageId not found");
-        }
-
-        // If replacing an existing image, soft-delete the old blob and attempt to delete the object
-        if (
-          existingCandidate.profileImageId &&
-          existingCandidate.profileImageId !== profileImageId
-        ) {
-          const oldBlob = await prisma.blobStorageReference.findUnique({
-            where: { id: existingCandidate.profileImageId },
-          });
-          if (oldBlob && !oldBlob.deletedAt) {
-            await prisma.blobStorageReference.update({
-              where: { id: oldBlob.id },
-              data: { deletedAt: new Date() },
-            });
-            try {
-              const { deleteObject } =
-                await import("../../../../../lib/blobStorage");
-              await deleteObject(oldBlob.fileLocation);
-            } catch (err) {
-              // best-effort delete, do not block update
-              console.error("Failed to delete old blob object:", err);
-            }
-          }
-        }
-
-        return prisma.candidate.update({
-          where: { id },
-          data: {
-            ...(firstName && { firstName }),
-            ...(middleName !== undefined && { middleName: middleName || null }),
-            ...(lastName && { lastName }),
-            ...(birthYear !== undefined && { birthYear: birthYear || null }),
-            ...(biography !== undefined && { biography: biography || null }),
-            ...(biographyRedacted !== undefined && {
-              biographyRedacted: biographyRedacted || null,
-            }),
-            profileImageId: profileImageId || null,
-            updatedAt: new Date(),
-          },
-        });
-      }
-
-      // No profile image change
-      return prisma.candidate.update({
-        where: { id },
-        data: {
-          ...(firstName && { firstName }),
-          ...(middleName !== undefined && { middleName: middleName || null }),
-          ...(lastName && { lastName }),
-          ...(birthYear !== undefined && { birthYear: birthYear || null }),
-          ...(biography !== undefined && { biography: biography || null }),
-          ...(biographyRedacted !== undefined && {
-            biographyRedacted: biographyRedacted || null,
-          }),
-          updatedAt: new Date(),
-        },
-      });
-    });
-
-    return new Response(JSON.stringify(candidate), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
   } catch (error) {
     console.error("Error updating candidate:", error);
     return new Response(
