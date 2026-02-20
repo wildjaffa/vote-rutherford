@@ -7,6 +7,7 @@ export const upsertCandidateSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   middleName: z.string().optional().nullable(),
   lastName: z.string().min(1, "Last name is required"),
+  partyAffiliation: z.string().min(1, "Party Affiliation is required"),
   birthYear: z.preprocess(
     (val) => (val === "" ? undefined : Number(val)),
     z.number().min(1900).optional().nullable(),
@@ -15,13 +16,35 @@ export const upsertCandidateSchema = z.object({
   biographyRedacted: z.string().optional().nullable(),
   profileImageId: z.string().optional().nullable(),
   slug: z.string().min(1, "Slug is required"),
-  facebookUrl: z.string().optional().nullable(),
-  xUrl: z.string().optional().nullable(),
-  instagramUrl: z.string().optional().nullable(),
-  linkedInUrl: z.string().optional().nullable(),
-  youtubeUrl: z.string().optional().nullable(),
-  threadsUrl: z.string().optional().nullable(),
-  websiteUrl: z.string().optional().nullable(),
+  externalLinks: z
+    .array(
+      z.object({
+        type: z.string(),
+        url: z.string().url("Must be a valid URL"),
+        displayText: z.string().optional().nullable(),
+        id: z.string().optional(),
+      }),
+    )
+    .optional(),
+  policyResponses: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        questionId: z.string(),
+        responseText: z.string(),
+        clarifications: z
+          .array(
+            z.object({
+              id: z.string().optional(),
+              clarificationText: z
+                .string()
+                .min(1, "Clarification text is required"),
+            }),
+          )
+          .optional(),
+      }),
+    )
+    .optional(),
 });
 
 export type UpsertCandidateType = z.infer<typeof upsertCandidateSchema>;

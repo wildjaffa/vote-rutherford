@@ -1,8 +1,5 @@
 import type { APIRoute } from "astro";
-import prisma, { withUserContext } from "../../../../../lib/prisma";
-import { canManageElection } from "../../../../../lib/permissions";
-
-const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
+import { updateElection } from "../../../../../lib/services/elections";
 
 export const prerender = false;
 
@@ -17,48 +14,25 @@ export const PUT: APIRoute = async ({ params, request }) => {
       });
     }
 
-    // Check permissions
-    const hasPermission = await canManageElection(id);
-    if (!hasPermission) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Verify election exists
-    const existingElection = await prisma.election.findUnique({
-      where: { id },
-    });
-
-    if (!existingElection) {
-      return new Response(JSON.stringify({ error: "Election not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
+    // delegate to service
     const body = await request.json();
-    const { name, description, date, slug } = body;
-
-    // Update election with user context for audit logging
-    const election = await withUserContext(SYSTEM_USER_ID, async () => {
-      return prisma.election.update({
-        where: { id },
-        data: {
-          ...(name && { name }),
-          ...(description && { description }),
-          ...(date && { date: new Date(date) }),
-          ...(slug && { slug }),
-          updatedAt: new Date(),
-        },
+    try {
+      const election = await updateElection(id, body);
+      return new Response(JSON.stringify(election), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
       });
-    });
-
-    return new Response(JSON.stringify(election), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    } catch (error: any) {
+      console.error("Error updating election:", error);
+      const status = error.code === 403 ? 403 : error.code === 404 ? 404 : 500;
+      return new Response(
+        JSON.stringify({
+          error: error.message || "Failed to update election",
+          details: error.details,
+        }),
+        { status, headers: { "Content-Type": "application/json" } },
+      );
+    }
   } catch (error) {
     console.error("Error updating election:", error);
     return new Response(

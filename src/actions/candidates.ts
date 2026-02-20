@@ -1,57 +1,38 @@
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { upsertCandidateSchema } from "../lib/models/upsertCandidate";
+import * as candidateService from "../lib/services/candidates";
 
 export const createCandidate = defineAction({
   accept: "json",
   input: upsertCandidateSchema,
-  handler: async (input, context) => {
-    const url = new URL(
-      "/api/admin/candidates/create.json",
-      context.request.url,
-    );
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
+  handler: async (input) => {
+    try {
+      const candidate = await candidateService.createCandidate(input);
+      return { data: candidate };
+    } catch (err: any) {
       throw new ActionError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: error.error || "Failed to create candidate",
+        code: err.code === 403 ? "FORBIDDEN" : "INTERNAL_SERVER_ERROR",
+        message: err.message || "Failed to create candidate",
       });
     }
-
-    return await response.json();
   },
 });
 
 export const updateCandidate = defineAction({
   accept: "json",
   input: upsertCandidateSchema.extend({ id: z.string() }),
-  handler: async (input, context) => {
+  handler: async (input) => {
     const { id, ...data } = input;
-    const url = new URL(
-      `/api/admin/candidates/${id}/update.json`,
-      context.request.url,
-    );
-    const response = await fetch(url, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
+    try {
+      const updated = await candidateService.updateCandidate(id, data);
+      return { data: updated };
+    } catch (err: any) {
       throw new ActionError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: error.error || "Failed to update candidate",
+        code: err.code === 403 ? "FORBIDDEN" : "INTERNAL_SERVER_ERROR",
+        message: err.message || "Failed to update candidate",
       });
     }
-
-    return await response.json();
   },
 });
 
@@ -60,24 +41,15 @@ export const deleteCandidate = defineAction({
   input: z.object({
     id: z.string(),
   }),
-  handler: async (input, context) => {
-    const url = new URL(
-      `/api/admin/candidates/${input.id}/delete.json`,
-      context.request.url,
-    );
-    const response = await fetch(url, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
+  handler: async (input) => {
+    try {
+      const deleted = await candidateService.deleteCandidate(input.id);
+      return { data: deleted };
+    } catch (err: any) {
       throw new ActionError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: error.error || "Failed to delete candidate",
+        code: err.code === 403 ? "FORBIDDEN" : "INTERNAL_SERVER_ERROR",
+        message: err.message || "Failed to delete candidate",
       });
     }
-
-    return await response.json();
   },
 });

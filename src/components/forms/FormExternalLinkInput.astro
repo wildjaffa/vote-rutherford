@@ -1,0 +1,191 @@
+---
+import { Constants } from "../../constants";
+import { linkTypeToIcon, Plus, Trash2 } from "../../lib/icons";
+
+interface Props {
+  links?: {
+    id?: string;
+    type: string;
+    url: string;
+    displayText?: string | null;
+  }[];
+}
+
+const { links = [] } = Astro.props;
+
+const availableTypes = Object.values(Constants);
+---
+
+<div id="external-links-container" class="space-y-4">
+  <label class="block text-sm font-medium text-gray-700">External Links</label>
+
+  <div id="links-list" class="space-y-3">
+    {
+      links.map((link, index) => {
+        const Icon =
+          linkTypeToIcon[link.type] ||
+          linkTypeToIcon[Constants.OTHER_LINK_TYPE];
+        if (!Icon) return null;
+        return (
+          <div
+            class="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3"
+            data-index={index}
+          >
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400">
+              <Icon class="size-5" />
+            </div>
+            <div class="grid flex-1 grid-cols-1 gap-3 md:grid-cols-2">
+              <input type="hidden" name="link-id" value={link.id || ""} />
+              <input type="hidden" name="link-type" value={link.type} />
+              <div class="space-y-1">
+                <input
+                  type="url"
+                  name="link-url"
+                  value={link.url}
+                  placeholder="URL (e.g., https://facebook.com/...)"
+                  class="focus:border-secondary focus:ring-secondary block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+                  required
+                />
+              </div>
+              <div class="space-y-1">
+                <input
+                  type="text"
+                  name="link-displayText"
+                  value={link.displayText || ""}
+                  placeholder="Display Name (optional)"
+                  class="focus:border-secondary focus:ring-secondary block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              class="remove-link-btn text-gray-400 transition-colors hover:text-red-500"
+              title="Remove link"
+            >
+              <Trash2 class="size-5" />
+            </button>
+          </div>
+        );
+      })
+    }
+  </div>
+
+  <div class="mt-4 flex items-center gap-3">
+    <select
+      id="new-link-type"
+      class="focus:border-secondary focus:ring-secondary block rounded-md border-gray-300 shadow-sm sm:text-sm"
+    >
+      <option value="" disabled selected>Select link type...</option>
+      {
+        availableTypes.map((type) => (
+          <option value={type}>
+            {type.charAt(0).toUpperCase() + type.slice(1)}
+          </option>
+        ))
+      }
+    </select>
+    <button
+      type="button"
+      id="add-link-btn"
+      class="inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-300 transition-colors ring-inset hover:bg-gray-50"
+    >
+      <Plus class="size-4" />
+      Add Link
+    </button>
+  </div>
+</div>
+
+<template id="link-row-template">
+  <div
+    class="animate-in fade-in slide-in-from-top-2 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 duration-200"
+  >
+    <div
+      class="icon-container flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-400"
+    >
+      <!-- Icon will be injected here -->
+    </div>
+    <div class="grid flex-1 grid-cols-1 gap-3 md:grid-cols-2">
+      <input type="hidden" name="link-id" value="" />
+      <input type="hidden" name="link-type" value="" />
+      <div class="space-y-1">
+        <input
+          type="url"
+          name="link-url"
+          placeholder="URL (e.g., https://...)"
+          class="focus:border-secondary focus:ring-secondary block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+          required
+        />
+      </div>
+      <div class="space-y-1">
+        <input
+          type="text"
+          name="link-displayText"
+          placeholder="Display Name (optional)"
+          class="focus:border-secondary focus:ring-secondary block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+        />
+      </div>
+    </div>
+    <button
+      type="button"
+      class="remove-link-btn text-gray-400 transition-colors hover:text-red-500"
+      title="Remove link"
+    >
+      <Trash2 class="size-5" />
+    </button>
+  </div>
+</template>
+
+<script>
+  const linksList = document.getElementById("links-list");
+  const typeSelect = document.getElementById(
+    "new-link-type",
+  ) as HTMLSelectElement;
+  const addBtn = document.getElementById("add-link-btn");
+  const template = document.getElementById(
+    "link-row-template",
+  ) as HTMLTemplateElement;
+  const iconLibrary = document.getElementById("icon-library");
+
+  function attachRemoveHandler(btn: HTMLButtonElement) {
+    btn.addEventListener("click", () => {
+      btn.closest(".flex")?.remove();
+    });
+  }
+
+  // Initial handlers
+  document
+    .querySelectorAll(".remove-link-btn")
+    .forEach((btn) => attachRemoveHandler(btn as HTMLButtonElement));
+
+  addBtn?.addEventListener("click", () => {
+    const type = typeSelect.value;
+    if (!type) {
+      alert("Please select a link type first.");
+      return;
+    }
+
+    const rowFragment = template.content.cloneNode(true) as DocumentFragment;
+    const row = rowFragment.firstElementChild as HTMLElement;
+    if (!row) return;
+
+    const typeInput = row.querySelector(
+      'input[name="link-type"]',
+    ) as HTMLInputElement;
+    typeInput.value = type;
+
+    const iconContainer = row.querySelector(".icon-container");
+    const libraryIconWrap = iconLibrary?.querySelector(`[data-type="${type}"]`);
+    const libraryIcon = libraryIconWrap?.firstElementChild;
+    if (iconContainer && libraryIcon) {
+      iconContainer.appendChild(libraryIcon.cloneNode(true));
+    }
+
+    const removeBtn = row.querySelector(
+      ".remove-link-btn",
+    ) as HTMLButtonElement;
+    attachRemoveHandler(removeBtn);
+
+    linksList?.appendChild(row);
+    typeSelect.value = ""; // Reset select
+  });
+</script>

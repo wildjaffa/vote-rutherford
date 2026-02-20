@@ -6,6 +6,7 @@ import FormTextarea from "../../../../components/forms/FormTextarea.astro";
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import prisma from "../../../../lib/prisma";
 import type { Election } from "../../../../generated/prisma/browser";
+import FormPolicyQuestionInput from "../../../../components/forms/FormPolicyQuestionInput.astro";
 
 export const prerender = false;
 
@@ -17,6 +18,9 @@ if (!slug) {
 
 const election: Election | null = await prisma.election.findUnique({
   where: { slug },
+  include: {
+    policyQuestions: true,
+  },
 });
 
 if (!election) {
@@ -34,12 +38,29 @@ if (Astro.request.method === "POST") {
     const date = formData.get("date") as string;
     const slug = formData.get("slug") as string;
 
+    const questionIds = formData.getAll("question-id") as string[];
+    const questionTexts = formData.getAll("question-text") as string[];
+    const questionDescriptions = formData.getAll(
+      "question-description",
+    ) as string[];
+    const questionOrders = formData.getAll("question-order") as string[];
+
+    const policyQuestions = questionTexts
+      .map((text, i) => ({
+        id: questionIds[i] || undefined,
+        questionText: text,
+        descriptionText: questionDescriptions[i] || null,
+        order: parseInt(questionOrders[i] || "0"),
+      }))
+      .filter((q) => q.questionText);
+
     const result = await Astro.callAction(actions.updateElection, {
       id: election.id,
       name: name || undefined,
       description: description || undefined,
       date: date || undefined,
       slug: slug || undefined,
+      policyQuestions,
     });
 
     if (result.data) {
@@ -61,7 +82,7 @@ if (Astro.request.method === "POST") {
   <div class="space-y-6">
     {
       error && (
-        <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div class="rounded-lg border border-red-200 bg-red-50 p-4">
           <p class="text-sm font-medium text-red-800">{error}</p>
         </div>
       )
@@ -69,7 +90,7 @@ if (Astro.request.method === "POST") {
 
     {
       success && (
-        <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+        <div class="rounded-lg border border-green-200 bg-green-50 p-4">
           <p class="text-sm font-medium text-green-800">{success}</p>
         </div>
       )
@@ -106,16 +127,18 @@ if (Astro.request.method === "POST") {
         value={election.date.toISOString().slice(0, 16)}
       />
 
-      <div class="flex gap-3 justify-end pt-4 border-t border-gray-200">
+      <FormPolicyQuestionInput questions={election.policyQuestions} />
+
+      <div class="flex justify-end gap-3 border-t border-gray-200 pt-4">
         <a
           href="/admin/elections"
-          class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
         >
           Cancel
         </a>
         <button
           type="submit"
-          class="inline-flex items-center px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors focus:ring-2 focus:ring-secondary focus:ring-offset-2"
+          class="bg-secondary hover:bg-secondary/90 focus:ring-secondary inline-flex items-center rounded-lg px-4 py-2 text-white transition-colors focus:ring-2 focus:ring-offset-2"
         >
           Save Changes
         </button>
@@ -124,9 +147,9 @@ if (Astro.request.method === "POST") {
 
     <!-- Danger Zone -->
     <div class="border-t border-gray-200 pt-6">
-      <h3 class="text-lg font-semibold text-red-900 mb-4">Danger Zone</h3>
-      <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p class="text-sm text-red-800 mb-4">
+      <h3 class="mb-4 text-lg font-semibold text-red-900">Danger Zone</h3>
+      <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+        <p class="mb-4 text-sm text-red-800">
           Deleting this election will archive it and hide it from public view.
         </p>
         <DeleteButton

@@ -4,15 +4,8 @@ import FormTextarea from "../../../../../../../components/forms/FormTextarea.ast
 import AdminLayout from "../../../../../../../layouts/AdminLayout.astro";
 import prisma from "../../../../../../../lib/prisma";
 import { actions } from "astro:actions";
-import {
-  Facebook,
-  Instagram,
-  Threads,
-  X,
-  Youtube,
-  Linkedin,
-  Globe,
-} from "../../../../../../../lib/icons";
+import FormExternalLinkInput from "../../../../../../../components/forms/FormExternalLinkInput.astro";
+import FormCandidatePolicyResponseInput from "../../../../../../../components/forms/FormCandidatePolicyResponseInput.astro";
 
 export const prerender = false;
 
@@ -25,7 +18,12 @@ if (!electionSlug || !raceSlug) {
 const race = await prisma.race.findFirst({
   where: { slug: raceSlug, election: { slug: electionSlug } },
   include: {
-    election: true,
+    election: {
+      include: {
+        policyQuestions: true,
+      },
+    },
+    policyQuestionsToRaces: true,
   },
 });
 
@@ -40,31 +38,77 @@ if (!election || race.electionId !== election.id) {
   return Astro.redirect(`/admin/elections/${electionSlug}/races`);
 }
 
+const prioritizedQuestionIds = race.policyQuestionsToRaces.map(
+  (p) => p.policyQuestionId,
+);
+
+const questions = election.policyQuestions.map((q) => ({
+  ...q,
+  isPrioritized: prioritizedQuestionIds.includes(q.id),
+}));
+
 let error: string | null = null;
 
 if (Astro.request.method === "POST") {
   try {
     const formData = await Astro.request.formData();
 
+    const externalLinksUrls = formData.getAll("link-url") as string[];
+    const externalLinksTypes = formData.getAll("link-type") as string[];
+    const externalLinksTexts = formData.getAll("link-displayText") as string[];
+
+    const externalLinks = externalLinksUrls
+      .map((url, i) => ({
+        url,
+        type: externalLinksTypes[i] as string,
+        displayText: externalLinksTexts[i] || null,
+      }))
+      .filter((l) => l.url);
+
+    const responseQuestionIds = formData.getAll(
+      "response-question-id",
+    ) as string[];
+    const responseTexts = formData.getAll("response-text") as string[];
+
+    const policyResponses = responseQuestionIds
+      .map((questionId, i) => {
+        const clarificationIds = formData.getAll(
+          `clarification-id-${questionId}`,
+        ) as string[];
+        const clarificationTexts = formData.getAll(
+          `clarification-text-${questionId}`,
+        ) as string[];
+
+        const clarifications = clarificationTexts
+          .map((text, j) => ({
+            id: clarificationIds[j] || undefined,
+            clarificationText: text,
+          }))
+          .filter((c) => c.clarificationText.trim());
+
+        return {
+          questionId,
+          responseText: responseTexts[i] || "",
+          clarifications,
+        };
+      })
+      .filter((r) => r.responseText.trim() || r.clarifications?.length);
+
     const result = await Astro.callAction(actions.createCandidate, {
       firstName: formData.get("firstName") as string,
       lastName: formData.get("lastName") as string,
+      partyAffiliation: formData.get("partyAffiliation") as string,
       birthYear: (formData.get("birthYear") as string) || undefined, // Schema handles string -> number coercion
       biography: (formData.get("biography") as string) || undefined,
       profileImageId: (formData.get("profileImageId") as string) || undefined,
       slug: formData.get("slug") as string,
-      facebookUrl: (formData.get("facebookUrl") as string) || undefined,
-      xUrl: (formData.get("xUrl") as string) || undefined,
-      instagramUrl: (formData.get("instagramUrl") as string) || undefined,
-      linkedInUrl: (formData.get("linkedInUrl") as string) || undefined,
-      youtubeUrl: (formData.get("youtubeUrl") as string) || undefined,
-      threadsUrl: (formData.get("threadsUrl") as string) || undefined,
-      websiteUrl: (formData.get("websiteUrl") as string) || undefined,
+      externalLinks,
+      policyResponses,
     });
 
     if (result.data) {
       return Astro.redirect(
-        `/admin/elections/${electionSlug}/races/${raceSlug}/candidates/${result.data.slug}/edit`,
+        `/admin/elections/${electionSlug}/races/${raceSlug}/candidates/${result.data.data.slug}/edit`,
       );
     }
   } catch (err) {
@@ -117,6 +161,14 @@ if (Astro.request.method === "POST") {
     </div>
 
     <FormInput
+      label="Party Affiliation"
+      name="partyAffiliation"
+      type="text"
+      placeholder="e.g., Moose Party"
+      required
+    />
+
+    <FormInput
       label="Slug"
       name="slug"
       type="text"
@@ -138,51 +190,11 @@ if (Astro.request.method === "POST") {
       placeholder="Enter candidate biography..."
     />
 
-    <FormInput
-      label="Facebook URL"
-      name="facebookUrl"
-      type="url"
-      placeholder="Facebook URL"><Facebook slot="start" /></FormInput
-    >
+    <FormExternalLinkInput />
 
-    <FormInput label="X URL" name="xUrl" type="url" placeholder="X URL"
-      ><X slot="start" /></FormInput
-    >
+    <hr class="border-gray-200" />
 
-    <FormInput
-      label="Instagram URL"
-      name="instagramUrl"
-      type="url"
-      placeholder="Instagram URL"><Instagram slot="start" /></FormInput
-    >
-
-    <FormInput
-      label="LinkedIn URL"
-      name="linkedInUrl"
-      type="url"
-      placeholder="LinkedIn URL"><Linkedin slot="start" /></FormInput
-    >
-
-    <FormInput
-      label="YouTube URL"
-      name="youtubeUrl"
-      type="url"
-      placeholder="YouTube URL"><Youtube slot="start" /></FormInput
-    >
-
-    <FormInput
-      label="Threads URL"
-      name="threadsUrl"
-      type="url"
-      placeholder="Threads URL"><Threads slot="start" /></FormInput
-    >
-
-    <FormInput
-      label="Website URL"
-      name="websiteUrl"
-      type="url"
-      placeholder="Website URL"><Globe slot="start" /></FormInput
-    >
+    <FormCandidatePolicyResponseInput questions={questions} />
 
     <div>
       <label class="block text-sm font-medium text-gray-700"
