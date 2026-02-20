@@ -45,6 +45,14 @@ export const upsertCandidateSchema = z.object({
       }),
     )
     .optional(),
+  qualifications: z.array(
+    z.object({
+      type: z.string(),
+      url: z.string().url().optional().nullable(),
+      displayText: z.string().min(1, "Display text is required"),
+      id: z.string().optional(),
+    }),
+  ),
 });
 
 export type UpsertCandidateType = z.infer<typeof upsertCandidateSchema>;

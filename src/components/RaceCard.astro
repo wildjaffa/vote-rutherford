@@ -1,7 +1,7 @@
 ---
 import RaceType from "../enums/raceTypeEnum";
-import { Calendar, Users, ArrowRight } from "@lucide/astro";
 import type { Candidate, Election, Race } from "../generated/prisma/browser";
+import { ArrowRight, Calendar, Users } from "../lib/icons";
 
 interface Props {
   election: Election;
@@ -26,31 +26,31 @@ const typeLabel = getRaceTypeLabel(race.raceTypeId);
 ---
 
 <div
-  class="border border-gray-200 rounded-lg overflow-hidden shadow hover:shadow-lg hover:-translate-y-1 transition-transform bg-white group p-6 transform-gpu"
+  class="group transform-gpu overflow-hidden rounded-lg border border-gray-200 bg-white p-6 shadow transition-transform hover:-translate-y-1 hover:shadow-lg"
 >
   <div class="">
     <span
-      class="inline-block bg-accent text-black px-3 py-2 rounded-md text-sm font-semibold uppercase tracking-wide"
+      class="bg-accent inline-block rounded-md px-3 py-2 text-sm font-semibold tracking-wide text-black uppercase"
     >
       {typeLabel}
     </span>
   </div>
   <div class="pt-4">
     <h3
-      class="m-0 mb-2 text-xl font-bold text-gray-900 group-hover:text-secondary"
+      class="group-hover:text-secondary m-0 mb-2 text-xl font-bold text-gray-900"
     >
       {race.name}
     </h3>
-    <p class="m-0 mb-3 text-gray-600 leading-relaxed">{race.description}</p>
+    <p class="m-0 mb-3 leading-relaxed text-gray-600">{race.description}</p>
     <p class="mb-3">
-      <Calendar size="18" stroke-width={2} class="text-secondary inline mr-1" />
+      <Calendar size="18" stroke-width={2} class="text-secondary mr-1 inline" />
       {
         new Date(election.date).toLocaleDateString("en-US", {
           year: "numeric",
           month: "long",
           day: "numeric",
         })
-      }<Users size="16" stroke-width={2} class="text-secondary inline ml-2" />
+      }<Users size="16" stroke-width={2} class="text-secondary ml-2 inline" />
       {candidates.length} Candidates
     </p>
     <a
@@ -59,7 +59,7 @@ const typeLabel = getRaceTypeLabel(race.raceTypeId);
       >View Candidates<ArrowRight
         size="16"
         stroke-width={2}
-        class="inline ml-1"
+        class="ml-1 inline"
       /></a
     >
   </div>

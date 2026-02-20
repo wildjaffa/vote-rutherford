@@ -1,21 +1,32 @@
-export const Constants = {
-  FACEBOOK_LINK_TYPE: "facebook",
-  LINKEDIN_LINK_TYPE: "linkedin",
-  INSTAGRAM_LINK_TYPE: "instagram",
-  YOUTUBE_LINK_TYPE: "youtube",
-  THREADS_LINK_TYPE: "threads",
-  X_LINK_TYPE: "x",
-  WEBSITE_LINK_TYPE: "website",
-  WIKIPEDIA_LINK_TYPE: "wikipedia",
-  NEWS_LINK_TYPE: "news",
-  OTHER_LINK_TYPE: "other",
+export const LinkTypes = {
+  FACEBOOK: "facebook",
+  LINKEDIN: "linkedin",
+  INSTAGRAM: "instagram",
+  YOUTUBE: "youtube",
+  THREADS: "threads",
+  X: "x",
+  TIKTOK: "tiktok",
+  WEBSITE: "website",
+  WIKIPEDIA: "wikipedia",
+  NEWS: "news",
+  OTHER: "other",
 };
 
-export const socialTypes: string[] = [
-  Constants.FACEBOOK_LINK_TYPE,
-  Constants.LINKEDIN_LINK_TYPE,
-  Constants.INSTAGRAM_LINK_TYPE,
-  Constants.YOUTUBE_LINK_TYPE,
-  Constants.THREADS_LINK_TYPE,
-  Constants.X_LINK_TYPE,
+export const socialLinkTypes: string[] = [
+  LinkTypes.FACEBOOK,
+  LinkTypes.LINKEDIN,
+  LinkTypes.INSTAGRAM,
+  LinkTypes.YOUTUBE,
+  LinkTypes.THREADS,
+  LinkTypes.X,
+  LinkTypes.TIKTOK,
 ];
+
+export const QualificationTypes = {
+  EDUCATION: "education",
+  WORK_EXPERIENCE: "work_experience",
+  POLITICAL_EXPERIENCE: "political_experience",
+  ENDORSEMENT: "endorsement",
+  AWARD: "award",
+  OTHER: "other",
+};

@@ -1,7 +1,7 @@
 ---
-import { House, Vote, LogOut } from "@lucide/astro";
 import Layout from "./Layout.astro";
 import Button from "../components/Button.astro";
+import { House, LogOut, Vote } from "../lib/icons";
 
 interface Props {
   title: string;
@@ -28,7 +28,7 @@ const { title, breadcrumbs = [] } = Astro.props;
             Back to Site
           </Button>
           <Button
-            class="inline-flex items-center ml-4"
+            class="ml-4 inline-flex items-center"
             href="/api/auth/signout"
             variant="secondary"
             size="md"
@@ -42,16 +42,16 @@ const { title, breadcrumbs = [] } = Astro.props;
   </div>
 
   <div class="container mx-auto px-4 py-8">
-    <div class="flex flex-col lg:flex-row gap-8">
+    <div class="flex flex-col gap-8 lg:flex-row">
       <!-- Sidebar Navigation -->
-      <aside class="lg:w-64 shrink-0">
-        <nav class="bg-white rounded-lg shadow-md p-4 sticky top-4">
-          <h2 class="text-lg font-semibold text-gray-900 mb-4">Admin Menu</h2>
+      <aside class="shrink-0 lg:w-64">
+        <nav class="sticky top-4 rounded-lg bg-white p-4 shadow-md">
+          <h2 class="mb-4 text-lg font-semibold text-gray-900">Admin Menu</h2>
           <ul class="space-y-2">
             <li>
               <a
                 href="/admin/elections"
-                class="flex items-center px-4 py-2 text-gray-700 hover:bg-secondary hover:text-white rounded-lg transition-colors"
+                class="hover:bg-secondary flex items-center rounded-lg px-4 py-2 text-gray-700 transition-colors hover:text-white"
               >
                 <Vote size="18" stroke-width={2} class="mr-3" />
                 Elections
@@ -60,8 +60,8 @@ const { title, breadcrumbs = [] } = Astro.props;
           </ul>
 
           <!-- Help Section -->
-          <div class="mt-8 pt-6 border-t border-gray-200">
-            <h3 class="text-sm font-semibold text-gray-700 mb-3">
+          <div class="mt-8 border-t border-gray-200 pt-6">
+            <h3 class="mb-3 text-sm font-semibold text-gray-700">
               Quick Links
             </h3>
             <ul class="space-y-2 text-sm">
@@ -115,7 +115,7 @@ const { title, breadcrumbs = [] } = Astro.props;
                           {crumb.label}
                         </a>
                       ) : (
-                        <span class="text-gray-900 font-medium">
+                        <span class="font-medium text-gray-900">
                           {crumb.label}
                         </span>
                       )}
@@ -133,7 +133,7 @@ const { title, breadcrumbs = [] } = Astro.props;
         </div>
 
         <!-- Page Content -->
-        <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="rounded-lg bg-white p-6 shadow-md">
           <slot />
         </div>
       </main>

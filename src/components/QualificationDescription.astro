@@ -1,0 +1,22 @@
+---
+import type { CandidateQualification } from "../generated/prisma/browser";
+
+interface Props {
+  qualification: CandidateQualification;
+}
+
+const { qualification } = Astro.props;
+---
+
+{
+  qualification.qualification_url && (
+    <a class="text-secondary underline" href={qualification.qualification_url}>
+      {qualification.qualification_description}
+    </a>
+  )
+}
+{
+  !qualification.qualification_url && (
+    <span>{qualification.qualification_description}</span>
+  )
+}

@@ -200,7 +200,7 @@ model CandidateQualification {
   qualification_description String
   qualificationType         QualificationType @relation(fields: [qualificationTypeId], references: [id])
   qualificationTypeId       Int
-  qualification_url         String
+  qualification_url         String?
   createdAt                 DateTime          @default(now()) 
   updatedAt                 DateTime          @default(now()) 
   deletedAt                 DateTime?         

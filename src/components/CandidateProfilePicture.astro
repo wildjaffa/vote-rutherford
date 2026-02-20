@@ -1,18 +1,19 @@
 ---
-import { User } from "@lucide/astro";
 import Image from "astro/components/Image.astro";
 import type {
   Candidate,
   BlobStorageReference,
 } from "../generated/prisma/client";
 import { convertKeyToPublicUrl } from "../lib/blobStorage";
+import { User } from "../lib/icons";
 
 interface Props {
   candidate: Candidate;
   profileImage?: BlobStorageReference | null;
+  loading?: "eager" | "lazy";
 }
 
-const { candidate, profileImage } = Astro.props;
+const { candidate, profileImage, loading = "lazy" } = Astro.props;
 
 const fullName = `${candidate.firstName} ${candidate.middleName ? candidate.middleName + " " : ""}${candidate.lastName}`;
 const imageUrl = convertKeyToPublicUrl(profileImage?.fileLocation);
@@ -25,6 +26,7 @@ const imageUrl = convertKeyToPublicUrl(profileImage?.fileLocation);
       src={imageUrl}
       alt={fullName}
       inferSize={true}
+      loading={loading}
     />
   ) : (
     <User class="h-full w-full" />

@@ -44,7 +44,8 @@ export async function createCandidate(
 
   // create candidate with audit context
   const candidate = await withUserContext(SYSTEM_USER_ID, async () => {
-    const { externalLinks, policyResponses, ...candidateData } = validated;
+    const { externalLinks, policyResponses, qualifications, ...candidateData } =
+      validated;
     // validated already contains raceId; Prisma create accepts it directly
     const newCandidate = await prisma.candidate.create({
       data: {
@@ -97,6 +98,26 @@ export async function createCandidate(
       }
     }
 
+    if (qualifications && qualifications.length > 0) {
+      const types = await prisma.qualificationType.findMany({
+        where: { value: { in: qualifications.map((l) => l.type) } },
+      });
+      for (const qualification of qualifications) {
+        const qualificationType = types.find(
+          (t) => t.value === qualification.type,
+        );
+        if (!qualificationType) continue;
+        await prisma.candidateQualification.create({
+          data: {
+            candidateId: newCandidate.id,
+            qualificationTypeId: qualificationType.id,
+            qualification_url: qualification.url || null,
+            qualification_description: qualification.displayText,
+          },
+        });
+      }
+    }
+
     return newCandidate;
   });
   return candidate;
@@ -131,6 +152,7 @@ export async function updateCandidate(
     profileImageId,
     externalLinks,
     policyResponses,
+    qualifications,
   } = validationData;
 
   const updated = await withUserContext(SYSTEM_USER_ID, async () => {
@@ -221,6 +243,60 @@ export async function updateCandidate(
                 hyperlink: link.url,
                 displayText: link.displayText || null,
                 externalLinkTypeId: linkType.id,
+              },
+            });
+          }
+        }
+      }
+    }
+
+    if (qualifications !== undefined) {
+      const existingQualifications =
+        await prisma.candidateQualification.findMany({
+          where: { candidateId: id },
+        });
+
+      // Qualifications to delete
+      const qualificationsToDelete = existingQualifications.filter(
+        (existing) => !qualifications.some((q) => q.id === existing.id),
+      );
+      if (qualificationsToDelete.length > 0) {
+        await prisma.candidateQualification.deleteMany({
+          where: { id: { in: qualificationsToDelete.map((q) => q.id) } },
+        });
+      }
+
+      // Sync qualifications
+      if (qualifications.length > 0) {
+        const types = await prisma.qualificationType.findMany({
+          where: { value: { in: qualifications.map((q) => q.type) } },
+        });
+
+        for (const qualification of qualifications) {
+          const qualificationType = types.find(
+            (t) => t.value === qualification.type,
+          );
+          if (!qualificationType) continue;
+
+          if (qualification.id) {
+            // Update
+            await prisma.candidateQualification.update({
+              where: { id: qualification.id },
+              data: {
+                qualificationTypeId: qualificationType.id,
+                qualification_url: qualification.url || null,
+                qualification_description: qualification.displayText,
+                updatedAt: new Date(),
+              },
+            });
+          } else {
+            // Create
+            await prisma.candidateQualification.create({
+              data: {
+                candidateId: id,
+                qualificationTypeId: qualificationType.id,
+                qualification_url: qualification.url || null,
+                qualification_description: qualification.displayText,
               },
             });
           }
