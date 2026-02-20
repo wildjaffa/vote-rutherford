@@ -7,6 +7,7 @@ import FormExternalLinkInput from "../../../../../../../../components/forms/Form
 import FormCandidatePolicyResponseInput from "../../../../../../../../components/forms/FormCandidatePolicyResponseInput.astro";
 import prisma from "../../../../../../../../lib/prisma";
 import { convertKeyToPublicUrl } from "../../../../../../../../lib/blobStorage";
+import FormQualificationInput from "../../../../../../../../components/forms/FormQualificationInput.astro";
 
 export const prerender = false;
 
@@ -39,6 +40,7 @@ const candidate = await prisma.candidate.findFirst({
         clarifications: true,
       },
     },
+    qualifications: { include: { qualificationType: true } },
   },
 });
 
@@ -90,6 +92,24 @@ if (Astro.request.method === "POST") {
       }))
       .filter((l) => l.url);
 
+    const qualificationTypes = formData.getAll(
+      "qualification-type",
+    ) as string[];
+    const qualificationUrls = formData.getAll("qualification-url") as string[];
+    const qualificationDisplayTexts = formData.getAll(
+      "qualification-displayText",
+    ) as string[];
+    const qualificationIds = formData.getAll("qualification-id") as string[];
+
+    const qualifications = qualificationTypes
+      .map((type, i) => ({
+        type,
+        url: qualificationUrls[i] || null,
+        displayText: qualificationDisplayTexts[i] as string,
+        id: qualificationIds[i] || undefined,
+      }))
+      .filter((q) => q.type);
+
     const responseIds = formData.getAll("response-id") as string[];
     const responseQuestionIds = formData.getAll(
       "response-question-id",
@@ -132,6 +152,7 @@ if (Astro.request.method === "POST") {
       slug: candidateSlug,
       externalLinks,
       policyResponses,
+      qualifications,
     });
 
     if (result.error) {
@@ -145,6 +166,7 @@ if (Astro.request.method === "POST") {
           race: true,
           profileImage: true,
           externalLinks: { include: { externalLinkType: true } },
+          qualifications: { include: { qualificationType: true } },
         },
       });
       if (updatedCandidate) {
@@ -239,6 +261,17 @@ const profileImageUrl = convertKeyToPublicUrl(
           type: l.externalLinkType.value,
           url: l.hyperlink,
           displayText: l.displayText,
+        }))}
+      />
+
+      <hr class="border-gray-200" />
+
+      <FormQualificationInput
+        qualifications={candidate.qualifications.map((q) => ({
+          id: q.id,
+          type: q.qualificationType.value,
+          url: q.qualification_url,
+          displayText: q.qualification_description,
         }))}
       />
 

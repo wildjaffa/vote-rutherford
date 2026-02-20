@@ -1,4 +1,4 @@
-import { Constants } from "../src/constants";
+import { LinkTypes, QualificationTypes } from "../src/constants";
 import prisma from "../src/lib/prisma";
 
 async function main() {
@@ -35,20 +35,38 @@ async function main() {
   // Create qualification types
   const educationQualType = await prisma.qualificationType.upsert({
     where: { id: 1 },
-    update: {},
-    create: { value: "education" },
+    update: { value: QualificationTypes.EDUCATION },
+    create: { value: QualificationTypes.EDUCATION },
   });
 
   const workExperienceQualType = await prisma.qualificationType.upsert({
     where: { id: 2 },
-    update: {},
-    create: { value: "work_experience" },
+    update: { value: QualificationTypes.WORK_EXPERIENCE },
+    create: { value: QualificationTypes.WORK_EXPERIENCE },
   });
 
   const politicalExperienceQualType = await prisma.qualificationType.upsert({
     where: { id: 3 },
-    update: {},
-    create: { value: "political_experience" },
+    update: { value: QualificationTypes.POLITICAL_EXPERIENCE },
+    create: { value: QualificationTypes.POLITICAL_EXPERIENCE },
+  });
+
+  const endoresementQualType = await prisma.qualificationType.upsert({
+    where: { id: 4 },
+    update: { value: QualificationTypes.ENDORSEMENT },
+    create: { value: QualificationTypes.ENDORSEMENT },
+  });
+
+  const awardQualType = await prisma.qualificationType.upsert({
+    where: { id: 5 },
+    update: { value: QualificationTypes.AWARD },
+    create: { value: QualificationTypes.AWARD },
+  });
+
+  const otherQualType = await prisma.qualificationType.upsert({
+    where: { id: 6 },
+    update: { value: QualificationTypes.OTHER },
+    create: { value: QualificationTypes.OTHER },
   });
 
   console.log("✓ Created qualification types");
@@ -56,51 +74,69 @@ async function main() {
   // Create external link types
   const websiteLink = await prisma.externalLinkType.upsert({
     where: { id: 1 },
-    update: { value: Constants.WEBSITE_LINK_TYPE },
-    create: { value: Constants.WEBSITE_LINK_TYPE },
+    update: { value: LinkTypes.WEBSITE },
+    create: { value: LinkTypes.WEBSITE },
   });
 
   const facebookLink = await prisma.externalLinkType.upsert({
     where: { id: 2 },
-    update: { value: Constants.FACEBOOK_LINK_TYPE },
-    create: { value: Constants.FACEBOOK_LINK_TYPE },
+    update: { value: LinkTypes.FACEBOOK },
+    create: { value: LinkTypes.FACEBOOK },
   });
 
   // additional social / external link types
   const xLink = await prisma.externalLinkType.upsert({
     where: { id: 3 },
-    update: { value: Constants.X_LINK_TYPE },
-    create: { value: Constants.X_LINK_TYPE },
+    update: { value: LinkTypes.X },
+    create: { value: LinkTypes.X },
   });
 
   const instagramLink = await prisma.externalLinkType.upsert({
     where: { id: 4 },
-    update: { value: Constants.INSTAGRAM_LINK_TYPE },
-    create: { value: Constants.INSTAGRAM_LINK_TYPE },
+    update: { value: LinkTypes.INSTAGRAM },
+    create: { value: LinkTypes.INSTAGRAM },
   });
 
   const linkedInLink = await prisma.externalLinkType.upsert({
     where: { id: 5 },
-    update: { value: Constants.LINKEDIN_LINK_TYPE },
-    create: { value: Constants.LINKEDIN_LINK_TYPE },
+    update: { value: LinkTypes.LINKEDIN },
+    create: { value: LinkTypes.LINKEDIN },
   });
 
   const youtubeLink = await prisma.externalLinkType.upsert({
     where: { id: 6 },
-    update: { value: Constants.YOUTUBE_LINK_TYPE },
-    create: { value: Constants.YOUTUBE_LINK_TYPE },
+    update: { value: LinkTypes.YOUTUBE },
+    create: { value: LinkTypes.YOUTUBE },
   });
 
   const threadsLink = await prisma.externalLinkType.upsert({
     where: { id: 7 },
-    update: { value: Constants.THREADS_LINK_TYPE },
-    create: { value: Constants.THREADS_LINK_TYPE },
+    update: { value: LinkTypes.THREADS },
+    create: { value: LinkTypes.THREADS },
   });
 
   const wikipediaLink = await prisma.externalLinkType.upsert({
     where: { id: 8 },
-    update: { value: Constants.WIKIPEDIA_LINK_TYPE },
-    create: { value: Constants.WIKIPEDIA_LINK_TYPE },
+    update: { value: LinkTypes.WIKIPEDIA },
+    create: { value: LinkTypes.WIKIPEDIA },
+  });
+
+  const newsLink = await prisma.externalLinkType.upsert({
+    where: { id: 9 },
+    update: { value: LinkTypes.NEWS },
+    create: { value: LinkTypes.NEWS },
+  });
+
+  const otherLink = await prisma.externalLinkType.upsert({
+    where: { id: 10 },
+    update: { value: LinkTypes.OTHER },
+    create: { value: LinkTypes.OTHER },
+  });
+
+  const tiktokLink = await prisma.externalLinkType.upsert({
+    where: { id: 11 },
+    update: { value: LinkTypes.TIKTOK },
+    create: { value: LinkTypes.TIKTOK },
   });
 
   console.log("✓ Created external link types");

@@ -1,8 +1,8 @@
 ---
-import { Plus } from "@lucide/astro";
 import AdminLayout from "../../../../../layouts/AdminLayout.astro";
 import prisma from "../../../../../lib/prisma";
 import type { RaceWithCandidates } from "../../../../../lib/types";
+import { Plus } from "../../../../../lib/icons";
 
 export const prerender = false;
 
@@ -51,7 +51,7 @@ if (!election) {
     <div class="flex justify-end">
       <a
         href={`/admin/elections/${slug}/races/create`}
-        class="inline-flex items-center px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors focus:ring-2 focus:ring-secondary focus:ring-offset-2"
+        class="bg-secondary hover:bg-secondary/90 focus:ring-secondary inline-flex items-center rounded-lg px-4 py-2 text-white transition-colors focus:ring-2 focus:ring-offset-2"
       >
         <Plus size="18" stroke-width={2} class="mr-2" />
         New Race
@@ -81,7 +81,7 @@ if (!election) {
             </thead>
             <tbody>
               {election.races.map((race: RaceWithCandidates) => (
-                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                <tr class="border-b border-gray-100 transition-colors hover:bg-gray-50">
                   <td class="px-4 py-3 text-sm font-medium text-gray-900">
                     {race.name}
                   </td>
@@ -93,16 +93,16 @@ if (!election) {
                     {race.candidates.length} candidate
                     {race.candidates.length !== 1 ? "s" : ""}
                   </td>
-                  <td class="px-4 py-3 text-sm text-right space-x-2">
+                  <td class="space-x-2 px-4 py-3 text-right text-sm">
                     <a
                       href={`/admin/elections/${slug}/races/${race.slug}/edit`}
-                      class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-xs font-medium"
+                      class="inline-flex items-center rounded-md bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-200"
                     >
                       Edit
                     </a>
                     <a
                       href={`/admin/elections/${slug}/races/${race.slug}/candidates`}
-                      class="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors text-xs font-medium"
+                      class="inline-flex items-center rounded-md bg-green-100 px-3 py-1 text-xs font-medium text-green-700 transition-colors hover:bg-green-200"
                     >
                       Candidates
                     </a>
@@ -113,7 +113,7 @@ if (!election) {
           </table>
         </div>
       ) : (
-        <div class="text-center py-12">
+        <div class="py-12 text-center">
           <p class="text-gray-500">No races yet. Create one to get started!</p>
         </div>
       )

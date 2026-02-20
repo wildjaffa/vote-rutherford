@@ -6,6 +6,7 @@ import prisma from "../../../../../../../lib/prisma";
 import { actions } from "astro:actions";
 import FormExternalLinkInput from "../../../../../../../components/forms/FormExternalLinkInput.astro";
 import FormCandidatePolicyResponseInput from "../../../../../../../components/forms/FormCandidatePolicyResponseInput.astro";
+import FormQualificationInput from "../../../../../../../components/forms/FormQualificationInput.astro";
 
 export const prerender = false;
 
@@ -65,6 +66,24 @@ if (Astro.request.method === "POST") {
       }))
       .filter((l) => l.url);
 
+    const qualificationTypes = formData.getAll(
+      "qualification-type",
+    ) as string[];
+    const qualificationUrls = formData.getAll("qualification-url") as string[];
+    const qualificationDisplayTexts = formData.getAll(
+      "qualification-displayText",
+    ) as string[];
+    const qualificationIds = formData.getAll("qualification-id") as string[];
+
+    const qualifications = qualificationTypes
+      .map((type, i) => ({
+        type,
+        url: qualificationUrls[i] || null,
+        displayText: qualificationDisplayTexts[i] as string,
+        id: qualificationIds[i] || undefined,
+      }))
+      .filter((q) => q.type);
+
     const responseQuestionIds = formData.getAll(
       "response-question-id",
     ) as string[];
@@ -104,6 +123,7 @@ if (Astro.request.method === "POST") {
       slug: formData.get("slug") as string,
       externalLinks,
       policyResponses,
+      qualifications,
     });
 
     if (result.data) {
@@ -191,6 +211,10 @@ if (Astro.request.method === "POST") {
     />
 
     <FormExternalLinkInput />
+
+    <hr class="border-gray-200" />
+
+    <FormQualificationInput />
 
     <hr class="border-gray-200" />
 

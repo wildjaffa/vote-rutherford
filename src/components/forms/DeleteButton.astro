@@ -1,5 +1,5 @@
 ---
-import { Trash2 } from "@lucide/astro";
+import { Trash2 } from "../../lib/icons";
 
 interface Props {
   itemName: string;
@@ -12,7 +12,7 @@ const { itemName, deleteUrl, redirectUrl } = Astro.props;
 
 <button
   type="button"
-  class="inline-flex items-center px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+  class="inline-flex items-center rounded-lg bg-red-600 px-3 py-2 text-white transition-colors hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
   data-delete-url={deleteUrl}
   data-redirect-url={redirectUrl}
   data-item-name={itemName}

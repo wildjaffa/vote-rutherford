@@ -1,15 +1,26 @@
 import type { AstroComponent } from "@lucide/astro";
-import { Constants } from "../constants";
+import { LinkTypes, QualificationTypes } from "../constants";
 import {
+  Users,
+  Calendar,
+  Layers,
+  ArrowRight,
+  ArrowLeft,
   User,
   ExternalLink,
   Menu,
-  X,
   Linkedin,
   Globe,
   Plus,
   Trash2,
   Newspaper,
+  GraduationCap,
+  ThumbsUp,
+  Briefcase,
+  Trophy,
+  Vote,
+  House,
+  LogOut,
 } from "@lucide/astro";
 
 import {
@@ -18,20 +29,54 @@ import {
   Instagram,
   Youtube,
   Wikipedia,
+  X,
+  Tiktok,
 } from "simple-icons-astro";
 
-export { User, ExternalLink, Menu, X, Linkedin, Globe, Plus, Trash2 };
-export { Facebook, Threads, Instagram, Youtube, Wikipedia };
+export {
+  Users,
+  User,
+  Calendar,
+  Layers,
+  ExternalLink,
+  Menu,
+  ArrowRight,
+  ArrowLeft,
+  X,
+  Linkedin,
+  Globe,
+  Plus,
+  Trash2,
+  Facebook,
+  Threads,
+  Tiktok,
+  Instagram,
+  Youtube,
+  Wikipedia,
+  House,
+  LogOut,
+  Vote,
+};
+
+export const qualificationTypeToIcon: Record<string, AstroComponent> = {
+  [QualificationTypes.EDUCATION]: GraduationCap,
+  [QualificationTypes.WORK_EXPERIENCE]: Briefcase,
+  [QualificationTypes.POLITICAL_EXPERIENCE]: Vote,
+  [QualificationTypes.ENDORSEMENT]: ThumbsUp,
+  [QualificationTypes.AWARD]: Trophy,
+  [QualificationTypes.OTHER]: ExternalLink,
+};
 
 export const linkTypeToIcon: Record<string, AstroComponent> = {
-  [Constants.FACEBOOK_LINK_TYPE]: Facebook,
-  [Constants.LINKEDIN_LINK_TYPE]: Linkedin,
-  [Constants.INSTAGRAM_LINK_TYPE]: Instagram,
-  [Constants.YOUTUBE_LINK_TYPE]: Youtube,
-  [Constants.THREADS_LINK_TYPE]: Threads,
-  [Constants.X_LINK_TYPE]: X,
-  [Constants.WEBSITE_LINK_TYPE]: Globe,
-  [Constants.WIKIPEDIA_LINK_TYPE]: Wikipedia,
-  [Constants.OTHER_LINK_TYPE]: ExternalLink,
-  [Constants.NEWS_LINK_TYPE]: Newspaper,
+  [LinkTypes.FACEBOOK]: Facebook,
+  [LinkTypes.LINKEDIN]: Linkedin,
+  [LinkTypes.INSTAGRAM]: Instagram,
+  [LinkTypes.YOUTUBE]: Youtube,
+  [LinkTypes.THREADS]: Threads,
+  [LinkTypes.X]: X,
+  [LinkTypes.WEBSITE]: Globe,
+  [LinkTypes.WIKIPEDIA]: Wikipedia,
+  [LinkTypes.OTHER]: ExternalLink,
+  [LinkTypes.NEWS]: Newspaper,
+  [LinkTypes.TIKTOK]: Tiktok,
 };

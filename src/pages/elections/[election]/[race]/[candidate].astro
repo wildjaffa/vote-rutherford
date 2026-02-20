@@ -2,7 +2,20 @@
 import Layout from "../../../../layouts/Layout.astro";
 import prisma from "../../../../lib/prisma";
 import CandidateProfilePicture from "../../../../components/CandidateProfilePicture.astro";
-import { linkTypeToIcon } from "../../../../lib/icons";
+import { linkTypeToIcon, Users } from "../../../../lib/icons";
+import { LinkTypes, QualificationTypes } from "../../../../constants";
+import type {
+  CandidateExternalLink,
+  ExternalLinkType,
+  CandidateQualification,
+} from "../../../../generated/prisma/browser";
+import CandidateAboutSection from "../../../../components/CandidateAboutSection.astro";
+import QualificationDescription from "../../../../components/QualificationDescription.astro";
+import Button from "../../../../components/Button.astro";
+
+interface CandidateExternalLinkWithType extends CandidateExternalLink {
+  externalLinkType: ExternalLinkType;
+}
 
 export const prerender = false;
 
@@ -52,12 +65,76 @@ const otherCandidates = candidateData.race.candidates.filter(
   (c) => c.id !== candidateData.id,
 );
 
+const socialLinks: CandidateExternalLinkWithType[] = [];
+
+const newsLinks: CandidateExternalLinkWithType[] = [];
+
+let wikipediaLink: CandidateExternalLinkWithType | undefined;
+
+let websiteLink: CandidateExternalLinkWithType | undefined;
+
+const otherLinks: CandidateExternalLinkWithType[] = [];
+
+candidateData.externalLinks.forEach((link) => {
+  switch (link.externalLinkType.value) {
+    case LinkTypes.WEBSITE:
+      websiteLink = link;
+      break;
+    case LinkTypes.WIKIPEDIA:
+      wikipediaLink = link;
+      break;
+    case LinkTypes.NEWS:
+      newsLinks.push(link);
+      break;
+    case LinkTypes.OTHER:
+      otherLinks.push(link);
+      break;
+    default:
+      socialLinks.push(link);
+  }
+});
+
+const endorsements: CandidateQualification[] = [];
+
+const education: CandidateQualification[] = [];
+
+const workExperience: CandidateQualification[] = [];
+
+const politicalExperience: CandidateQualification[] = [];
+
+const awards: CandidateQualification[] = [];
+
+const otherQualifications: CandidateQualification[] = [];
+
+candidateData.qualifications.forEach((qualification) => {
+  switch (qualification.qualificationType.value) {
+    case QualificationTypes.ENDORSEMENT:
+      endorsements.push(qualification);
+      break;
+    case QualificationTypes.EDUCATION:
+      education.push(qualification);
+      break;
+    case QualificationTypes.WORK_EXPERIENCE:
+      workExperience.push(qualification);
+      break;
+    case QualificationTypes.POLITICAL_EXPERIENCE:
+      politicalExperience.push(qualification);
+      break;
+    case QualificationTypes.AWARD:
+      awards.push(qualification);
+      break;
+    case QualificationTypes.OTHER:
+      otherQualifications.push(qualification);
+      break;
+  }
+});
+
 const fullName = `${candidateData.firstName} ${candidateData.middleName ? candidateData.middleName + " " : ""}${candidateData.lastName}`;
 ---
 
 <Layout title={`${fullName} | ${candidateData.race.election.name}`}>
   <main class="w-full px-4 py-8">
-    <div class="grid grid-cols-1 items-start gap-6 md:grid-cols-12 md:gap-8">
+    <div class="grid grid-cols-12 items-start gap-6 md:gap-8">
       <div class="hidden md:col-span-1 md:block"></div>
       <div class="col-span-12 md:col-span-7">
         <h1 class="text-2xl font-bold text-gray-900 md:text-3xl">
@@ -70,6 +147,7 @@ const fullName = `${candidateData.firstName} ${candidateData.middleName ? candid
             <CandidateProfilePicture
               candidate={candidateData}
               profileImage={candidateData.profileImage}
+              loading="eager"
             />
           </div>
           <div
@@ -82,105 +160,202 @@ const fullName = `${candidateData.firstName} ${candidateData.middleName ? candid
           </div>
         </div>
         {
-          candidateData.policyResponses.map(response => (
-            <h2
-          class="w-full content-end justify-end text-end text-xl font-semibold md:w-[90%] pt-4"
-        >
-          {response.policyQuestion.questionText}
-        </h2>
-        <div class="bg-primary h-1 w-full md:w-[90%]"></div>
-        <p class="mt-4 w-full text-gray-700">
-          {response.response}
-        </p>
+          candidateData.policyResponses.map((response) => (
+            <>
+              <h2 class="w-full content-end justify-end pt-4 text-end text-xl font-semibold md:w-[90%]">
+                {response.policyQuestion.questionText}
+              </h2>
+              <div class="bg-primary h-1 w-full md:w-[90%]" />
+              <p class="mt-4 w-full text-gray-700">{response.response}</p>
+            </>
           ))
         }
-       
       </div>
-      <div
-        class="bg-primary inset-x-auto order-last col-span-12 rounded-4xl py-4 md:order-0 md:col-span-4"
-      >
-        <div class="row-auto text-center text-3xl font-bold text-white">
-          About
+      <div class="col-span-12 grid w-full grid-cols-1 gap-4 md:col-span-4">
+        <div
+          class="bg-primary inset-x-auto order-last col-span-12 w-full rounded-4xl py-2 md:order-0"
+        >
+          {
+            candidateData.externalLinks.length && (
+              <CandidateAboutSection title="Links">
+                <ul>
+                  {websiteLink && (
+                    <li>
+                      <a
+                        class="text-secondary underline"
+                        href={websiteLink.hyperlink}
+                      >
+                        Campaign Website
+                      </a>
+                    </li>
+                  )}
+                  {wikipediaLink && (
+                    <li>
+                      <a
+                        class="text-secondary underline"
+                        href={wikipediaLink.hyperlink}
+                      >
+                        Wikipedia
+                      </a>
+                    </li>
+                  )}
+                  {newsLinks.map((newsLink) => (
+                    <li>
+                      <a
+                        class="text-secondary underline"
+                        href={newsLink.hyperlink}
+                      >
+                        {newsLink.displayText}
+                      </a>
+                    </li>
+                  ))}
+                  {otherLinks.map((otherLink) => (
+                    <li>
+                      <a
+                        class="text-secondary underline"
+                        href={otherLink.hyperlink}
+                      >
+                        {otherLink.displayText}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+
+                <div class="flex gap-1">
+                  {socialLinks.map((externalLink) => {
+                    const Icon =
+                      linkTypeToIcon[externalLink.externalLinkType.value];
+                    if (!Icon) {
+                      return null;
+                    }
+                    return (
+                      <a href={externalLink.hyperlink}>
+                        <Icon />
+                      </a>
+                    );
+                  })}
+                </div>
+              </CandidateAboutSection>
+            )
+          }
+          {
+            awards.length > 0 && (
+              <CandidateAboutSection title="Awards">
+                <ul>
+                  {awards.map((award) => (
+                    <li>
+                      <QualificationDescription qualification={award} />
+                    </li>
+                  ))}
+                </ul>
+              </CandidateAboutSection>
+            )
+          }
+          {
+            endorsements.length > 0 && (
+              <CandidateAboutSection title="Endorsements">
+                <ul>
+                  {endorsements.map((endorsement) => (
+                    <li>
+                      <QualificationDescription qualification={endorsement} />
+                    </li>
+                  ))}
+                </ul>
+              </CandidateAboutSection>
+            )
+          }
+          {
+            education.length > 0 && (
+              <CandidateAboutSection title="Education">
+                <ul>
+                  {education.map((education) => (
+                    <QualificationDescription qualification={education} />
+                  ))}
+                </ul>
+              </CandidateAboutSection>
+            )
+          }
+          {
+            workExperience.length > 0 && (
+              <CandidateAboutSection title="Professional Experience">
+                <ul>
+                  {workExperience.map((experience) => (
+                    <li>
+                      <QualificationDescription qualification={experience} />
+                    </li>
+                  ))}
+                </ul>
+              </CandidateAboutSection>
+            )
+          }
+          {
+            politicalExperience.length > 0 && (
+              <CandidateAboutSection title="Political Experience">
+                <ul>
+                  {politicalExperience.map((experience) => (
+                    <li>
+                      <QualificationDescription qualification={experience} />
+                    </li>
+                  ))}
+                </ul>
+              </CandidateAboutSection>
+            )
+          }
+          {
+            otherQualifications.length > 0 && (
+              <CandidateAboutSection title="Other Qualifications">
+                <ul>
+                  {otherQualifications.map((qualification) => (
+                    <li>
+                      <QualificationDescription qualification={qualification} />
+                    </li>
+                  ))}
+                </ul>
+              </CandidateAboutSection>
+            )
+          }
         </div>
         <div
-          class="row-auto mx-auto mt-2 flex w-[90%] flex-col gap-2 rounded-4xl bg-white p-4"
+          class="bg-primary inset-x-auto order-last col-span-12 hidden rounded-4xl py-4 md:block"
         >
-          <h2 class="text-2xl font-bold">Links</h2>
-          <ul>
-            <li>
-              <a class="text-secondary underline" href="#">Campaign Website</a>
-            </li>
-          </ul>
-
-          <div class="flex gap-1">
-            {
-              candidateData.externalLinks.map((externalLink) => {
-                const Icon =
-                  linkTypeToIcon[externalLink.externalLinkType.value];
-                if (!Icon) {
-                  return null;
-                }
-                return (
-                  <a href={externalLink.hyperlink}>
-                    <Icon />
-                  </a>
-                );
-              })
-            }
+          <div class="row-auto text-center text-3xl font-bold text-white">
+            Other Candidates
+          </div>
+          <div
+            class="row-auto mx-auto mt-2 flex w-[90%] flex-col gap-2 rounded-4xl bg-white p-4"
+          >
+            <ul>
+              {
+                otherCandidates.map((otherCandidate) => (
+                  <li>
+                    <a
+                      class="text-secondary flex items-center pl-2 underline"
+                      href={`/elections/${election}/${race}/${otherCandidate.slug}`}
+                    >
+                      <div class="h-8 w-8 overflow-hidden rounded-full">
+                        <CandidateProfilePicture
+                          candidate={otherCandidate}
+                          profileImage={otherCandidate.profileImage}
+                        />
+                      </div>
+                      <span class="pl-2">
+                        {otherCandidate.firstName} {otherCandidate.lastName}
+                      </span>
+                    </a>
+                  </li>
+                ))
+              }
+            </ul>
           </div>
         </div>
-        <div class="row-auto text-center text-3xl font-bold text-white">
-          Endorsements
-        </div>
-        <div
-          class="row-auto mx-auto mt-2 flex w-[90%] flex-col gap-2 rounded-4xl bg-white p-4"
-        >
-          <ul>
-            <li>
-              <span class="font-medium">Jane Doe</span> - Local Business Owner
-            </li>
-            <li>
-              <span class="font-medium">John Smith</span> - Community Organizer
-            </li>
-            <li>
-              <span class="font-medium">Emily Johnson</span> - Teacher
-            </li>
-          </ul>
-        </div>
       </div>
-      <div
-        class="bg-primary inset-x-auto order-last col-span-12 rounded-4xl py-4 md:order-0 md:col-span-4"
+    </div>
+    <div class="fixed right-3 bottom-3 block md:hidden">
+      <Button
+        aria-label="Other Candidates"
+        variant="secondary"
+        class="flex h-12 w-12 items-center rounded-full"><Users /></Button
       >
-        <div class="row-auto text-center text-3xl font-bold text-white">
-          Other Candidates
-        </div>
-        <div
-          class="row-auto mx-auto mt-2 flex w-[90%] flex-col gap-2 rounded-4xl bg-white p-4"
-        >
-          <ul>
-            {
-              otherCandidates.map((otherCandidate) => (
-                <li>
-                  <a
-                    class="text-secondary flex items-center pl-2 underline"
-                    href={`/elections/${election}/${race}/${otherCandidate.slug}`}
-                  >
-                    <div class="h-8 w-8 overflow-hidden rounded-full">
-                      <CandidateProfilePicture
-                        candidate={otherCandidate}
-                        profileImage={otherCandidate.profileImage}
-                      />
-                    </div>
-                    <span class="pl-2">
-                      {otherCandidate.firstName} {otherCandidate.lastName}
-                    </span>
-                  </a>
-                </li>
-              ))
-            }
-          </ul>
-        </div>
-      </div>
     </div>
   </main>
 </Layout>

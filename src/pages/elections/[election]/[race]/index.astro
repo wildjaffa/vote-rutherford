@@ -1,10 +1,10 @@
 ---
 import Layout from "../../../../layouts/Layout.astro";
 import CandidateCard from "../../../../components/CandidateCard.astro";
-import { ArrowLeft } from "@lucide/astro";
 import type { PolicyQuestion } from "../../../../generated/prisma/client";
 import prisma from "../../../../lib/prisma";
 import { convertKeyToPublicUrl } from "../../../../lib/blobStorage";
+import { ArrowLeft } from "../../../../lib/icons";
 
 export const prerender = false;
 
@@ -43,26 +43,26 @@ const { candidates } = raceData;
     <div class="mb-6">
       <a
         href={`/elections/${election}`}
-        class="text-blue-600 hover:text-blue-800 flex items-center group w-fit"
+        class="group flex w-fit items-center text-blue-600 hover:text-blue-800"
       >
         <ArrowLeft
           size={20}
-          class="mr-2 group-hover:-translate-x-1 transition-transform"
+          class="mr-2 transition-transform group-hover:-translate-x-1"
         />
         Back to {raceData.election.name}
       </a>
     </div>
 
     <div class="mb-12">
-      <h1 class="text-4xl font-bold text-gray-900 mb-4">{raceData.name}</h1>
-      <p class="text-xl text-gray-600 max-w-3xl">{raceData.description}</p>
+      <h1 class="mb-4 text-4xl font-bold text-gray-900">{raceData.name}</h1>
+      <p class="max-w-3xl text-xl text-gray-600">{raceData.description}</p>
     </div>
 
     <section class="mb-16">
-      <h2 class="text-2xl font-semibold text-gray-900 mb-6">Candidates</h2>
+      <h2 class="mb-6 text-2xl font-semibold text-gray-900">Candidates</h2>
       {
         candidates.length > 0 ? (
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {candidates.map((candidate) => (
               <CandidateCard
                 candidate={candidate}
@@ -81,32 +81,32 @@ const { candidates } = raceData;
     {
       questions.length > 0 && candidates.length > 0 && (
         <section>
-          <h2 class="text-2xl font-semibold text-gray-900 mb-8">
+          <h2 class="mb-8 text-2xl font-semibold text-gray-900">
             Policy Comparison
           </h2>
           <div class="space-y-12">
             {questions.map((question: PolicyQuestion) => (
-              <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div class="bg-gray-50 p-6 border-b border-gray-200">
+              <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                <div class="border-b border-gray-200 bg-gray-50 p-6">
                   <h3 class="text-xl font-bold text-gray-900">
                     {question.questionText}
                   </h3>
-                  <p class="text-gray-600 mt-2">{question.descriptionText}</p>
+                  <p class="mt-2 text-gray-600">{question.descriptionText}</p>
                 </div>
 
-                <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="grid grid-cols-1 gap-8 p-6 lg:grid-cols-2">
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <label class="mb-2 block text-sm font-medium text-gray-700">
                       Your Stance
                     </label>
                     <textarea
-                      class="w-full h-40 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary focus:border-secondary resize-none"
+                      class="focus:ring-secondary focus:border-secondary h-40 w-full resize-none rounded-lg border border-gray-300 p-3 focus:ring-2"
                       placeholder="Type your thoughts here to compare directly with the candidates..."
                     />
                   </div>
 
-                  <div class="space-y-4 max-h-125 overflow-y-auto pr-2 custom-scrollbar">
-                    <h4 class="text-sm font-medium text-gray-700 uppercase tracking-wider mb-3">
+                  <div class="custom-scrollbar max-h-125 space-y-4 overflow-y-auto pr-2">
+                    <h4 class="mb-3 text-sm font-medium tracking-wider text-gray-700 uppercase">
                       Candidate Responses
                     </h4>
                     {candidates.map((candidate) => {
@@ -115,9 +115,9 @@ const { candidates } = raceData;
                       );
 
                       return (
-                        <div class="bg-gray-50 rounded-lg p-4 relative">
-                          <div class="flex items-center gap-3 mb-2">
-                            <div class="h-8 w-8 rounded-full bg-gray-200 overflow-hidden shrink-0">
+                        <div class="relative rounded-lg bg-gray-50 p-4">
+                          <div class="mb-2 flex items-center gap-3">
+                            <div class="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-gray-200">
                               {candidate.profileImage ? (
                                 <img
                                   src={convertKeyToPublicUrl(
@@ -127,7 +127,7 @@ const { candidates } = raceData;
                                   class="h-full w-full object-cover"
                                 />
                               ) : (
-                                <div class="h-full w-full flex items-center justify-center text-gray-400 text-xs">
+                                <div class="flex h-full w-full items-center justify-center text-xs text-gray-400">
                                   ?
                                 </div>
                               )}
@@ -138,11 +138,11 @@ const { candidates } = raceData;
                           </div>
 
                           {response ? (
-                            <p class="text-gray-800 text-sm leading-relaxed">
+                            <p class="text-sm leading-relaxed text-gray-800">
                               {response.response}
                             </p>
                           ) : (
-                            <p class="text-gray-500 text-sm italic">
+                            <p class="text-sm text-gray-500 italic">
                               No response provided.
                             </p>
                           )}

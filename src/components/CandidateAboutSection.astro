@@ -1,0 +1,16 @@
+---
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<div class="py-2">
+  <h2 class="row-auto text-center text-3xl font-bold text-white">{title}</h2>
+  <div
+    class="row-auto mx-auto mt-2 flex w-[90%] flex-col gap-2 rounded-4xl bg-white p-4"
+  >
+    <slot />
+  </div>
+</div>
