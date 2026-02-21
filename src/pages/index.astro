@@ -8,17 +8,7 @@ export const prerender = true;
 ---
 
 <Layout title="Home">
-  <main class="flex min-h-[50vh] flex-col items-center space-y-8 pt-10">
-    <div
-      class="bg-primary w-full max-w-11/12 justify-start rounded-[50px] p-6 shadow-lg md:max-w-3/4"
-    >
-      <h1 class="font-montserrat text-4xl font-semibold text-white">
-        Find Your Ballot
-      </h1>
-      <AddressSearch />
-      <h3 class="pt-2 text-white">
-        Type your address to see ONLY the candidates YOU can vote for
-      </h3>
-    </div>
+  <main class="flex flex-1 flex-col items-center space-y-8 pt-10">
+    <AddressSearch />
   </main>
 </Layout>

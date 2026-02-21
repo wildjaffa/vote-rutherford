@@ -3,7 +3,9 @@ import { Image } from "astro:assets";
 import Logo from "../assets/Logo.png";
 import Button from "./Button.astro";
 import "../styles/global.css";
-import { Menu, X } from "../lib/icons";
+import { Menu } from "../lib/icons";
+// Because of the company X, we have to import the X icon directly from lucide instead of our icons.ts wrapper
+import { X } from "@lucide/astro";
 ---
 
 <header
@@ -26,9 +28,7 @@ import { Menu, X } from "../lib/icons";
         <a href="/" class="hover:text-accent text-white">Find Your Ballot</a>
       </li>
       <li class="pr-2">
-        <a href="/elections" class="hover:text-accent text-white"
-          >Upcoming Races</a
-        >
+        <a href="/my-ballot" class="hover:text-accent text-white">My Ballot</a>
       </li>
       <li class="pr-2">
         <a href="/about" class="hover:text-accent text-white">About</a>
@@ -51,13 +51,13 @@ import { Menu, X } from "../lib/icons";
     aria-label="Toggle menu"
   >
     <Menu class="menu-icon h-6 w-6 text-white" id="menu-icon" />
-    <X class="x-icon hidden h-6 w-6 text-white" id="x-icon" />
+    <X class="close-icon hidden h-6 w-6 text-white" id="close-icon" />
   </button>
 
   <!-- Mobile Navigation -->
   <nav
     id="mobile-menu"
-    class="bg-secondary absolute top-full right-0 left-0 hidden shadow-md sm:hidden"
+    class="bg-secondary absolute top-full right-0 left-0 z-90 hidden shadow-md sm:hidden"
   >
     <div class="border-b border-white/20"></div>
     <ul
@@ -89,7 +89,7 @@ import { Menu, X } from "../lib/icons";
   const mobileMenu = document.getElementById("mobile-menu");
   const menuList = document.getElementById("mobile-menu-list");
   const menuIcon = document.getElementById("menu-icon");
-  const xIcon = document.getElementById("x-icon");
+  const xIcon = document.getElementById("close-icon");
 
   menuToggle?.addEventListener("click", () => {
     const isHidden = mobileMenu?.classList.toggle("hidden");

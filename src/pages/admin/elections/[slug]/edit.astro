@@ -5,7 +5,6 @@ import FormInput from "../../../../components/forms/FormInput.astro";
 import FormTextarea from "../../../../components/forms/FormTextarea.astro";
 import AdminLayout from "../../../../layouts/AdminLayout.astro";
 import prisma from "../../../../lib/prisma";
-import type { Election } from "../../../../generated/prisma/browser";
 import FormPolicyQuestionInput from "../../../../components/forms/FormPolicyQuestionInput.astro";
 
 export const prerender = false;
@@ -16,7 +15,7 @@ if (!slug) {
   return Astro.redirect("/admin/elections");
 }
 
-const election: Election | null = await prisma.election.findUnique({
+const election = await prisma.election.findUnique({
   where: { slug },
   include: {
     policyQuestions: true,
@@ -56,10 +55,10 @@ if (Astro.request.method === "POST") {
 
     const result = await Astro.callAction(actions.updateElection, {
       id: election.id,
-      name: name || undefined,
-      description: description || undefined,
-      date: date || undefined,
-      slug: slug || undefined,
+      name,
+      description,
+      date,
+      slug,
       policyQuestions,
     });
 

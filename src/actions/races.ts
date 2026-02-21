@@ -25,7 +25,7 @@ export const updateRace = defineAction({
   handler: async (input) => {
     const { id, ...data } = input;
     try {
-      const race = await raceService.updateRace(id, data as any);
+      const race = await raceService.updateRace(id!, data);
       return { data: race };
     } catch (err: any) {
       throw new ActionError({
