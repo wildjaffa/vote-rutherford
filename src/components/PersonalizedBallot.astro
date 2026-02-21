@@ -146,14 +146,7 @@ const races = election
   : [];
 ---
 
-{
-  !voterAddress && (
-    <AddressSearch
-      class="mb-8"
-      subTitle="Enter your address to find YOUR ballot races. The races below apply to everyone in Rutherford County."
-    />
-  )
-}
+{!voterAddress && <AddressSearch class="mb-8" />}
 
 <div class="mb-8">
   <h1 class="mb-2 text-4xl font-bold text-gray-900">
