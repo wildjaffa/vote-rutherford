@@ -32,17 +32,17 @@ if (!electionData) {
 ---
 
 <Layout title={`${electionData.name} | Races`}>
-  <main class="container mx-auto px-4 py-8">
+  <main class="container mx-auto flex-1 px-4 py-8">
     <div class="mb-12 text-center">
-      <h1 class="text-4xl font-bold text-gray-900 mb-4">
+      <h1 class="mb-4 text-4xl font-bold text-gray-900">
         {electionData.name}
       </h1>
-      <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+      <p class="mx-auto max-w-3xl text-xl text-gray-600">
         {electionData.description}
       </p>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
       {
         electionData.races.length > 0 ? (
           electionData.races.map((race) => (
@@ -53,8 +53,8 @@ if (!electionData) {
             />
           ))
         ) : (
-          <div class="col-span-full text-center py-12">
-            <p class="text-gray-500 text-lg">
+          <div class="col-span-full py-12 text-center">
+            <p class="text-lg text-gray-500">
               No races found for this election.
             </p>
           </div>

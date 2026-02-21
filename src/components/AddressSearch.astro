@@ -1,47 +1,65 @@
 ---
+interface Props {
+  subTitle?: string;
+  class?: string;
+}
 
+const { class: className, subTitle } = Astro.props as Props;
 ---
 
-<div class="relative w-full py-2">
-  <div class="relative">
-    <input
-      type="text"
-      id="address-search"
-      placeholder="Address"
-      class="w-full px-4 py-2 text-gray-900 border-4 border-accent rounded-4xl focus:ring-2 bg-white focus:border-transparent outline-none transition-all duration-200"
-      autocomplete="off"
-    />
-    <div
-      id="loading-indicator"
-      class="absolute right-3 top-1/2 -translate-y-1/2 hidden"
-    >
-      <svg
-        class="animate-spin h-5 w-5 text-gray-500"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
+<div
+  class={`bg-primary mx-auto w-full max-w-11/12 justify-start rounded-[50px] p-6 shadow-lg md:max-w-3/4 ${className || ""}`}
+>
+  <h1 class="font-montserrat text-4xl font-semibold text-white">
+    Find Your Ballot
+  </h1>
+  <div class="relative w-full py-2">
+    <div class="relative">
+      <input
+        type="text"
+        id="address-search"
+        placeholder="Address"
+        class="border-accent w-full rounded-4xl border-4 bg-white px-4 py-2 text-gray-900 transition-all duration-200 outline-none focus:border-transparent focus:ring-2"
+        autocomplete="off"
+      />
+      <div
+        id="loading-indicator"
+        class="absolute top-1/2 right-3 hidden -translate-y-1/2"
       >
-        <circle
-          class="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          stroke-width="4"></circle>
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        ></path>
-      </svg>
+        <svg
+          class="h-5 w-5 animate-spin text-gray-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          ></path>
+        </svg>
+      </div>
     </div>
-  </div>
 
-  <ul
-    id="search-results"
-    class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden"
-  >
-  </ul>
+    <ul
+      id="search-results"
+      class="absolute z-10 mt-1 hidden max-h-60 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg"
+    >
+    </ul>
+  </div>
+  <h3 class="pt-2 text-white">
+    {
+      subTitle ||
+        "Type your address to see ONLY the candidates YOU can vote for"
+    }
+  </h3>
 </div>
 
 <script>

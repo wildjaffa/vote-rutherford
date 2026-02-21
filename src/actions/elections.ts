@@ -25,7 +25,7 @@ export const updateElection = defineAction({
   handler: async (input) => {
     const { id, ...data } = input;
     try {
-      const election = await electionService.updateElection(id, data);
+      const election = await electionService.updateElection(id!, data);
       return { data: election };
     } catch (err: any) {
       throw new ActionError({

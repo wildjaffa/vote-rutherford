@@ -36,7 +36,8 @@
     "formidable": "^3.5.4",
     "pg": "^8.17.2",
     "simple-icons-astro": "^16.1.0",
-    "tailwindcss": "^4.1.18"
+    "tailwindcss": "^4.1.18",
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@types/pg": "^8.16.0",
