@@ -1,5 +1,10 @@
 import type { ServiceAccount } from "firebase-admin";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
+import {
+  getAuth,
+  type DecodedIdToken,
+  type UserRecord,
+} from "firebase-admin/auth";
 
 const activeApps = getApps();
 const getServiceAccount = (): ServiceAccount | undefined => {
@@ -43,3 +48,31 @@ const initApp = () => {
 };
 
 export const app = activeApps.length === 0 ? initApp() : activeApps[0];
+
+export const getSessionUser = async (
+  sessionCookie: string | undefined,
+): Promise<UserRecord | null> => {
+  const auth = getAuth(app);
+  if (!sessionCookie) {
+    return null;
+  }
+  let decodedCookie: DecodedIdToken;
+  try {
+    decodedCookie = await auth.verifySessionCookie(sessionCookie);
+  } catch (error) {
+    console.error("Error verifying session cookie:", error);
+    return null;
+  }
+  let user: UserRecord;
+  try {
+    user = await auth.getUser(decodedCookie.uid);
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    return null;
+  }
+
+  if (!user) {
+    return null;
+  }
+  return user;
+};
