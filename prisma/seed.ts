@@ -242,7 +242,7 @@ async function main() {
 
   console.log("✓ Created races");
 
-  // Create candidates with profile images
+  // Create candidates
   const candidates = [];
   const candidateData = [
     { firstName: "Alice", lastName: "Johnson", birthYear: 1975 },
@@ -254,21 +254,13 @@ async function main() {
   for (let i = 0; i < candidateData.length; i++) {
     const candidateValue = candidateData[i];
     if (!candidateValue) continue;
-    const profileImage = await prisma.blobStorageReference.create({
-      data: {
-        fileType: "image/jpeg",
-        fileName: `${candidateValue.firstName.toLowerCase()}-profile.jpg`,
-        fileLocation: `candidates/${candidateValue.firstName.toLowerCase()}/profile.jpg`,
-        blobStorageTypeId: imageStorageType.id,
-      },
-    });
 
     const candidate = await prisma.candidate.create({
       data: {
         firstName: candidateValue.firstName,
         lastName: candidateValue.lastName,
         birthYear: candidateValue.birthYear,
-        profileImageId: profileImage.id,
+
         raceId: i < 2 ? presidentialRace.id : senateRace.id,
         slug: `${candidateValue.firstName.toLowerCase()}-${candidateValue.lastName.toLowerCase()}`,
         externalLinks: {

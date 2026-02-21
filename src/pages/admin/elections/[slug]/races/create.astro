@@ -5,7 +5,10 @@ import FormTextarea from "../../../../../components/forms/FormTextarea.astro";
 import FormSelect from "../../../../../components/forms/FormSelect.astro";
 import { actions } from "astro:actions";
 import prisma from "../../../../../lib/prisma";
-import type { RaceType } from "../../../../../generated/prisma/browser";
+import {
+  DistrictType,
+  type RaceType,
+} from "../../../../../generated/prisma/browser";
 
 export const prerender = false;
 
@@ -37,7 +40,7 @@ const districts = await prisma.district.findMany({
 });
 
 // Get unique district types for filter
-const districtTypes = Array.from(new Set(districts.map((d) => d.type)));
+const districtTypes = Object.values(DistrictType); // Array.from(new Set(districts.map((d) => d.type)));
 const districtTypeOptions = districtTypes.map((type) => ({
   value: type,
   label: type.replace(/_/g, " "),
@@ -67,7 +70,7 @@ if (Astro.request.method === "POST") {
 
     if (result.data) {
       return Astro.redirect(
-        `/admin/elections/${electionSlug}/races/${result.data.slug}/edit`,
+        `/admin/elections/${electionSlug}/races/${result.data.data.slug}/edit`,
       );
     }
   } catch (err) {
@@ -88,7 +91,7 @@ if (Astro.request.method === "POST") {
   <form method="POST" class="max-w-2xl space-y-6">
     {
       error && (
-        <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div class="rounded-lg border border-red-200 bg-red-50 p-4">
           <p class="text-sm font-medium text-red-800">{error}</p>
         </div>
       )
@@ -153,16 +156,16 @@ if (Astro.request.method === "POST") {
       placeholder="Enter race description..."
     />
 
-    <div class="flex gap-3 justify-end pt-4">
+    <div class="flex justify-end gap-3 pt-4">
       <a
         href={`/admin/elections/${electionSlug}/races`}
-        class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
       >
         Cancel
       </a>
       <button
         type="submit"
-        class="inline-flex items-center px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors focus:ring-2 focus:ring-secondary focus:ring-offset-2"
+        class="bg-secondary hover:bg-secondary/90 focus:ring-secondary inline-flex items-center rounded-lg px-4 py-2 text-white transition-colors focus:ring-2 focus:ring-offset-2"
       >
         Create Race
       </button>

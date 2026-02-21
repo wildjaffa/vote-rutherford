@@ -34,6 +34,7 @@ const VERBOSE = process.argv.includes("--verbose");
 
 // Map DistrictType to GeoJSON filenames
 const LAYER_FILES: Partial<Record<DistrictType, string>> = {
+  [DistrictType.COMMISSIONER]: "Commission_Districts.geojson",
   [DistrictType.PRECINCT]: "Precinct_Hub_Data.geojson",
   [DistrictType.US_HOUSE]: "US_House_Districts.geojson",
   [DistrictType.STATE_SENATE]: "TN_Senate_Districts.geojson",
@@ -170,6 +171,27 @@ async function ensureDistricts(layers: LoadedLayer[]) {
   return map;
 }
 
+async function ensureAllDistrict(): Promise<string> {
+  console.log("Ensuring 'ALL' district exists...");
+  const allDistrict = await prisma.district.upsert({
+    where: {
+      type_name_number: {
+        type: DistrictType.ALL,
+        name: "ALL",
+        number: 0,
+      },
+    },
+    update: {},
+    create: {
+      type: DistrictType.ALL,
+      name: "ALL",
+      number: 0,
+    },
+  });
+  console.log(`  ✓ 'ALL' district ID: ${allDistrict.id}`);
+  return allDistrict.id;
+}
+
 function extractDistrictInfo(
   props: DistrictProperties,
   type: DistrictType,
@@ -202,6 +224,7 @@ function extractDistrictInfo(
 async function processAddresses(
   layers: LoadedLayer[],
   districtIdMap: Map<string, string>,
+  allDistrictId: string,
 ) {
   const stream = createReadStream(CSV_FILE).pipe(
     csv(),
@@ -244,7 +267,14 @@ async function processAddresses(
     const districtConnects: Prisma.DistrictToVoterAddressCreateWithoutVoterAddressInput[] =
       [];
     const point = turf.point([lon, lat]);
-    const addedDistrictIds = new Set<string>();
+    const addedDistrictIds = new Set<string>([allDistrictId]);
+
+    // Always connect to 'ALL' district
+    districtConnects.push({
+      district: {
+        connect: { id: allDistrictId },
+      },
+    });
 
     for (const layer of layers) {
       for (const feature of layer.features) {
@@ -344,7 +374,18 @@ async function main() {
     }
 
     const districtIdMap = await ensureDistricts(layers);
-    await processAddresses(layers, districtIdMap);
+    const allDistrictId = await ensureAllDistrict();
+
+    if (!DRY_RUN) {
+      console.log("Cleaning up existing voter addresses and associations...");
+      const deletedAssoc = await prisma.districtToVoterAddress.deleteMany({});
+      const deletedAddresses = await prisma.voterAddress.deleteMany({});
+      console.log(
+        `  ✓ Deleted ${deletedAssoc.count} associations and ${deletedAddresses.count} addresses.`,
+      );
+    }
+
+    await processAddresses(layers, districtIdMap, allDistrictId);
 
     console.log("Done.");
   } catch (e) {

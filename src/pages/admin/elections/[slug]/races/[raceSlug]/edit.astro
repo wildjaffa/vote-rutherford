@@ -7,6 +7,7 @@ import AdminLayout from "../../../../../../layouts/AdminLayout.astro";
 import prisma from "../../../../../../lib/prisma";
 import FormInput from "../../../../../../components/forms/FormInput.astro";
 import FormPolicyQuestionSelect from "../../../../../../components/forms/FormPolicyQuestionSelect.astro";
+import { DistrictType } from "../../../../../../generated/prisma/browser";
 
 export const prerender = false;
 
@@ -54,7 +55,7 @@ const districts = await prisma.district.findMany({
 });
 
 // Get unique district types for filter
-const districtTypes = Array.from(new Set(districts.map((d) => d.type)));
+const districtTypes = Object.values(DistrictType);
 const districtTypeOptions = districtTypes.map((type) => ({
   value: type,
   label: type.replace(/_/g, " "),
