@@ -1,6 +1,5 @@
 import { defineMiddleware, sequence } from "astro:middleware";
-import { app } from "./firebase/server";
-import { getAuth } from "firebase-admin/auth";
+import { getSessionUser } from "./firebase/server";
 
 const authentication = defineMiddleware(async (context, next) => {
   const pathName = context.url.pathname;
@@ -12,14 +11,8 @@ const authentication = defineMiddleware(async (context, next) => {
     return next();
   }
 
-  const auth = getAuth(app);
   const session = context.cookies.get("__session");
-  if (!session) {
-    return context.redirect("/admin/signin");
-  }
-
-  const decodedCookie = await auth.verifySessionCookie(session.value);
-  const user = await auth.getUser(decodedCookie.uid);
+  const user = await getSessionUser(session?.value);
 
   if (!user) {
     return context.redirect("/admin/signin");
