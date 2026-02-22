@@ -3,57 +3,82 @@ import { PrismaLibSql } from "@prisma/adapter-libsql";
 import type { Config } from "@libsql/client";
 import { createAuditExtension } from "../../prisma/auditExtension";
 
-const connectionString =
-  process.env.DATABASE_URL || (import.meta.env && import.meta.env.DATABASE_URL);
-
-if (!connectionString) {
-  throw new Error("DATABASE_URL is not defined");
-}
-const config: Config = {
-  url: connectionString,
-};
-config.authToken =
-  process.env.AUTH_TOKEN || (import.meta.env && import.meta.env.AUTH_TOKEN);
-if (
-  process.env.SYNC_INTERVAL ||
-  (import.meta.env && import.meta.env.SYNC_INTERVAL)
-) {
-  config.syncInterval = Number(
-    process.env.SYNC_INTERVAL ||
-      (import.meta.env && import.meta.env.SYNC_INTERVAL),
-  );
-}
-config.syncUrl =
-  process.env.SYNC_URL || (import.meta.env && import.meta.env.SYNC_URL);
-if (config.syncUrl && !config.syncInterval) {
-  config.syncInterval = 60; // Default to 1 minute, sync interval is in seconds
-}
-
-const adapter = new PrismaLibSql(config);
-
 // Fixed UUID placeholder for system/unknown users
 const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
 
 // Store user context for the current request
 let currentUserContext: { userId: string } | null = null;
 
-const basePrisma = new PrismaClient({
-  adapter,
-});
+// Lazily-initialized Prisma client. This defers DATABASE_URL resolution to
+// the first database call at *runtime*, rather than at module-load time
+// during the build phase (when env vars are not available).
+let _prisma: ReturnType<typeof createPrismaClient> | null = null;
 
-// Log module load so we can confirm this prisma instance is the one used at runtime
-try {
-  console.log("prisma module loaded", { pid: process.pid });
-} catch (e) {
-  console.error("prisma module load log failed", e);
-  /* ignore */
+// Helper to read an env var from either process.env (Node/Docker runtime)
+// or import.meta.env (Vite/Astro dev server).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function env(key: string): string | undefined {
+  // @ts-ignore - import.meta.env is valid in Astro/Vite contexts
+  return process.env[key] ?? (import.meta.env as Record<string, string>)?.[key];
 }
 
-const prisma = basePrisma.$extends(
-  createAuditExtension(() => currentUserContext?.userId || SYSTEM_USER_ID),
-);
+function createPrismaClient() {
+  const connectionString = env("DATABASE_URL");
 
-// Apply audit extension (use a getter so the extension can read the current user id at operation time)
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is not defined");
+  }
+
+  const config: Config = {
+    url: connectionString,
+  };
+
+  const authToken = env("AUTH_TOKEN");
+  if (authToken) {
+    config.authToken = authToken;
+  }
+
+  const syncInterval = env("SYNC_INTERVAL");
+  if (syncInterval) {
+    config.syncInterval = Number(syncInterval);
+  }
+
+  const syncUrl = env("SYNC_URL");
+  if (syncUrl) {
+    config.syncUrl = syncUrl;
+    if (!config.syncInterval) {
+      config.syncInterval = 60; // Default to 1 minute, sync interval is in seconds
+    }
+  }
+
+  const adapter = new PrismaLibSql(config);
+  const basePrisma = new PrismaClient({ adapter });
+
+  try {
+    console.log("prisma module loaded", { pid: process.pid });
+  } catch (e) {
+    console.error("prisma module load log failed", e);
+  }
+
+  return basePrisma.$extends(
+    createAuditExtension(() => currentUserContext?.userId || SYSTEM_USER_ID),
+  );
+}
+
+function getPrisma() {
+  if (!_prisma) {
+    _prisma = createPrismaClient();
+  }
+  return _prisma;
+}
+
+// Proxy that forwards all property accesses to the lazily-created client.
+// This keeps the existing `import prisma from '...'` usage unchanged.
+const prisma = new Proxy({} as ReturnType<typeof createPrismaClient>, {
+  get(_target, prop) {
+    return (getPrisma() as unknown as Record<string | symbol, unknown>)[prop];
+  },
+});
 
 export default prisma;
 
