@@ -1,0 +1,21 @@
+---
+import { ArrowLeft } from "../lib/icons";
+
+interface Props {
+  href: string;
+  text: string;
+}
+
+const { href, text } = Astro.props;
+---
+
+<a
+  href={href}
+  class="group text-secondary hover:text-primary mt-6 ml-6 flex w-fit items-center"
+>
+  <ArrowLeft
+    size={20}
+    class="mr-2 transition-transform group-hover:-translate-x-1"
+  />
+  {text}
+</a>

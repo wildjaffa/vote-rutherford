@@ -5,6 +5,7 @@ import type {
 } from "../generated/prisma/client";
 import { convertKeyToPublicUrl } from "../lib/blobStorage";
 import { User, ArrowRight } from "../lib/icons";
+import CandidateProfilePicture from "./CandidateProfilePicture.astro";
 
 interface Props {
   candidate: Candidate;
@@ -25,13 +26,7 @@ const imageUrl = convertKeyToPublicUrl(profileImage?.fileLocation);
   <div
     class="mb-4 flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100"
   >
-    {
-      imageUrl ? (
-        <img class="h-full w-full object-cover" src={imageUrl} alt={fullName} />
-      ) : (
-        <User size={48} class="text-gray-400" />
-      )
-    }
+    <CandidateProfilePicture candidate={candidate} />
   </div>
 
   <h3
@@ -39,6 +34,7 @@ const imageUrl = convertKeyToPublicUrl(profileImage?.fileLocation);
   >
     {fullName}
   </h3>
+  <p>{candidate.partyAffiliation}</p>
 
   <div class="mt-auto pt-4">
     <a

@@ -3,8 +3,8 @@ import Layout from "../../../../layouts/Layout.astro";
 import CandidateCard from "../../../../components/CandidateCard.astro";
 import type { PolicyQuestion } from "../../../../generated/prisma/client";
 import prisma from "../../../../lib/prisma";
-import { convertKeyToPublicUrl } from "../../../../lib/blobStorage";
-import { ArrowLeft } from "../../../../lib/icons";
+import BackOption from "../../../../components/BackOption.astro";
+import CandidateProfilePicture from "../../../../components/CandidateProfilePicture.astro";
 
 export const prerender = false;
 
@@ -24,7 +24,11 @@ const raceData = await prisma.race.findFirst({
     candidates: {
       include: {
         profileImage: true,
-        policyResponses: true,
+        policyResponses: {
+          include: {
+            clarifications: true,
+          },
+        },
       },
     },
   },
@@ -36,23 +40,36 @@ if (raceData === null) {
 
 const questions = raceData.election.policyQuestions;
 const { candidates } = raceData;
+
+// Serialise to JSON for client-side script
+const candidatesJson = JSON.stringify(
+  candidates.map((c) => ({
+    id: c.id,
+    firstName: c.firstName,
+    lastName: c.lastName,
+    policyResponses: c.policyResponses.map((r) => ({
+      policyQuestionId: r.policyQuestionId,
+      response: r.response,
+      clarifications: r.clarifications.map((cl) => ({
+        clarification: cl.clarification,
+        clarificationReceivedAt: cl.clarificationReceivedAt,
+      })),
+    })),
+  })),
+);
+
+const questionsJson = JSON.stringify(
+  questions.map((q) => ({
+    id: q.id,
+    questionText: q.questionText,
+    descriptionText: q.descriptionText,
+  })),
+);
 ---
 
 <Layout title={`${raceData.name} | ${raceData.election.name}`}>
+  <BackOption href="/my-ballot" text="Back to Your Ballot" />
   <main class="container mx-auto flex-1 px-4 py-8">
-    <div class="mb-6">
-      <a
-        href={`/elections/${election}`}
-        class="group flex w-fit items-center text-blue-600 hover:text-blue-800"
-      >
-        <ArrowLeft
-          size={20}
-          class="mr-2 transition-transform group-hover:-translate-x-1"
-        />
-        Back to {raceData.election.name}
-      </a>
-    </div>
-
     <div class="mb-12">
       <h1 class="mb-4 text-4xl font-bold text-gray-900">{raceData.name}</h1>
       <p class="max-w-3xl text-xl text-gray-600">{raceData.description}</p>
@@ -81,84 +98,197 @@ const { candidates } = raceData;
     {
       questions.length > 0 && candidates.length > 0 && (
         <section>
-          <h2 class="mb-8 text-2xl font-semibold text-gray-900">
-            Policy Comparison
-          </h2>
-          <div class="space-y-12">
-            {questions.map((question: PolicyQuestion) => (
-              <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-                <div class="border-b border-gray-200 bg-gray-50 p-6">
-                  <h3 class="text-xl font-bold text-gray-900">
-                    {question.questionText}
-                  </h3>
-                  <p class="mt-2 text-gray-600">{question.descriptionText}</p>
-                </div>
+          <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <h2 class="text-2xl font-semibold text-gray-900">
+              Policy Comparison
+            </h2>
+            <p class="text-sm text-gray-500">
+              Select candidates below to compare their positions.
+            </p>
+          </div>
 
-                <div class="grid grid-cols-1 gap-8 p-6 lg:grid-cols-2">
-                  <div>
-                    <label class="mb-2 block text-sm font-medium text-gray-700">
-                      Your Stance
-                    </label>
-                    <textarea
-                      class="focus:ring-secondary focus:border-secondary h-40 w-full resize-none rounded-lg border border-gray-300 p-3 focus:ring-2"
-                      placeholder="Type your thoughts here to compare directly with the candidates..."
-                    />
-                  </div>
-
-                  <div class="custom-scrollbar max-h-125 space-y-4 overflow-y-auto pr-2">
-                    <h4 class="mb-3 text-sm font-medium tracking-wider text-gray-700 uppercase">
-                      Candidate Responses
-                    </h4>
-                    {candidates.map((candidate) => {
-                      const response = candidate.policyResponses.find(
-                        (r) => r.policyQuestionId === question.id,
-                      );
-
-                      return (
-                        <div class="relative rounded-lg bg-gray-50 p-4">
-                          <div class="mb-2 flex items-center gap-3">
-                            <div class="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-gray-200">
-                              {candidate.profileImage ? (
-                                <img
-                                  src={convertKeyToPublicUrl(
-                                    candidate.profileImage.fileLocation,
-                                  )}
-                                  alt={candidate.lastName}
-                                  class="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <div class="flex h-full w-full items-center justify-center text-xs text-gray-400">
-                                  ?
-                                </div>
-                              )}
-                            </div>
-                            <span class="font-semibold text-gray-900">
-                              {candidate.firstName} {candidate.lastName}
-                            </span>
-                          </div>
-
-                          {response ? (
-                            <p class="text-sm leading-relaxed text-gray-800">
-                              {response.response}
-                            </p>
-                          ) : (
-                            <p class="text-sm text-gray-500 italic">
-                              No response provided.
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
+          {/* Candidate selector chips */}
+          <div id="candidate-selector" class="mb-8 flex flex-wrap gap-3">
+            {candidates.map((candidate) => (
+              <button
+                type="button"
+                data-candidate-id={candidate.id}
+                class="candidate-chip hover:border-accent hover:text-accent flex items-center gap-2 rounded-full border-2 border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 shadow-sm transition-all duration-200 focus:outline-none"
+                aria-pressed="false"
+              >
+                <span class="chip-avatar flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-200 text-xs text-gray-400">
+                  <CandidateProfilePicture candidate={candidate} size="sm" />
+                </span>
+                <span>
+                  {candidate.firstName} {candidate.lastName}
+                </span>
+                <span class="chip-check text-accent hidden">✓</span>
+              </button>
             ))}
           </div>
+
+          {/* Empty-state notice when no candidate selected */}
+          <div
+            id="no-selection-notice"
+            class="mb-8 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center text-gray-500"
+          >
+            Select one or more candidates above to view their policy positions.
+          </div>
+
+          {/* Questions rendered by client-side JS */}
+          <div id="questions-container" class="hidden space-y-12" />
+
+          {/* Pre-rendered avatar templates for use by client-side JS */}
+          {candidates.map((candidate) => (
+            <template id={`avatar-${candidate.id}`}>
+              <CandidateProfilePicture
+                candidate={candidate}
+                profileImage={candidate.profileImage}
+              />
+            </template>
+          ))}
         </section>
       )
     }
   </main>
 </Layout>
+
+<script define:vars={{ candidatesJson, questionsJson }} type="module">
+  /** @type {Array} */
+  const candidates = JSON.parse(candidatesJson);
+  /** @type {Array} */
+  const questions = JSON.parse(questionsJson);
+
+  /** @type {Set<string>} */
+  const selected = new Set();
+
+  const chips = document.querySelectorAll(".candidate-chip");
+  const notice = document.getElementById("no-selection-notice");
+  const container = document.getElementById("questions-container");
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  function avatarHtml(c) {
+    const tpl = /** @type {HTMLTemplateElement|null} */ (
+      document.getElementById(`avatar-${c.id}`)
+    );
+    if (!tpl) return "";
+    const div = document.createElement("div");
+    div.appendChild(tpl.content.cloneNode(true));
+    return div.innerHTML;
+  }
+
+  function clarificationsHtml(clarifications) {
+    if (!clarifications || clarifications.length === 0) return "";
+    return `
+      <div class="mt-3 space-y-2 border-t border-gray-200 pt-3">
+        <p class="text-xs font-semibold tracking-wider text-gray-500 uppercase">Clarifications</p>
+        ${clarifications
+          .map(
+            (cl) => `
+          <div class="rounded-md bg-blue-50 p-3 text-sm leading-relaxed text-blue-900">
+            ${cl.clarification}
+          </div>`,
+          )
+          .join("")}
+      </div>`;
+  }
+
+  function buildQuestions() {
+    if (!container) return;
+    container.innerHTML = "";
+
+    const activeCandidates = candidates.filter((c) => selected.has(c.id));
+
+    questions.forEach((q) => {
+      const responseCols = activeCandidates
+        .map((c) => {
+          const resp = c.policyResponses.find(
+            (r) => r.policyQuestionId === q.id,
+          );
+          return `
+          <div class="flex flex-col rounded-lg bg-gray-50 p-4">
+            <div class="mb-3 flex items-center gap-3">
+              <div class="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-gray-200">
+                ${avatarHtml(c)}
+              </div>
+              <span class="font-semibold text-gray-900">${c.firstName} ${c.lastName}</span>
+            </div>
+            ${
+              resp
+                ? `<p class="text-sm leading-relaxed text-gray-800">${resp.response}</p>
+                   ${clarificationsHtml(resp.clarifications)}`
+                : `<p class="text-sm text-gray-500 italic">No response provided.</p>`
+            }
+          </div>`;
+        })
+        .join("");
+
+      const colClass =
+        activeCandidates.length === 1
+          ? "grid-cols-1"
+          : activeCandidates.length === 2
+            ? "grid-cols-1 sm:grid-cols-2"
+            : activeCandidates.length === 3
+              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+              : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4";
+
+      const card = document.createElement("div");
+      card.className =
+        "overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm";
+      card.innerHTML = `
+        <div class="border-b border-gray-200 bg-gray-50 p-6">
+          <h3 class="text-xl font-bold text-gray-900">${q.questionText}</h3>
+          ${q.descriptionText ? `<p class="mt-2 text-gray-600">${q.descriptionText}</p>` : ""}
+        </div>
+        <div class="grid gap-4 p-6 ${colClass}">
+          ${responseCols}
+        </div>`;
+      container.appendChild(card);
+    });
+  }
+
+  function refresh() {
+    const hasSelection = selected.size > 0;
+
+    if (notice) notice.classList.toggle("hidden", hasSelection);
+    if (container) container.classList.toggle("hidden", !hasSelection);
+
+    if (hasSelection) buildQuestions();
+  }
+
+  // ── Event listeners ────────────────────────────────────────────────────────
+
+  chips.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const id = chip.dataset.candidateId;
+      if (!id) return;
+
+      const nowSelected = !selected.has(id);
+      if (nowSelected) {
+        selected.add(id);
+      } else {
+        selected.delete(id);
+      }
+
+      chip.setAttribute("aria-pressed", String(nowSelected));
+      chip.classList.toggle("border-accent", nowSelected);
+      chip.classList.toggle("bg-accent/10", nowSelected);
+      chip.classList.toggle("text-accent", nowSelected);
+      chip.classList.toggle("border-gray-200", !nowSelected);
+      chip.classList.toggle("bg-white", !nowSelected);
+      chip.classList.toggle("text-gray-600", !nowSelected);
+
+      const check = chip.querySelector(".chip-check");
+      if (check) check.classList.toggle("hidden", !nowSelected);
+
+      refresh();
+    });
+  });
+
+  // Initial state
+  refresh();
+</script>
 
 <style>
   .custom-scrollbar::-webkit-scrollbar {
