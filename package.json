@@ -37,7 +37,8 @@
     "pg": "^8.17.2",
     "simple-icons-astro": "^16.1.0",
     "tailwindcss": "^4.1.18",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "vite-plugin-entry-shaking": "^0.5.1"
   },
   "devDependencies": {
     "@types/pg": "^8.16.0",
@@ -51,7 +52,6 @@
     "prisma": "^7.3.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.54.0",
-    "vite-plugin-entry-shaking": "^0.5.1"
+    "typescript-eslint": "^8.54.0"
   }
 }
