@@ -2,6 +2,11 @@
 FROM node:lts AS builder
 WORKDIR /app
 
+# DATABASE_URL is required by Prisma at generate/build time.
+# We use a dummy placeholder here; the real value is injected at runtime.
+ARG DATABASE_URL=file:/tmp/build-placeholder.db
+ENV DATABASE_URL=${DATABASE_URL}
+
 # Install dependencies
 COPY package*.json ./
 RUN npm ci --only=production && \

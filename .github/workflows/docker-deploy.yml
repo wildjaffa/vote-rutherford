@@ -41,6 +41,8 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          build-args: |
+            DATABASE_URL=file:/tmp/build-placeholder.db
 
       - name: Output image digest
         run: echo "Image digest ${{ steps.build.outputs.digest }}"
