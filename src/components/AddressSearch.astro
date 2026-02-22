@@ -7,9 +7,7 @@ interface Props {
 const { class: className, subTitle } = Astro.props as Props;
 ---
 
-<div
-  class={`bg-primary mx-auto w-full max-w-11/12 justify-start rounded-[50px] p-6 shadow-lg md:max-w-3/4 ${className || ""}`}
->
+<div class={`bg-primary  rounded-[50px] p-6 shadow-lg ${className || ""}`}>
   <h1 class="font-montserrat text-4xl font-semibold text-white">
     Find Your Ballot
   </h1>

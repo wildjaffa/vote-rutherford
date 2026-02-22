@@ -144,9 +144,50 @@ const races = election
         return a.name.localeCompare(b.name);
       })
   : [];
+
+// Efficiently group into sections for display while maintaining sort order
+const raceTypeLabels: Record<number, string> = {
+  4: "Federal",
+  3: "State",
+  2: "County",
+  1: "City",
+};
+
+interface RaceSection {
+  label: string;
+  races: typeof races;
+}
+
+const raceSections: RaceSection[] = [];
+let lastTypeId = -1;
+
+for (const race of races) {
+  const typeId = race.raceType.id;
+  if (typeId !== lastTypeId) {
+    raceSections.push({
+      label:
+        raceTypeLabels[typeId] || (race.raceType.value as string) || "Other",
+      races: [race],
+    });
+    lastTypeId = typeId;
+  } else {
+    const lastSection = raceSections[raceSections.length - 1];
+    if (lastSection) {
+      lastSection.races.push(race);
+    }
+  }
+}
 ---
 
-{!voterAddress && <AddressSearch class="mb-8" />}
+{
+  !voterAddress && (
+    <div class="grid w-full grid-cols-12">
+      <div class="col-span-2 hidden md:block" />
+      <AddressSearch class="col-span-12 md:col-span-8" />
+      <div class="col-span-2 hidden md:block" />
+    </div>
+  )
+}
 
 <div class="mb-8">
   <h1 class="mb-2 text-4xl font-bold text-gray-900">
@@ -204,14 +245,26 @@ const races = election
 }
 
 {
-  races.length > 0 && election && (
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {races.map((race) => (
-        <RaceCard
-          race={race}
-          election={election}
-          candidates={race.candidates}
-        />
+  raceSections.length > 0 && election && (
+    <div class="space-y-12">
+      {raceSections.map((section) => (
+        <section>
+          <div class="mb-8 flex items-center gap-6">
+            <h2 class="text-3xl font-bold tracking-tight text-gray-900">
+              {section.label}
+            </h2>
+            <div class="h-px flex-1 bg-linear-to-r from-gray-200 to-transparent" />
+          </div>
+          <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {section.races.map((race) => (
+              <RaceCard
+                race={race}
+                election={election}
+                candidates={race.candidates}
+              />
+            ))}
+          </div>
+        </section>
       ))}
     </div>
   )

@@ -1,14 +1,66 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import AddressSearch from "../components/AddressSearch.astro";
-// import "../styles/global.css";
 import "@fontsource-variable/montserrat";
+import LILAGraphic from "../assets/LILA-Graphic.png";
+import { Image } from "astro:assets";
+import CandidateAboutSection from "../components/CandidateAboutSection.astro";
+import CourtHouseSilhouette from "../assets/Courthouse-silhouette-no-weather-vain-no-background.png";
+import InstagramEmbed from "../components/InstagramEmbed.astro";
 
 export const prerender = true;
 ---
 
 <Layout title="Home">
-  <main class="flex flex-1 flex-col items-center space-y-8 pt-10">
-    <AddressSearch />
+  <main class="flex flex-1 flex-col items-center space-y-8 px-4 pt-10 md:px-0">
+    <div class="grid w-full grid-cols-12">
+      <div class="col-span-0 md:col-span-2"></div>
+      <AddressSearch class="col-span-12 md:col-span-8" />
+      <div class="col-span-0 md:col-span-2"></div>
+      <div class="col-span-12 h-8"></div>
+
+      <div class="col-span-12 py-4 md:col-span-7">
+        <div class="mx-auto mb-12 w-6/10">
+          <Image src={LILAGraphic} alt="LILA Graphic" loading="eager" />
+        </div>
+        <div class="relative">
+          <Image
+            src={CourtHouseSilhouette}
+            alt="Rutherford County Courthouse"
+            class="float-left hidden w-full md:block lg:w-2/3"
+            style={`shape-outside: url(${CourtHouseSilhouette.src}); shape-image-threshold: 0.1; margin-bottom: 1rem;`}
+            loading="eager"
+          />
+          <div class="sorts-mill-goudy text-2xl leading-tight lg:text-4xl">
+            “Wherever the people are well informed they can be trusted with
+            their own government”
+            <div class="mt-4 text-right">
+              <span class="text-secondary mr-4 text-2xl lg:text-3xl"
+                >- Thomas Jefferson</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-span-12 grid w-full grid-cols-1 md:col-span-3">
+        <div
+          class="bg-primary inset-x-auto col-span-12 h-min w-full rounded-4xl py-2 md:order-0"
+        >
+          <CandidateAboutSection title="Next Election">
+            <h3 class="justify-center text-center text-lg font-bold">
+              State and County Primary
+            </h3>
+            <p class="text-center text-4xl font-extrabold">May <br />5</p>
+            <p class="justify-center text-center text-lg font-bold">
+              Early voting <br />April 15-30 <br /> ★ ★ ★
+            </p>
+          </CandidateAboutSection>
+        </div>
+        <div class="mx-auto pt-4">
+          <InstagramEmbed />
+        </div>
+      </div>
+      <div class="col-span-2"></div>
+    </div>
   </main>
 </Layout>
