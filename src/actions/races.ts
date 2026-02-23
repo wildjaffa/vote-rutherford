@@ -1,37 +1,39 @@
-import { defineAction, ActionError } from "astro:actions";
+import { defineAction } from "astro:actions";
 import { z } from "astro/zod";
 import * as raceService from "../lib/services/races";
 import { upsertRaceSchema } from "../lib/models/upsertRace";
+import { getCurrentUserId } from "../lib/permissions";
+import { handleActionError } from "./utils";
 
 export const createRace = defineAction({
   accept: "json",
   input: upsertRaceSchema.omit({ id: true }),
-  handler: async (input) => {
+  handler: async (input, context) => {
+    const userId = await getCurrentUserId(
+      context.cookies.get("__session")?.value,
+    );
     try {
-      const race = await raceService.createRace(input);
+      const race = await raceService.createRace(input, userId);
       return { data: race };
-    } catch (err: any) {
-      throw new ActionError({
-        code: err.code === 403 ? "FORBIDDEN" : "INTERNAL_SERVER_ERROR",
-        message: err.message || "Failed to create race",
-      });
+    } catch (err) {
+      handleActionError(err, "Failed to create race");
     }
   },
 });
 
 export const updateRace = defineAction({
   accept: "json",
-  input: upsertRaceSchema,
-  handler: async (input) => {
+  input: upsertRaceSchema.extend({ id: z.string() }),
+  handler: async (input, context) => {
     const { id, ...data } = input;
+    const userId = await getCurrentUserId(
+      context.cookies.get("__session")?.value,
+    );
     try {
-      const race = await raceService.updateRace(id!, data);
+      const race = await raceService.updateRace(id, data, userId);
       return { data: race };
-    } catch (err: any) {
-      throw new ActionError({
-        code: err.code === 403 ? "FORBIDDEN" : "INTERNAL_SERVER_ERROR",
-        message: err.message || "Failed to update race",
-      });
+    } catch (err) {
+      handleActionError(err, "Failed to update race");
     }
   },
 });
@@ -41,15 +43,15 @@ export const deleteRace = defineAction({
   input: z.object({
     id: z.string(),
   }),
-  handler: async (input) => {
+  handler: async (input, context) => {
+    const userId = await getCurrentUserId(
+      context.cookies.get("__session")?.value,
+    );
     try {
-      const result = await raceService.deleteRace(input.id);
+      const result = await raceService.deleteRace(input.id, userId);
       return { data: result };
-    } catch (err: any) {
-      throw new ActionError({
-        code: err.code === 403 ? "FORBIDDEN" : "INTERNAL_SERVER_ERROR",
-        message: err.message || "Failed to delete race",
-      });
+    } catch (err) {
+      handleActionError(err, "Failed to delete race");
     }
   },
 });

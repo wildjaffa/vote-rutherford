@@ -5,8 +5,6 @@ import { UpsertRace } from "../models/upsertRace";
 import { canManageRace } from "../permissions";
 import { makeError } from "./utils";
 
-const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
-
 export async function validateRacePayload(
   body: unknown,
 ): Promise<UpsertRaceType> {
@@ -18,7 +16,10 @@ export async function validateRacePayload(
   return validation.data;
 }
 
-export async function createRace(data: UpsertRaceType): Promise<Race> {
+export async function createRace(
+  data: UpsertRaceType,
+  userId: string,
+): Promise<Race> {
   const validated = await validateRacePayload(data);
 
   if (!validated.electionId) {
@@ -39,7 +40,7 @@ export async function createRace(data: UpsertRaceType): Promise<Race> {
 
   const { policyQuestionIds, ...raceData } = validated;
 
-  const created = await withUserContext(SYSTEM_USER_ID, () =>
+  const created = await withUserContext(userId, () =>
     prisma.race.create({
       data: {
         ...(raceData as Prisma.RaceUncheckedCreateInput),
@@ -57,6 +58,7 @@ export async function createRace(data: UpsertRaceType): Promise<Race> {
 export async function updateRace(
   id: string,
   body: UpsertRaceType,
+  userId: string,
 ): Promise<Race> {
   const hasPermission = await canManageRace(id);
   if (!hasPermission) {
@@ -71,7 +73,7 @@ export async function updateRace(
   const validated = await validateRacePayload(body);
   const { policyQuestionIds, ...raceData } = validated;
 
-  const updated = await withUserContext(SYSTEM_USER_ID, async () => {
+  const updated = await withUserContext(userId, async () => {
     const race = await prisma.race.update({
       where: { id },
       data: raceData as Prisma.RaceUpdateInput,
@@ -98,15 +100,17 @@ export async function updateRace(
   return updated;
 }
 
-export async function deleteRace(id: string): Promise<Race> {
+export async function deleteRace(id: string, userId: string): Promise<Race> {
   const hasPermission = await canManageRace(id);
   if (!hasPermission) {
     throw makeError("Unauthorized", 403);
   }
 
-  const deleted = await prisma.race.update({
-    where: { id },
-    data: { deletedAt: new Date() },
-  });
+  const deleted = await withUserContext(userId, () =>
+    prisma.race.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    }),
+  );
   return deleted;
 }
