@@ -21,6 +21,7 @@ import {
   Vote,
   House,
   LogOut,
+  CircleQuestionMark,
 } from "@lucide/astro";
 
 import {
@@ -56,6 +57,7 @@ export {
   House,
   LogOut,
   Vote,
+  CircleQuestionMark,
 };
 
 export const qualificationTypeToIcon: Record<string, AstroComponent> = {

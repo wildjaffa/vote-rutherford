@@ -13,7 +13,7 @@ export const prerender = true;
 
 <Layout title="Home">
   <main class="flex flex-1 flex-col items-center space-y-8 px-4 pt-10 md:px-0">
-    <div class="grid w-full grid-cols-12">
+    <div class="grid w-full grid-cols-12 gap-2">
       <div class="col-span-0 md:col-span-2"></div>
       <AddressSearch class="col-span-12 md:col-span-8" />
       <div class="col-span-0 md:col-span-2"></div>
@@ -56,9 +56,7 @@ export const prerender = true;
             </p>
           </CandidateAboutSection>
         </div>
-        <div class="border-primary mx-auto rounded-4xl border-4 pt-4">
-          <InstagramEmbed />
-        </div>
+        <InstagramEmbed />
       </div>
       <div class="col-span-2"></div>
     </div>
