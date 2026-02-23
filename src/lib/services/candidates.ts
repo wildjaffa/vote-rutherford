@@ -5,9 +5,6 @@ import type { UpsertCandidateType } from "../models/upsertCandidate";
 import { canManageCandidate, canManageRace } from "../permissions";
 import { makeError } from "./utils";
 
-// constant copied from API code – could eventually be resolved from context
-const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
-
 export async function validateCandidatePayload(
   body: unknown,
 ): Promise<UpsertCandidateType> {
@@ -21,16 +18,18 @@ export async function validateCandidatePayload(
 
 export async function createCandidate(
   data: UpsertCandidateType,
+  userId: string,
 ): Promise<Candidate> {
   // perform validation and permission check as in original API
   const validated = await validateCandidatePayload(data);
 
+  const raceId = validated.raceId;
   // ensure race exists and user can manage it
-  if (!validated.raceId) {
+  if (!raceId) {
     throw makeError("Missing raceId", 400);
   }
 
-  const hasPermission = await canManageRace(validated.raceId);
+  const hasPermission = await canManageRace(raceId);
   if (!hasPermission) {
     throw makeError("Unauthorized", 403);
   }
@@ -43,15 +42,31 @@ export async function createCandidate(
   }
 
   // create candidate with audit context
-  const candidate = await withUserContext(SYSTEM_USER_ID, async () => {
-    const { externalLinks, policyResponses, qualifications, ...candidateData } =
-      validated;
-    // validated already contains raceId; Prisma create accepts it directly
+  const candidate = await withUserContext(userId, async () => {
+    const {
+      firstName,
+      lastName,
+      slug,
+      middleName,
+      partyAffiliation,
+      birthYear,
+      profileImageId,
+      externalLinks,
+      policyResponses,
+      qualifications,
+    } = validated;
+    const candidateData: Prisma.CandidateUncheckedCreateInput = {
+      firstName,
+      lastName,
+      raceId,
+      slug,
+      middleName: middleName ?? null,
+      partyAffiliation,
+      birthYear: birthYear ?? null,
+      profileImageId: profileImageId ?? null,
+    };
     const newCandidate = await prisma.candidate.create({
-      data: {
-        ...(candidateData as any),
-        externalLinks: undefined,
-      } as Prisma.CandidateUncheckedCreateInput,
+      data: candidateData,
     });
 
     if (externalLinks && externalLinks.length > 0) {
@@ -126,6 +141,7 @@ export async function createCandidate(
 export async function updateCandidate(
   id: string,
   body: UpsertCandidateType,
+  userId: string,
 ): Promise<Candidate> {
   const hasPermission = await canManageCandidate(id);
   if (!hasPermission) {
@@ -147,25 +163,19 @@ export async function updateCandidate(
     lastName,
     partyAffiliation,
     birthYear,
-    biography,
-    biographyRedacted,
     profileImageId,
     externalLinks,
     policyResponses,
     qualifications,
   } = validationData;
 
-  const updated = await withUserContext(SYSTEM_USER_ID, async () => {
+  const updated = await withUserContext(userId, async () => {
     const data: Prisma.CandidateUncheckedUpdateInput = {
       ...(firstName && { firstName }),
       ...(middleName !== undefined && { middleName: middleName || null }),
       ...(lastName && { lastName }),
       ...(partyAffiliation && { partyAffiliation }),
       ...(birthYear !== undefined && { birthYear: birthYear || null }),
-      ...(biography !== undefined && { biography: biography || null }),
-      ...(biographyRedacted !== undefined && {
-        biographyRedacted: biographyRedacted || null,
-      }),
       updatedAt: new Date(),
     };
 
@@ -367,7 +377,7 @@ export async function updateCandidate(
             } else {
               await prisma.candidatePolicyResponseClarification.create({
                 data: {
-                  candidatePolicyResponseId: targetResponseId!,
+                  candidatePolicyResponseId: targetResponseId,
                   clarification: clarification.clarificationText,
                 },
               });
@@ -411,16 +421,21 @@ export async function updateCandidate(
   return updated;
 }
 
-export async function deleteCandidate(id: string): Promise<Candidate> {
+export async function deleteCandidate(
+  id: string,
+  userId: string,
+): Promise<Candidate> {
   const hasPermission = await canManageCandidate(id);
   if (!hasPermission) {
     throw makeError("Unauthorized", 403);
   }
 
   // perform soft-delete or archive logic
-  const candidate = await prisma.candidate.update({
-    where: { id },
-    data: { deletedAt: new Date() },
-  });
+  const candidate = await withUserContext(userId, () =>
+    prisma.candidate.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    }),
+  );
   return candidate;
 }

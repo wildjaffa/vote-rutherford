@@ -1,20 +1,22 @@
-import { defineAction, ActionError } from "astro:actions";
+import { defineAction } from "astro:actions";
 import { z } from "astro/zod";
 import { upsertCandidateSchema } from "../lib/models/upsertCandidate";
 import * as candidateService from "../lib/services/candidates";
+import { getCurrentUserId } from "../lib/permissions";
+import { handleActionError } from "./utils";
 
 export const createCandidate = defineAction({
   accept: "json",
   input: upsertCandidateSchema,
-  handler: async (input) => {
+  handler: async (input, context) => {
+    const userId = await getCurrentUserId(
+      context.cookies.get("__session")?.value,
+    );
     try {
-      const candidate = await candidateService.createCandidate(input);
+      const candidate = await candidateService.createCandidate(input, userId);
       return { data: candidate };
-    } catch (err: any) {
-      throw new ActionError({
-        code: err.code === 403 ? "FORBIDDEN" : "INTERNAL_SERVER_ERROR",
-        message: err.message || "Failed to create candidate",
-      });
+    } catch (err) {
+      handleActionError(err, "Failed to create candidate");
     }
   },
 });
@@ -22,16 +24,16 @@ export const createCandidate = defineAction({
 export const updateCandidate = defineAction({
   accept: "json",
   input: upsertCandidateSchema.extend({ id: z.string() }),
-  handler: async (input) => {
+  handler: async (input, context) => {
     const { id, ...data } = input;
+    const userId = await getCurrentUserId(
+      context.cookies.get("__session")?.value,
+    );
     try {
-      const updated = await candidateService.updateCandidate(id, data);
+      const updated = await candidateService.updateCandidate(id, data, userId);
       return { data: updated };
-    } catch (err: any) {
-      throw new ActionError({
-        code: err.code === 403 ? "FORBIDDEN" : "INTERNAL_SERVER_ERROR",
-        message: err.message || "Failed to update candidate",
-      });
+    } catch (err) {
+      handleActionError(err, "Failed to update candidate");
     }
   },
 });
@@ -41,15 +43,15 @@ export const deleteCandidate = defineAction({
   input: z.object({
     id: z.string(),
   }),
-  handler: async (input) => {
+  handler: async (input, context) => {
+    const userId = await getCurrentUserId(
+      context.cookies.get("__session")?.value,
+    );
     try {
-      const deleted = await candidateService.deleteCandidate(input.id);
+      const deleted = await candidateService.deleteCandidate(input.id, userId);
       return { data: deleted };
-    } catch (err: any) {
-      throw new ActionError({
-        code: err.code === 403 ? "FORBIDDEN" : "INTERNAL_SERVER_ERROR",
-        message: err.message || "Failed to delete candidate",
-      });
+    } catch (err) {
+      handleActionError(err, "Failed to delete candidate");
     }
   },
 });

@@ -5,6 +5,10 @@ export interface ServiceError extends Error {
   details?: unknown;
 }
 
+export function isServiceError(err: unknown): err is ServiceError {
+  return err instanceof Error && ("code" in err || "details" in err);
+}
+
 export function makeError(
   message: string,
   code?: number,

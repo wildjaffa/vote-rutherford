@@ -1,37 +1,39 @@
-import { defineAction, ActionError } from "astro:actions";
+import { defineAction } from "astro:actions";
 import { z } from "astro/zod";
 import * as electionService from "../lib/services/elections";
 import { upsertElectionSchema } from "../lib/models/upsertElection";
+import { getCurrentUserId } from "../lib/permissions";
+import { handleActionError } from "./utils";
 
 export const createElection = defineAction({
   accept: "json",
   input: upsertElectionSchema.omit({ id: true }),
-  handler: async (input) => {
+  handler: async (input, context) => {
+    const userId = await getCurrentUserId(
+      context.cookies.get("__session")?.value,
+    );
     try {
-      const election = await electionService.createElection(input);
+      const election = await electionService.createElection(input, userId);
       return { data: election };
-    } catch (err: any) {
-      throw new ActionError({
-        code: err.code === 403 ? "FORBIDDEN" : "INTERNAL_SERVER_ERROR",
-        message: err.message || "Failed to create election",
-      });
+    } catch (err) {
+      handleActionError(err, "Failed to create election");
     }
   },
 });
 
 export const updateElection = defineAction({
   accept: "json",
-  input: upsertElectionSchema,
-  handler: async (input) => {
+  input: upsertElectionSchema.extend({ id: z.string() }),
+  handler: async (input, context) => {
     const { id, ...data } = input;
+    const userId = await getCurrentUserId(
+      context.cookies.get("__session")?.value,
+    );
     try {
-      const election = await electionService.updateElection(id!, data);
+      const election = await electionService.updateElection(id, data, userId);
       return { data: election };
-    } catch (err: any) {
-      throw new ActionError({
-        code: err.code === 403 ? "FORBIDDEN" : "INTERNAL_SERVER_ERROR",
-        message: err.message || "Failed to update election",
-      });
+    } catch (err) {
+      handleActionError(err, "Failed to update election");
     }
   },
 });
@@ -41,15 +43,15 @@ export const deleteElection = defineAction({
   input: z.object({
     id: z.string(),
   }),
-  handler: async (input) => {
+  handler: async (input, context) => {
+    const userId = await getCurrentUserId(
+      context.cookies.get("__session")?.value,
+    );
     try {
-      const result = await electionService.deleteElection(input.id);
+      const result = await electionService.deleteElection(input.id, userId);
       return { data: result };
-    } catch (err: any) {
-      throw new ActionError({
-        code: err.code === 403 ? "FORBIDDEN" : "INTERNAL_SERVER_ERROR",
-        message: err.message || "Failed to delete election",
-      });
+    } catch (err) {
+      handleActionError(err, "Failed to delete election");
     }
   },
 });

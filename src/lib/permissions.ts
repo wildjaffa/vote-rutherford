@@ -8,6 +8,8 @@
  * - User-to-election assignments
  */
 
+import { getSessionUser } from "../firebase/server";
+
 /**
  * Check if the current user can manage any elections
  * Future: Check if user is admin or has any election assignments
@@ -56,4 +58,11 @@ export async function canManageCandidate(
   // });
   // return canManageElection(candidate.race.electionId);
   return true;
+}
+
+export async function getCurrentUserId(
+  sessionCookie: string | undefined,
+): Promise<string> {
+  const user = await getSessionUser(sessionCookie);
+  return user?.uid ?? "";
 }

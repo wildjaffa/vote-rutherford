@@ -5,8 +5,6 @@ import { UpsertElection } from "../models/upsertElection";
 import { canManageElections, canManageElection } from "../permissions";
 import { makeError } from "./utils";
 
-const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
-
 export async function validateElectionPayload(
   body: unknown,
 ): Promise<UpsertElectionType> {
@@ -20,6 +18,7 @@ export async function validateElectionPayload(
 
 export async function createElection(
   payload: UpsertElectionType,
+  userId: string,
 ): Promise<Election> {
   const hasPermission = await canManageElections();
   if (!hasPermission) {
@@ -29,7 +28,7 @@ export async function createElection(
   const validated = await validateElectionPayload(payload);
 
   const { policyQuestions, ...electionData } = validated;
-  const election = await withUserContext(SYSTEM_USER_ID, () =>
+  const election = await withUserContext(userId, () =>
     prisma.election.create({
       data: {
         ...(electionData as Prisma.ElectionCreateInput),
@@ -49,6 +48,7 @@ export async function createElection(
 export async function updateElection(
   id: string,
   payload: UpsertElectionType,
+  userId: string,
 ): Promise<Election> {
   const hasPermission = await canManageElection(id);
   if (!hasPermission) {
@@ -63,7 +63,7 @@ export async function updateElection(
   const validated = await validateElectionPayload(payload);
   const { policyQuestions, ...electionData } = validated;
 
-  const updated = await withUserContext(SYSTEM_USER_ID, async () => {
+  const updated = await withUserContext(userId, async () => {
     // 1. Update basic election data
     const election = await prisma.election.update({
       where: { id },
@@ -115,15 +115,20 @@ export async function updateElection(
   return updated;
 }
 
-export async function deleteElection(id: string): Promise<Election> {
+export async function deleteElection(
+  id: string,
+  userId: string,
+): Promise<Election> {
   const hasPermission = await canManageElection(id);
   if (!hasPermission) {
     throw makeError("Unauthorized", 403);
   }
 
-  const deleted = await prisma.election.update({
-    where: { id },
-    data: { deletedAt: new Date() },
-  });
+  const deleted = await withUserContext(userId, () =>
+    prisma.election.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    }),
+  );
   return deleted;
 }
