@@ -1,4 +1,6 @@
 ---
+import { CircleQuestionMark } from "../lib/icons";
+
 interface Props {
   subTitle?: string;
   class?: string;
@@ -52,11 +54,17 @@ const { class: className, subTitle } = Astro.props as Props;
     >
     </ul>
   </div>
-  <h3 class="pt-2 text-white">
+  <h3 class="inline-flex items-center gap-2 pt-2 text-white">
     {
       subTitle ||
         "Type your address to see ONLY the candidates YOU can vote for"
     }
+    <a
+      href="/how-it-works"
+      class="text-accent text-sm font-medium hover:underline"
+    >
+      <CircleQuestionMark size="16" />
+    </a>
   </h3>
 </div>
 
