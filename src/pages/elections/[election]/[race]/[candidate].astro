@@ -2,7 +2,7 @@
 import Layout from "../../../../layouts/Layout.astro";
 import prisma from "../../../../lib/prisma";
 import CandidateProfilePicture from "../../../../components/CandidateProfilePicture.astro";
-import { linkTypeToIcon, Users, ArrowLeft } from "../../../../lib/icons";
+import { linkTypeToIcon, Square, Check } from "../../../../lib/icons";
 import { LinkTypes, QualificationTypes } from "../../../../constants";
 import type {
   CandidateExternalLink,
@@ -11,7 +11,6 @@ import type {
 } from "../../../../generated/prisma/browser";
 import CandidateAboutSection from "../../../../components/CandidateAboutSection.astro";
 import QualificationDescription from "../../../../components/QualificationDescription.astro";
-import Button from "../../../../components/Button.astro";
 import BackOption from "../../../../components/BackOption.astro";
 
 interface CandidateExternalLinkWithType extends CandidateExternalLink {
@@ -137,12 +136,18 @@ const fullName = `${candidateData.firstName} ${candidateData.middleName ? candid
   <BackOption href={`/elections/${election}/${race}`} text="Back to Race" />
   <main class="w-full px-4 py-8">
     <div class="grid grid-cols-12 items-start gap-6 md:gap-8">
-      <div class="hidden md:col-span-1 md:block"></div>
-      <div class="col-span-12 md:col-span-7">
-        <h1 class="text-2xl font-bold text-gray-900 md:text-3xl">
-          {candidateData.race.election.name}
-        </h1>
-        <div class="mt-6 flex w-full items-center space-x-6">
+      <div class="col-span-12 md:col-span-8">
+        <div
+          class="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <h1 class="text-2xl font-bold text-gray-900 md:text-3xl">
+            {candidateData.race.election.name}
+          </h1>
+        </div>
+        <div
+          id="candidate-header"
+          class="mt-6 flex w-full items-center space-x-6"
+        >
           <div
             class="border-primary z-10 h-23 w-23 shrink-0 overflow-hidden rounded-full border-8 bg-white md:h-30 md:w-30"
           >
@@ -153,8 +158,22 @@ const fullName = `${candidateData.firstName} ${candidateData.middleName ? candid
             />
           </div>
           <div
-            class="bg-primary border-accent -ml-18 flex h-18 w-[90%] flex-col justify-center rounded-2xl border-6 border-l-0 px-4 font-bold text-white md:h-20 md:px-6"
+            class="bg-primary border-accent relative -ml-18 flex h-18 w-[90%] flex-col justify-center rounded-2xl border-6 border-l-0 px-4 font-bold text-white md:h-20 md:px-6"
           >
+            <button
+              id="vote-plan-btn"
+              class="vote-plan-toggle border-accent focus:ring-accent absolute -top-3 -right-3 hidden h-8 w-8 items-center justify-center rounded-full border-2 bg-white text-gray-400 shadow-lg transition-transform hover:scale-110 focus:ring-2 focus:outline-none"
+              data-candidate-id={candidateData.id}
+              data-candidate-name={fullName}
+              data-race-id={candidateData.race.id}
+              data-num-selections={candidateData.race.numSelections}
+            >
+              <Square class="relative h-5 w-5" />
+              <Check
+                stroke-width={4}
+                class="selected-icon text-secondary absolute bottom-[-2px] left-[-4px] z-10 hidden h-12 w-12"
+              />
+            </button>
             <div class="ml-16">
               <h2 class="text-2xl md:text-3xl">{fullName}</h2>
               <p class="text-md md:text-lg">{candidateData.partyAffiliation}</p>
@@ -361,3 +380,101 @@ const fullName = `${candidateData.firstName} ${candidateData.middleName ? candid
     </div> -->
   </main>
 </Layout>
+
+<script is:inline define:vars={{ candidates: candidateData.race.candidates }}>
+  window.raceCandidates = candidates.reduce((acc, c) => {
+    acc[c.id] =
+      `${c.firstName} ${c.middleName ? c.middleName + " " : ""}${c.lastName}`;
+    return acc;
+  }, {});
+</script>
+
+<script>
+  function initCandidateVotePlan() {
+    const btn = document.getElementById(
+      "vote-plan-btn",
+    ) as HTMLButtonElement | null;
+    if (!btn) return;
+
+    const STORAGE_KEY = "vote_plan_selections";
+
+    // Parse data attributes
+    const candidateId = btn.getAttribute("data-candidate-id");
+    const candidateName = btn.getAttribute("data-candidate-name");
+    const raceId = btn.getAttribute("data-race-id");
+    const numSelections = parseInt(
+      btn.getAttribute("data-num-selections") || "1",
+      10,
+    );
+
+    if (!candidateId || !raceId) return;
+
+    const updateButtonUI = () => {
+      const selections = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      const raceSelections = selections[raceId] || [];
+      const isSelected = raceSelections.includes(candidateId);
+
+      // Make button visible and flex now that hydration/client state is ready
+      btn.classList.remove("hidden");
+      btn.classList.add("flex");
+
+      const unselectedIcon = btn.querySelector(".unselected-icon");
+      const selectedIcon = btn.querySelector(".selected-icon");
+
+      if (isSelected) {
+        unselectedIcon?.classList.add("hidden");
+        selectedIcon?.classList.remove("hidden");
+        btn.setAttribute("aria-label", "Remove from Vote Plan");
+      } else {
+        unselectedIcon?.classList.remove("hidden");
+        selectedIcon?.classList.add("hidden");
+        btn.setAttribute("aria-label", "Add to Vote Plan");
+      }
+    };
+
+    updateButtonUI();
+
+    btn.addEventListener("click", () => {
+      const selections = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      if (!selections[raceId]) selections[raceId] = [];
+      const raceSelections = selections[raceId];
+
+      const index = raceSelections.indexOf(candidateId);
+
+      if (index > -1) {
+        // Deselect
+        raceSelections.splice(index, 1);
+        window.toast.info(`Removed ${candidateName} from your vote plan.`);
+      } else {
+        // Select
+        if (raceSelections.length < numSelections) {
+          raceSelections.push(candidateId);
+          window.toast.success(`Added ${candidateName} to your vote plan.`);
+        } else if (numSelections === 1 && raceSelections.length > 0) {
+          // Replace
+          const oldId = raceSelections[0];
+          const oldName =
+            // @ts-expect-error window.raceCandidates is not typed, but is defined above
+            window.raceCandidates?.[oldId] || "previous candidate";
+          selections[raceId] = [candidateId];
+          window.toast.success(
+            `Added ${candidateName} to your vote plan and removed ${oldName}.`,
+          );
+        } else {
+          // Limit reached for multi-select
+          window.toast.warning(
+            `You can only select up to ${numSelections} candidates for this race.`,
+          );
+          return;
+        }
+      }
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(selections));
+      updateButtonUI();
+    });
+  }
+
+  // Run on initial load and view transitions
+  initCandidateVotePlan();
+  document.addEventListener("astro:page-load", initCandidateVotePlan);
+</script>

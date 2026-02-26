@@ -1,7 +1,6 @@
 ---
 import Layout from "../../../../layouts/Layout.astro";
 import CandidateCard from "../../../../components/CandidateCard.astro";
-import type { PolicyQuestion } from "../../../../generated/prisma/client";
 import prisma from "../../../../lib/prisma";
 import BackOption from "../../../../components/BackOption.astro";
 import CandidateProfilePicture from "../../../../components/CandidateProfilePicture.astro";
@@ -41,7 +40,7 @@ if (raceData === null) {
 const questions = raceData.election.policyQuestions;
 const { candidates } = raceData;
 
-// Serialise to JSON for client-side script
+// Serialize to JSON for client-side script
 const candidatesJson = JSON.stringify(
   candidates.map((c) => ({
     id: c.id,
@@ -73,6 +72,14 @@ const questionsJson = JSON.stringify(
     <div class="mb-12">
       <h1 class="mb-4 text-4xl font-bold text-gray-900">{raceData.name}</h1>
       <p class="max-w-3xl text-xl text-gray-600">{raceData.description}</p>
+      {
+        raceData.numSelections > 1 && (
+          <p class="mt-4 inline-block rounded-lg bg-blue-50 px-4 py-2 text-blue-800">
+            <strong>Note:</strong> In this race, you can select up to{" "}
+            <strong>{raceData.numSelections}</strong> candidates.
+          </p>
+        )
+      }
     </div>
 
     <section class="mb-16">
@@ -117,7 +124,7 @@ const questionsJson = JSON.stringify(
                 aria-pressed="false"
               >
                 <span class="chip-avatar flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-200 text-xs text-gray-400">
-                  <CandidateProfilePicture candidate={candidate} size="sm" />
+                  <CandidateProfilePicture candidate={candidate} />
                 </span>
                 <span>
                   {candidate.firstName} {candidate.lastName}

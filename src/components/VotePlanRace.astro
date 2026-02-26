@@ -1,0 +1,273 @@
+---
+import { PartyCategories } from "../constants";
+import RaceType from "../enums/raceTypeEnum";
+import type { Candidate, Election, Race } from "../generated/prisma/browser";
+import { Users, SquareCheck, Square } from "../lib/icons";
+
+interface Props {
+  election: Election;
+  race: Race;
+  candidates: Candidate[];
+}
+
+const { race, candidates } = Astro.props;
+
+// Map raceTypeId to race type label
+const getRaceTypeLabel = (raceTypeId: number): string => {
+  const typeLabels: Record<number, string> = {
+    [RaceType.city]: "City",
+    [RaceType.county]: "County",
+    [RaceType.state]: "State",
+    [RaceType.federal]: "Federal",
+  };
+  return typeLabels[raceTypeId] || "Unknown";
+};
+
+const typeLabel = getRaceTypeLabel(race.raceTypeId);
+---
+
+<div
+  class="group vote-plan-race transform-gpu overflow-hidden rounded-lg border border-gray-200 bg-white p-6 shadow transition-transform hover:-translate-y-1 hover:shadow-lg"
+  data-race-id={race.id}
+  data-num-selections={race.numSelections}
+  data-party-category={race.partyCategory}
+>
+  <div class="">
+    {
+      race.partyCategory && (
+        <span
+          class={`my-1 mr-2 inline-block rounded-md px-3 py-2 text-xs font-semibold tracking-wide uppercase md:text-sm ${
+            race.partyCategory === PartyCategories.DEMOCRATIC
+              ? "bg-primary text-white"
+              : race.partyCategory === PartyCategories.REPUBLICAN
+                ? "bg-tertiary text-white"
+                : "bg-accent text-black"
+          }`}
+        >
+          {race.partyCategory}
+        </span>
+      )
+    }
+    <span
+      class="bg-accent my-1 inline-block rounded-md px-3 py-2 text-xs font-semibold tracking-wide text-black uppercase md:text-sm"
+    >
+      {typeLabel}
+    </span>
+  </div>
+  <div class="pt-4">
+    <h3 class="m-0 mb-2 text-xl font-bold text-gray-900">
+      {race.name}
+    </h3>
+    <p class="m-0 mb-3 leading-relaxed text-gray-600">{race.description}</p>
+    <p class="mb-3">
+      <Users size="16" stroke-width={2} class="text-secondary mr-1 inline" />
+      {candidates.length} Candidates
+      {
+        race.numSelections > 1 && (
+          <>
+            <span class="mx-2">•</span>
+            Select up to{" "}
+            <span class="num-selections">{race.numSelections}</span>
+          </>
+        )
+      }
+    </p>
+
+    <div class="candidates-list mt-4 flex flex-col gap-2">
+      {
+        candidates.map((candidate) => (
+          <button
+            class="candidate-row focus:ring-secondary/50 flex w-full items-center justify-between rounded-md border border-gray-200 p-3 text-left transition-colors hover:bg-gray-50 focus:ring-2 focus:outline-none"
+            data-candidate-id={candidate.id}
+          >
+            <div>
+              <span class="font-medium text-gray-900">
+                {candidate.firstName} {candidate.middleName}{" "}
+                {candidate.lastName}
+              </span>
+              {candidate.partyAffiliation && (
+                <span class="ml-2 text-sm text-gray-500">
+                  ({candidate.partyAffiliation})
+                </span>
+              )}
+            </div>
+            <div class="checkbox-container text-gray-400">
+              <span class="unselected-icon">
+                <Square class="h-6 w-6" />
+              </span>
+              <span class="selected-icon text-secondary hidden">
+                <SquareCheck class="h-6 w-6" />
+              </span>
+            </div>
+          </button>
+        ))
+      }
+    </div>
+  </div>
+</div>
+
+<script>
+  // Function to initialize vote plan persistence logic
+  function initVotePlan() {
+    console.log("initVotePlan");
+    const races = document.querySelectorAll(".vote-plan-race");
+    const filterBtns = document.querySelectorAll(".primary-filter-btn");
+
+    // Default structure for vote plan in localStorage
+    const STORAGE_KEY = "vote_plan_selections";
+    const FILTER_KEY = "vote_plan_primary_filter";
+
+    const selections = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    let activeFilter = localStorage.getItem(FILTER_KEY); // null = no selection made yet
+
+    const updateAllUI = () => {
+      const effectiveFilter = activeFilter || "All";
+      // Update filter pills UI
+      filterBtns.forEach((btn) => {
+        const filterVal = btn.getAttribute("data-filter");
+        if (filterVal === effectiveFilter) {
+          btn.classList.add("bg-accent", "text-black");
+          btn.classList.remove("bg-secondary", "text-white");
+        } else {
+          btn.classList.remove("bg-accent", "text-black");
+          btn.classList.add("bg-secondary", "text-white");
+        }
+      });
+
+      races.forEach((raceEl) => {
+        const raceId = raceEl.getAttribute("data-race-id");
+        const partyCat = raceEl.getAttribute("data-party-category");
+        const candidateBtns = raceEl.querySelectorAll(".candidate-row");
+        if (!raceId) return;
+
+        const selectedCandidates = selections[raceId] || [];
+
+        const isPartisanPrimary =
+          partyCat === "Democratic Primary" ||
+          partyCat === "Republican Primary";
+
+        const isDisabled =
+          effectiveFilter !== "All" &&
+          isPartisanPrimary &&
+          partyCat !== effectiveFilter;
+
+        if (isDisabled) {
+          raceEl.classList.add("opacity-50", "grayscale");
+          candidateBtns.forEach((btn) => {
+            btn.setAttribute("disabled", "true");
+            btn.classList.add("cursor-not-allowed");
+          });
+        } else {
+          raceEl.classList.remove("opacity-50", "grayscale");
+          candidateBtns.forEach((btn) => {
+            btn.removeAttribute("disabled");
+            btn.classList.remove("cursor-not-allowed");
+          });
+        }
+
+        candidateBtns.forEach((btn) => {
+          const candidateId = btn.getAttribute("data-candidate-id");
+          const isSelected = selectedCandidates.includes(candidateId);
+
+          if (isSelected) {
+            btn.classList.add("bg-secondary/10", "border-secondary/50");
+            btn.querySelector(".unselected-icon")?.classList.add("hidden");
+            btn.querySelector(".selected-icon")?.classList.remove("hidden");
+          } else {
+            btn.classList.remove("bg-secondary/10", "border-secondary/50");
+            btn.querySelector(".unselected-icon")?.classList.remove("hidden");
+            btn.querySelector(".selected-icon")?.classList.add("hidden");
+          }
+        });
+      });
+    };
+
+    // Attach click handlers to filter buttons
+    filterBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const filterVal = btn.getAttribute("data-filter");
+        if (filterVal) {
+          activeFilter = filterVal;
+          localStorage.setItem(FILTER_KEY, activeFilter);
+          updateAllUI();
+        }
+      });
+    });
+
+    races.forEach((raceEl) => {
+      const raceId = raceEl.getAttribute("data-race-id");
+      const partyCat = raceEl.getAttribute("data-party-category");
+      const numSelectionsAllowed = parseInt(
+        raceEl.getAttribute("data-num-selections") || "1",
+        10,
+      );
+      const candidateBtns = raceEl.querySelectorAll(".candidate-row");
+      if (!raceId) return;
+
+      if (!selections[raceId]) {
+        selections[raceId] = [];
+      }
+
+      candidateBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (btn.hasAttribute("disabled")) return;
+
+          const candidateId = btn.getAttribute("data-candidate-id");
+          console.log(candidateId);
+          if (!selections[raceId]) selections[raceId] = [];
+          const selectedCandidates = selections[raceId];
+          const index = selectedCandidates.indexOf(candidateId);
+
+          if (index > -1) {
+            // Deselect
+            selectedCandidates.splice(index, 1);
+          } else {
+            // Select (enforcing limits)
+            if (selectedCandidates.length < numSelectionsAllowed) {
+              selectedCandidates.push(candidateId);
+            } else if (numSelectionsAllowed === 1) {
+              // For single selection, behave like radio button (replace selection)
+              selections[raceId] = [candidateId];
+            } else {
+              // Maximum reached in multi-select, maybe flash limit?
+              const limitEl = raceEl.querySelector(".num-selections");
+              if (limitEl) {
+                limitEl.classList.add(
+                  "text-red-600",
+                  "font-bold",
+                  "transition-colors",
+                );
+                setTimeout(
+                  () => limitEl.classList.remove("text-red-600", "font-bold"),
+                  300,
+                );
+              }
+              return; // Do not add
+            }
+          }
+
+          // Auto-select active filter if NEVER SET and user interacts with a partisan primary
+          if (
+            activeFilter === null &&
+            (partyCat === "Democratic Primary" ||
+              partyCat === "Republican Primary")
+          ) {
+            activeFilter = partyCat;
+            localStorage.setItem(FILTER_KEY, activeFilter);
+          }
+
+          // Save and update
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(selections));
+          updateAllUI();
+        });
+      });
+    });
+
+    // Initial UI update
+    updateAllUI();
+  }
+
+  // Run immediately. Astro bundles this as a deferred module,
+  // so the DOM is ready, or the server island has just been injected.
+  initVotePlan();
+</script>

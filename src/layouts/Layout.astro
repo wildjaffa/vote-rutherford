@@ -25,7 +25,9 @@ const { title } = Astro.props;
   </head>
   <body>
     <Header />
-    <slot />
+    <div class="mx-auto max-w-7xl flex-1 px-4 py-8">
+      <slot />
+    </div>
     <Footer />
     <ToastContainer />
   </body>
