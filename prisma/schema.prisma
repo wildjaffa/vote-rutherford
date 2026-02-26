@@ -53,9 +53,11 @@ model Race {
   raceTypeId  Int
   district    District? @relation(fields: [districtId], references: [id])
   districtId  String?
+  numSelections Int @default(1)
   createdAt   DateTime  @default(now()) 
   updatedAt   DateTime  @default(now()) 
   deletedAt   DateTime? 
+  partyCategory String  @default("General Election")
 
   candidates             Candidate[]
   policyQuestionsToRaces PolicyQuestionToRace[]

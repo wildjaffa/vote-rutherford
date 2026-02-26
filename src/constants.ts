@@ -22,6 +22,12 @@ export const socialLinkTypes: string[] = [
   LinkTypes.TIKTOK,
 ];
 
+export const PartyCategories = {
+  DEMOCRATIC: "Democratic Primary",
+  REPUBLICAN: "Republican Primary",
+  GENERAL: "General Election",
+};
+
 export const QualificationTypes = {
   EDUCATION: "education",
   WORK_EXPERIENCE: "work_experience",

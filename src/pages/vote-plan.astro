@@ -1,16 +1,16 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import PersonalizedBallot from "../components/PersonalizedBallot.astro";
+import VotePlanBallot from "../components/VotePlanBallot.astro";
 import BallotLoadingSkeleton from "../components/BallotLoadingSkeleton.astro";
 
 export const prerender = true;
 ---
 
-<Layout title="My Ballot">
-  <main class="mx-auto flex-1 px-4 py-8">
-    <PersonalizedBallot server:defer>
+<Layout title="Vote Plan">
+  <main class="flex-1 px-4 py-8">
+    <VotePlanBallot server:defer>
       <BallotLoadingSkeleton slot="fallback" />
-    </PersonalizedBallot>
+    </VotePlanBallot>
   </main>
 </Layout>
 

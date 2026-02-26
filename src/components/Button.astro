@@ -11,6 +11,7 @@ interface Props {
   target?: string;
   rel?: string;
   id?: string;
+  [key: string]: any;
 }
 
 const {
@@ -22,6 +23,7 @@ const {
   href,
   target,
   rel,
+  ...rest
 } = Astro.props;
 
 const baseStyles =
@@ -50,6 +52,7 @@ const buttonClass =
       target={target}
       rel={rel}
       class={buttonClass}
+      {...rest}
     >
       <slot />
     </a>
@@ -59,6 +62,7 @@ const buttonClass =
       type={type}
       disabled={disabled}
       class={buttonClass}
+      {...rest}
     >
       <slot />
     </button>

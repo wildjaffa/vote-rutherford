@@ -1,4 +1,5 @@
 ---
+import { PartyCategories } from "../constants";
 import RaceType from "../enums/raceTypeEnum";
 import type { Candidate, Election, Race } from "../generated/prisma/browser";
 import { ArrowRight, Calendar, Users } from "../lib/icons";
@@ -29,8 +30,23 @@ const typeLabel = getRaceTypeLabel(race.raceTypeId);
   class="group transform-gpu overflow-hidden rounded-lg border border-gray-200 bg-white p-6 shadow transition-transform hover:-translate-y-1 hover:shadow-lg"
 >
   <div class="">
+    {
+      race.partyCategory && (
+        <span
+          class={`my-1 mr-2 inline-block rounded-md px-3 py-2 text-xs font-semibold tracking-wide uppercase md:text-sm ${
+            race.partyCategory === PartyCategories.DEMOCRATIC
+              ? "bg-primary text-white"
+              : race.partyCategory === PartyCategories.REPUBLICAN
+                ? "bg-tertiary text-white"
+                : "bg-accent text-black"
+          }`}
+        >
+          {race.partyCategory}
+        </span>
+      )
+    }
     <span
-      class="bg-accent inline-block rounded-md px-3 py-2 text-sm font-semibold tracking-wide text-black uppercase"
+      class="bg-accent my-1 inline-block rounded-md px-3 py-2 text-xs font-semibold tracking-wide text-black uppercase md:text-sm"
     >
       {typeLabel}
     </span>
@@ -52,6 +68,14 @@ const typeLabel = getRaceTypeLabel(race.raceTypeId);
         })
       }<Users size="16" stroke-width={2} class="text-secondary ml-2 inline" />
       {candidates.length} Candidates
+      {
+        race.numSelections > 1 && (
+          <>
+            <span class="mx-2">•</span>
+            Select up to {race.numSelections}
+          </>
+        )
+      }
     </p>
     <a
       href={`/elections/${election.slug}/${race.slug}`}

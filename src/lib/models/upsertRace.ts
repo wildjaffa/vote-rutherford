@@ -10,6 +10,8 @@ export const upsertRaceSchema = z.object({
   status: z.string().min(1, "Status is required"),
   slug: z.string().min(1, "Slug is required"),
   districtId: z.string().optional().nullable(),
+  numSelections: z.number().int().min(1).default(1),
+  partyCategory: z.string().optional().default("General Election"),
   policyQuestionIds: z.array(z.string()).optional(),
 });
 

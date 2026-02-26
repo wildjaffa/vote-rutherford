@@ -9,6 +9,7 @@ import {
   DistrictType,
   type RaceType,
 } from "../../../../../generated/prisma/browser";
+import { PartyCategories } from "../../../../../constants";
 
 export const prerender = false;
 
@@ -57,14 +58,17 @@ if (Astro.request.method === "POST") {
     const status = formData.get("status") as string;
     const slug = formData.get("slug") as string;
     const districtId = formData.get("districtId") as string | null;
+    const partyCategory = formData.get("partyCategory") as string;
 
     const result = await Astro.callAction(actions.createRace, {
       electionId: election.id,
       name,
+      partyCategory,
       raceTypeId,
       description,
       status,
       slug,
+      numSelections: parseInt(formData.get("numSelections") as string) || 1,
       ...(districtId && { districtId }),
     });
 
@@ -138,6 +142,31 @@ if (Astro.request.method === "POST") {
           label: `${d.name}${d.number ? ` #${d.number}` : ""} (${d.type.replace(/_/g, " ")})`,
         })),
       ]}
+    />
+
+    <FormSelect
+      label="Party Category"
+      name="partyCategory"
+      options={[
+        { value: PartyCategories.GENERAL, label: PartyCategories.GENERAL },
+        {
+          value: PartyCategories.DEMOCRATIC,
+          label: PartyCategories.DEMOCRATIC,
+        },
+        {
+          value: PartyCategories.REPUBLICAN,
+          label: PartyCategories.REPUBLICAN,
+        },
+      ]}
+      required
+    />
+
+    <FormInput
+      label="Number of Selections"
+      name="numSelections"
+      type="number"
+      value="1"
+      required
     />
 
     <FormSelect

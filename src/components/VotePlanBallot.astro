@@ -1,5 +1,6 @@
 ---
-import RaceCard from "./RaceCard.astro";
+import VotePlanRace from "./VotePlanRace.astro";
+import { PartyCategories } from "../constants";
 import prisma from "../lib/prisma";
 import { DistrictType } from "../generated/prisma/browser";
 import AddressSearch from "./AddressSearch.astro";
@@ -177,17 +178,27 @@ for (const race of races) {
     }
   }
 }
+
+const hasDemocraticPrimary = races.some(
+  (r) => r.partyCategory === PartyCategories.DEMOCRATIC,
+);
+const hasRepublicanPrimary = races.some(
+  (r) => r.partyCategory === PartyCategories.REPUBLICAN,
+);
+const showPrimaryFilters = hasDemocraticPrimary && hasRepublicanPrimary;
 ---
 
 {
   !voterAddress && (
-    <div class="mb-12">
+    <div class="grid w-full grid-cols-12">
+      <div class="col-span-2 hidden md:block" />
       <AddressSearch class="col-span-12 md:col-span-8" />
+      <div class="col-span-2 hidden md:block" />
     </div>
   )
 }
 
-<div class="center mb-6">
+<div class="mb-8">
   <h1 class="mb-2 text-4xl font-bold text-gray-900">
     {
       election &&
@@ -221,6 +232,31 @@ for (const race of races) {
 </div>
 
 {
+  showPrimaryFilters && (
+    <div class="mb-8 flex flex-wrap gap-3" id="primary-filters">
+      <button
+        class="primary-filter-btn bg-secondary flex-1 rounded-full px-4 py-2 text-sm font-semibold text-white transition-colors hover:opacity-90 md:flex-none"
+        data-filter="All"
+      >
+        All
+      </button>
+      <button
+        class="primary-filter-btn bg-secondary flex-1 rounded-full px-4 py-2 text-sm font-semibold text-white transition-colors hover:opacity-90 md:flex-none"
+        data-filter={PartyCategories.DEMOCRATIC}
+      >
+        Democratic Primary
+      </button>
+      <button
+        class="primary-filter-btn bg-secondary flex-1 rounded-full px-4 py-2 text-sm font-semibold text-white transition-colors hover:opacity-90 md:flex-none"
+        data-filter={PartyCategories.REPUBLICAN}
+      >
+        Republican Primary
+      </button>
+    </div>
+  )
+}
+
+{
   error && (
     <div class="mb-8 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
       <p>{error}</p>
@@ -247,15 +283,15 @@ for (const race of races) {
     <div class="space-y-12">
       {raceSections.map((section) => (
         <section>
-          <div class="mb-6 items-center">
+          <div class="mb-8 flex items-center gap-6">
             <h2 class="text-3xl font-bold tracking-tight text-gray-900">
               {section.label}
             </h2>
-            <div class="bg-primary h-1 w-full md:w-[32%]" />
+            <div class="h-px flex-1 bg-linear-to-r from-gray-200 to-transparent" />
           </div>
           <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {section.races.map((race) => (
-              <RaceCard
+              <VotePlanRace
                 race={race}
                 election={election}
                 candidates={race.candidates}
