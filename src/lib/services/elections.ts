@@ -49,7 +49,7 @@ export async function updateElection(
   id: string,
   payload: UpsertElectionType,
   userId: string,
-): Promise<Election> {
+): Promise<Election | null> {
   const hasPermission = await canManageElection(id);
   if (!hasPermission) {
     throw makeError("Unauthorized", 403);
@@ -61,14 +61,28 @@ export async function updateElection(
   }
 
   const validated = await validateElectionPayload(payload);
-  const { policyQuestions, ...electionData } = validated;
+  // pulling id out so we don't try to update it
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { policyQuestions, id: electionId, ...electionData } = validated;
 
-  const updated = await withUserContext(userId, async () => {
+  let updated: Election | null = null;
+
+  await withUserContext(userId, async () => {
     // 1. Update basic election data
-    const election = await prisma.election.update({
-      where: { id },
-      data: electionData as Prisma.ElectionUpdateInput,
-    });
+    try {
+      updated = await prisma.election.update({
+        where: { id: id },
+        data: {
+          ...electionData,
+          earlyVotingStart: electionData.earlyVotingStart ?? null,
+          earlyVotingEnd: electionData.earlyVotingEnd ?? null,
+          headerImageId: null,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to update election", error);
+      throw makeError("Failed to update election", 500, error);
+    }
 
     // 2. Sync Policy Questions
     if (policyQuestions !== undefined) {
@@ -109,8 +123,6 @@ export async function updateElection(
         }
       }
     }
-
-    return election;
   });
   return updated;
 }
@@ -131,4 +143,19 @@ export async function deleteElection(
     }),
   );
   return deleted;
+}
+
+export async function getUpcomingElections(): Promise<Election[]> {
+  const now = new Date();
+  return await prisma.election.findMany({
+    where: {
+      date: {
+        gte: now,
+      },
+      deletedAt: null,
+    },
+    orderBy: {
+      date: "asc",
+    },
+  });
 }

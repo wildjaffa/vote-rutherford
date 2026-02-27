@@ -147,8 +147,8 @@ if (Astro.request.method === "POST") {
       lastName: formData.get("lastName") as string,
       partyAffiliation: formData.get("partyAffiliation") as string,
       birthYear: (formData.get("birthYear") as string) || undefined, // Schema handles string -> number coercion
-      biography: (formData.get("biography") as string) || undefined,
       profileImageId: (formData.get("profileImageId") as string) || undefined,
+      isIncumbent: formData.get("isIncumbent") === "on",
       slug: candidateSlug,
       externalLinks,
       policyResponses,
@@ -288,6 +288,13 @@ const profileImageUrl = convertKeyToPublicUrl(
             clarification: c.clarification,
           })),
         }))}
+      />
+
+      <FormInput
+        label="Is Incumbent"
+        name="isIncumbent"
+        type="checkbox"
+        value={candidate.isIncumbent ? "on" : "off"}
       />
 
       <div>

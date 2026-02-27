@@ -12,6 +12,7 @@ export const upsertCandidateSchema = z.object({
     (val) => (val === "" ? undefined : Number(val)),
     z.number().min(1900).optional().nullable(),
   ),
+  isIncumbent: z.boolean().default(false),
   profileImageId: z.string().optional().nullable(),
   slug: z.string().min(1, "Slug is required"),
   externalLinks: z

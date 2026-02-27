@@ -16,9 +16,7 @@ let _prisma: ReturnType<typeof createPrismaClient> | null = null;
 
 // Helper to read an env var from either process.env (Node/Docker runtime)
 // or import.meta.env (Vite/Astro dev server).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function env(key: string): string | undefined {
-  // @ts-ignore - import.meta.env is valid in Astro/Vite contexts
   return process.env[key] ?? (import.meta.env as Record<string, string>)?.[key];
 }
 

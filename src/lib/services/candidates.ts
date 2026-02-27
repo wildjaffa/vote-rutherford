@@ -54,6 +54,7 @@ export async function createCandidate(
       externalLinks,
       policyResponses,
       qualifications,
+      isIncumbent,
     } = validated;
     const candidateData: Prisma.CandidateUncheckedCreateInput = {
       firstName,
@@ -64,6 +65,7 @@ export async function createCandidate(
       partyAffiliation,
       birthYear: birthYear ?? null,
       profileImageId: profileImageId ?? null,
+      isIncumbent: isIncumbent ?? false,
     };
     const newCandidate = await prisma.candidate.create({
       data: candidateData,
@@ -167,6 +169,7 @@ export async function updateCandidate(
     externalLinks,
     policyResponses,
     qualifications,
+    isIncumbent,
   } = validationData;
 
   const updated = await withUserContext(userId, async () => {
@@ -177,6 +180,7 @@ export async function updateCandidate(
       ...(partyAffiliation && { partyAffiliation }),
       ...(birthYear !== undefined && { birthYear: birthYear || null }),
       updatedAt: new Date(),
+      isIncumbent: isIncumbent ?? false,
     };
 
     if (profileImageId !== undefined) {

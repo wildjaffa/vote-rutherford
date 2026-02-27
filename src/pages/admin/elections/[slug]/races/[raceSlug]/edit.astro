@@ -18,7 +18,7 @@ if (!electionSlug || !raceSlug) {
   return Astro.redirect("/admin/elections");
 }
 
-const race = await prisma.race.findFirst({
+let race = await prisma.race.findFirst({
   where: { slug: raceSlug, election: { slug: electionSlug } },
   include: {
     raceType: true,
@@ -95,6 +95,18 @@ if (Astro.request.method === "POST") {
 
     if (result.data) {
       success = "Race updated successfully";
+      race = (await prisma.race.findFirst({
+        where: { slug: raceSlug, election: { slug: electionSlug } },
+        include: {
+          raceType: true,
+          election: {
+            include: {
+              policyQuestions: true,
+            },
+          },
+          policyQuestionsToRaces: true,
+        },
+      }))!;
     }
   } catch (err) {
     error = err instanceof Error ? err.message : "Failed to update race";

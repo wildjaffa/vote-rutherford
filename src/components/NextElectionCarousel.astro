@@ -1,0 +1,145 @@
+---
+import { getUpcomingElections } from "../lib/services/elections";
+
+const elections = await getUpcomingElections();
+
+// Format date helper
+const formatDate = (date: Date) => {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+  }).format(new Date(date));
+};
+
+// Simple helper to get early voting range (if we had specific fields, but for now we'll mock it or extract from description)
+// For now, let's assume we might need to add specific fields later, but we'll use fallback text.
+---
+
+<div
+  id="election-carousel"
+  class="relative min-h-[180px] w-full overflow-hidden"
+>
+  {
+    elections.length > 0 ? (
+      <div
+        id="carousel-inner"
+        class="flex transition-transform duration-500 ease-in-out"
+      >
+        {elections.map((election) => (
+          <div class="flex w-full shrink-0 flex-col items-center px-4">
+            <h3 class="flex min-h-12 items-center justify-center text-center text-lg font-bold">
+              {election.name}
+            </h3>
+            <p class="py-2 text-center text-4xl font-extrabold">
+              {formatDate(election.date).split(" ")[0]} <br />{" "}
+              {formatDate(election.date).split(" ")[1]}
+            </p>
+            <div class="justify-center text-center text-lg font-bold">
+              {/* Early voting placeholder - would be better if data was in DB */}
+              <p>
+                Early voting <br />{" "}
+                {election.earlyVotingStart &&
+                  formatDate(election.earlyVotingStart)}{" "}
+                -
+                {election.earlyVotingEnd && formatDate(election.earlyVotingEnd)}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div class="flex h-full flex-col items-center justify-center py-8">
+        <p class="text-lg font-bold text-gray-500 italic">
+          No upcoming elections
+        </p>
+      </div>
+    )
+  }
+
+  {
+    elections.length > 1 && (
+      <div class="mt-4 flex justify-center gap-2 pb-2">
+        {elections.map((_, index) => (
+          <button
+            class="carousel-dot cursor-pointer text-2xl transition-colors duration-200"
+            data-index={index}
+            aria-label={`Go to election ${index + 1}`}
+          >
+            ★
+          </button>
+        ))}
+      </div>
+    )
+  }
+</div>
+
+<script>
+  function setupCarousel() {
+    const carouselInner = document.querySelector(
+      "#carousel-inner",
+    ) as HTMLElement;
+    const dots = document.querySelectorAll(".carousel-dot");
+    const totalElections = dots.length;
+
+    if (!carouselInner || totalElections <= 1) return;
+
+    let currentIndex = 0;
+    let autoScrollInterval: ReturnType<typeof setInterval>;
+
+    function updateCarousel(index: number) {
+      currentIndex = index;
+      carouselInner.style.transform = `translateX(-${index * 100}%)`;
+
+      // Update dots
+      dots.forEach((dot, i) => {
+        if (i === index) {
+          dot.classList.add("text-secondary");
+          dot.classList.remove("text-gray-300");
+        } else {
+          dot.classList.remove("text-secondary");
+          dot.classList.add("text-gray-300");
+        }
+      });
+    }
+
+    function startAutoScroll() {
+      autoScrollInterval = setInterval(() => {
+        const nextIndex = (currentIndex + 1) % totalElections;
+        updateCarousel(nextIndex);
+      }, 4000);
+    }
+
+    function resetAutoScroll() {
+      clearInterval(autoScrollInterval);
+      startAutoScroll();
+    }
+
+    dots.forEach((dot, index) => {
+      dot.addEventListener("click", () => {
+        updateCarousel(index);
+        resetAutoScroll();
+      });
+    });
+
+    // Initialize
+    updateCarousel(0);
+    startAutoScroll();
+  }
+
+  // Handle both initial load and view transitions if enabled
+  setupCarousel();
+  document.addEventListener("astro:after-swap", setupCarousel);
+</script>
+
+<style>
+  .carousel-dot {
+    color: #d1d5db; /* gray-300 */
+    line-height: 1;
+  }
+  .carousel-dot.text-secondary {
+    color: var(
+      --color-secondary,
+      #e11d48
+    ); /* Fallback to rose-600 if variable missing, but project has primary/secondary */
+  }
+</style>

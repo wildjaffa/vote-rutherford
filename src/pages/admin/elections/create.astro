@@ -13,18 +13,26 @@ if (Astro.request.method === "POST") {
     const formData = await Astro.request.formData();
     const name = formData.get("name") as string;
     const description = formData.get("description") as string;
-    const date = formData.get("date") as string;
+    const date = new Date(formData.get("date") as string);
     const slug = formData.get("slug") as string;
+    const earlyVotingStart = (formData.get("earlyVotingStart") as string)
+      ? new Date(formData.get("earlyVotingStart") as string)
+      : null;
+    const earlyVotingEnd = (formData.get("earlyVotingEnd") as string)
+      ? new Date(formData.get("earlyVotingEnd") as string)
+      : null;
 
     const result = await Astro.callAction(actions.createElection, {
       name,
       description,
       date,
       slug,
+      earlyVotingStart,
+      earlyVotingEnd,
     });
 
     if (result.data) {
-      return Astro.redirect(`/admin/elections/${result.data.id}/edit`);
+      return Astro.redirect(`/admin/elections/${result.data.data.id}/edit`);
     }
   } catch (err) {
     error = err instanceof Error ? err.message : "Failed to create election";
@@ -39,10 +47,10 @@ if (Astro.request.method === "POST") {
     { label: "Create", href: "/admin/elections/create" },
   ]}
 >
-  <form method="POST" class="max-w-2xl space-y-6">
+  <form method="POST" class="">
     {
       error && (
-        <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div class="rounded-lg border border-red-200 bg-red-50 p-4">
           <p class="text-sm font-medium text-red-800">{error}</p>
         </div>
       )
@@ -78,16 +86,28 @@ if (Astro.request.method === "POST") {
       required
     />
 
-    <div class="flex gap-3 justify-end pt-4">
+    <FormInput
+      label="Early Voting Start"
+      name="earlyVotingStart"
+      type="datetime-local"
+    />
+
+    <FormInput
+      label="Early Voting End"
+      name="earlyVotingEnd"
+      type="datetime-local"
+    />
+
+    <div class="flex justify-end gap-3 pt-4">
       <a
         href="/admin/elections"
-        class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
       >
         Cancel
       </a>
       <button
         type="submit"
-        class="inline-flex items-center px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors focus:ring-2 focus:ring-secondary focus:ring-offset-2"
+        class="bg-secondary hover:bg-secondary/90 focus:ring-secondary inline-flex items-center rounded-lg px-4 py-2 text-white transition-colors focus:ring-2 focus:ring-offset-2"
       >
         Create Election
       </button>
