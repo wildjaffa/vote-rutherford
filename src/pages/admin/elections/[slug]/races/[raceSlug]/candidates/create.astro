@@ -1,6 +1,5 @@
 ---
 import FormInput from "../../../../../../../components/forms/FormInput.astro";
-import FormTextarea from "../../../../../../../components/forms/FormTextarea.astro";
 import AdminLayout from "../../../../../../../layouts/AdminLayout.astro";
 import prisma from "../../../../../../../lib/prisma";
 import { actions } from "astro:actions";
@@ -118,8 +117,8 @@ if (Astro.request.method === "POST") {
       lastName: formData.get("lastName") as string,
       partyAffiliation: formData.get("partyAffiliation") as string,
       birthYear: (formData.get("birthYear") as string) || undefined, // Schema handles string -> number coercion
-      biography: (formData.get("biography") as string) || undefined,
       profileImageId: (formData.get("profileImageId") as string) || undefined,
+      isIncumbent: formData.get("isIncumbent") === "on",
       slug: formData.get("slug") as string,
       externalLinks,
       policyResponses,
@@ -204,12 +203,6 @@ if (Astro.request.method === "POST") {
       min="1900"
     />
 
-    <FormTextarea
-      label="Biography"
-      name="biography"
-      placeholder="Enter candidate biography..."
-    />
-
     <FormExternalLinkInput />
 
     <hr class="border-gray-200" />
@@ -219,6 +212,8 @@ if (Astro.request.method === "POST") {
     <hr class="border-gray-200" />
 
     <FormCandidatePolicyResponseInput questions={questions} />
+
+    <FormInput label="Is Incumbent" name="isIncumbent" type="checkbox" />
 
     <div>
       <label class="block text-sm font-medium text-gray-700"

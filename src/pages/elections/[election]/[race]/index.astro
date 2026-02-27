@@ -64,6 +64,8 @@ const questionsJson = JSON.stringify(
     descriptionText: q.descriptionText,
   })),
 );
+
+const noIncumbent = candidates.filter((c) => c.isIncumbent).length === 0;
 ---
 
 <Layout title={`${raceData.name} | ${raceData.election.name}`}>
@@ -92,7 +94,13 @@ const questionsJson = JSON.stringify(
                 candidate={candidate}
                 raceSlug={raceData.slug}
                 electionSlug={raceData.election.slug}
-                profileImage={candidate.profileImage}
+                subtext={
+                  noIncumbent
+                    ? "Open Seat"
+                    : candidate.isIncumbent
+                      ? "Incumbent"
+                      : ""
+                }
               />
             ))}
           </div>

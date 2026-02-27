@@ -5,9 +5,11 @@ export const upsertElectionSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, "Election name is required"),
   description: z.string().min(1, "Description is required"),
-  date: z.string().min(1, "Election date is required"),
+  date: z.date({ required_error: "Election date is required" }),
+  earlyVotingStart: z.date().optional().nullable(),
+  earlyVotingEnd: z.date().optional().nullable(),
   slug: z.string().min(1, "Slug is required"),
-  headerImage: z.string().optional().nullable(),
+  headerImageId: z.string().optional().nullable(),
   policyQuestions: z
     .array(
       z.object({

@@ -7,6 +7,8 @@ import { Image } from "astro:assets";
 import CandidateAboutSection from "../components/CandidateAboutSection.astro";
 import CourtHouseSilhouette from "../assets/Courthouse-silhouette-no-weather-vain-no-background.png";
 import InstagramEmbed from "../components/InstagramEmbed.astro";
+import NextElectionCarousel from "../components/NextElectionCarousel.astro";
+import NextElectionSkeleton from "../components/NextElectionSkeleton.astro";
 
 export const prerender = true;
 ---
@@ -47,13 +49,9 @@ export const prerender = true;
           class="bg-primary inset-x-auto col-span-12 h-min w-full rounded-4xl py-2 md:order-0"
         >
           <CandidateAboutSection title="Next Election">
-            <h3 class="justify-center text-center text-lg font-bold">
-              State and County Primary
-            </h3>
-            <p class="text-center text-4xl font-extrabold">May <br />5</p>
-            <p class="justify-center text-center text-lg font-bold">
-              Early voting <br />April 15-30 <br /> ★ ★ ★
-            </p>
+            <NextElectionCarousel server:defer>
+              <NextElectionSkeleton slot="fallback" />
+            </NextElectionCarousel>
           </CandidateAboutSection>
         </div>
         <div class="w-full items-center justify-center pt-4">

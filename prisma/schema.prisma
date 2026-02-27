@@ -25,6 +25,8 @@ model Election {
   slug          String                @unique @default(cuid())
   description   String
   date          DateTime
+  earlyVotingStart DateTime?
+  earlyVotingEnd   DateTime?
   headerImage   BlobStorageReference? @relation("ElectionHeaderImage", fields: [headerImageId], references: [id])
   headerImageId String?               
   createdAt     DateTime              @default(now()) 
@@ -72,7 +74,6 @@ model RaceType {
   createdAt DateTime  @default(now()) 
   updatedAt DateTime  @default(now()) 
   deletedAt DateTime? 
-
   races Race[]
 
   @@map("race_types")
@@ -88,6 +89,7 @@ model Candidate {
   slug              String                @default(cuid())
   birthYear         Int?
   partyAffiliation  String?
+  isIncumbent       Boolean               @default(false)
   profileImage      BlobStorageReference? @relation("CandidateProfileImage", fields: [profileImageId], references: [id])
   profileImageId    String?               
   historicalLink    Candidate?            @relation("HistoricalLink", fields: [historicalLinkId], references: [id])

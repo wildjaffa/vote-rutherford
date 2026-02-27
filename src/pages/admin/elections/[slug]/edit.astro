@@ -15,7 +15,7 @@ if (!slug) {
   return Astro.redirect("/admin/elections");
 }
 
-const election = await prisma.election.findUnique({
+let election = await prisma.election.findUnique({
   where: { slug },
   include: {
     policyQuestions: true,
@@ -34,8 +34,14 @@ if (Astro.request.method === "POST") {
     const formData = await Astro.request.formData();
     const name = formData.get("name") as string;
     const description = formData.get("description") as string;
-    const date = formData.get("date") as string;
+    const date = new Date(formData.get("date") as string);
     const slug = formData.get("slug") as string;
+    const earlyVotingStart = (formData.get("earlyVotingStart") as string)
+      ? new Date(formData.get("earlyVotingStart") as string)
+      : null;
+    const earlyVotingEnd = (formData.get("earlyVotingEnd") as string)
+      ? new Date(formData.get("earlyVotingEnd") as string)
+      : null;
 
     const questionIds = formData.getAll("question-id") as string[];
     const questionTexts = formData.getAll("question-text") as string[];
@@ -59,11 +65,19 @@ if (Astro.request.method === "POST") {
       description,
       date,
       slug,
+      earlyVotingStart,
+      earlyVotingEnd,
       policyQuestions,
     });
 
     if (result.data) {
       success = "Election updated successfully";
+      election = (await prisma.election.findUnique({
+        where: { slug },
+        include: {
+          policyQuestions: true,
+        },
+      }))!;
     }
   } catch (err) {
     error = err instanceof Error ? err.message : "Failed to update election";
@@ -78,7 +92,7 @@ if (Astro.request.method === "POST") {
     { label: election.name },
   ]}
 >
-  <div class="space-y-6">
+  <div class="">
     {
       error && (
         <div class="rounded-lg border border-red-200 bg-red-50 p-4">
@@ -124,6 +138,20 @@ if (Astro.request.method === "POST") {
         name="date"
         type="datetime-local"
         value={election.date.toISOString().slice(0, 16)}
+      />
+
+      <FormInput
+        label="Early Voting Start"
+        name="earlyVotingStart"
+        type="datetime-local"
+        value={election.earlyVotingStart?.toISOString().slice(0, 16) || ""}
+      />
+
+      <FormInput
+        label="Early Voting End"
+        name="earlyVotingEnd"
+        type="datetime-local"
+        value={election.earlyVotingEnd?.toISOString().slice(0, 16) || ""}
       />
 
       <FormPolicyQuestionInput questions={election.policyQuestions} />
