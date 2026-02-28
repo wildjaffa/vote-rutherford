@@ -2,6 +2,8 @@ import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import type { Config } from "@libsql/client";
 import { createAuditExtension } from "../../prisma/auditExtension";
+import fs from "node:fs";
+import path from "node:path";
 
 // Fixed UUID placeholder for system/unknown users
 const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
@@ -27,21 +29,54 @@ function createPrismaClient() {
     throw new Error("DATABASE_URL is not defined");
   }
 
+  const syncUrl = env("SYNC_URL");
+  const authToken = env("AUTH_TOKEN");
+  const syncInterval = env("SYNC_INTERVAL");
+
+  // Robust LibSQL initialization:
+  // If we are using a local replica (DATABASE_URL is a file), we need to ensure
+  // the local state is valid. LibSQL throws error if the .db file exists but its
+  // metadata file is missing.
+  if (connectionString.startsWith("file:") && syncUrl) {
+    const dbPath = connectionString.replace("file:", "");
+    const absolutePath = path.isAbsolute(dbPath)
+      ? dbPath
+      : path.join(process.cwd(), dbPath);
+    const metadataPath = `${absolutePath}-metadata`;
+
+    try {
+      if (fs.existsSync(absolutePath) && !fs.existsSync(metadataPath)) {
+        console.warn(
+          "LibSQL invalid local state detected: db file exists but metadata file does not. Cleaning up local db file to trigger fresh sync.",
+          { absolutePath, metadataPath },
+        );
+        fs.unlinkSync(absolutePath);
+
+        // Also clean up wal/shm files if they exist
+        ["-wal", "-shm"].forEach((suffix) => {
+          const sidecar = absolutePath + suffix;
+          if (fs.existsSync(sidecar)) {
+            fs.unlinkSync(sidecar);
+          }
+        });
+      }
+    } catch (err) {
+      console.error("Failed to clean up invalid LibSQL state", err);
+    }
+  }
+
   const config: Config = {
     url: connectionString,
   };
 
-  const authToken = env("AUTH_TOKEN");
   if (authToken) {
     config.authToken = authToken;
   }
 
-  const syncInterval = env("SYNC_INTERVAL");
   if (syncInterval) {
     config.syncInterval = Number(syncInterval);
   }
 
-  const syncUrl = env("SYNC_URL");
   if (syncUrl) {
     console.log("prisma syncUrl", { syncUrl });
     config.syncUrl = syncUrl;
@@ -50,18 +85,23 @@ function createPrismaClient() {
     }
   }
 
-  const adapter = new PrismaLibSql(config);
-  const basePrisma = new PrismaClient({ adapter });
-
   try {
-    console.log("prisma module loaded", { pid: process.pid });
-  } catch (e) {
-    console.error("prisma module load log failed", e);
-  }
+    const adapter = new PrismaLibSql(config);
+    const basePrisma = new PrismaClient({ adapter });
 
-  return basePrisma.$extends(
-    createAuditExtension(() => currentUserContext?.userId || SYSTEM_USER_ID),
-  );
+    console.log("Prisma client created successfully", { pid: process.pid });
+
+    return basePrisma.$extends(
+      createAuditExtension(() => currentUserContext?.userId || SYSTEM_USER_ID),
+    );
+  } catch (error) {
+    console.error("Failed to initialize Prisma client with LibSQL adapter", {
+      error,
+      connectionString,
+      syncUrl: !!syncUrl,
+    });
+    throw error;
+  }
 }
 
 function getPrisma() {
