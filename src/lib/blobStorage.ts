@@ -3,16 +3,14 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
+import { env } from "./utils/environment";
 
-const R2_ENDPOINT = process.env.R2_ENDPOINT || import.meta.env.R2_ENDPOINT;
-const R2_REGION = process.env.R2_REGION || "auto";
-const R2_ACCESS_KEY_ID =
-  process.env.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID;
-const R2_SECRET_ACCESS_KEY =
-  process.env.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY;
-const R2_BUCKET = process.env.R2_BUCKET || import.meta.env.R2_BUCKET;
-const R2_PUBLIC_URL =
-  process.env.R2_PUBLIC_URL || import.meta.env.R2_PUBLIC_URL; // e.g. https://<accountid>.r2.cloudflarestorage.com/<bucket>
+const R2_ENDPOINT = env("R2_ENDPOINT");
+const R2_REGION = env("R2_REGION") || "auto";
+const R2_ACCESS_KEY_ID = env("R2_ACCESS_KEY_ID");
+const R2_SECRET_ACCESS_KEY = env("R2_SECRET_ACCESS_KEY");
+const R2_BUCKET = env("R2_BUCKET");
+const R2_PUBLIC_URL = env("R2_PUBLIC_URL"); // e.g. https://<accountid>.r2.cloudflarestorage.com/<bucket>
 
 if (!R2_ENDPOINT || !R2_BUCKET || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
   // Do not throw here; allow local/dev without R2 configured. Calls will error when used.
@@ -71,7 +69,7 @@ export function convertKeyToPublicUrl(
 ): string | null {
   if (!key) return null;
   if (key.startsWith("data:")) return key;
-  const publicUrl = import.meta.env.R2_PUBLIC_URL;
+  const publicUrl = env("R2_PUBLIC_URL");
   console.log("convertKeyToPublicUrl", { key, publicUrl });
   if (!publicUrl) {
     return key;

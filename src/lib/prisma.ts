@@ -4,6 +4,7 @@ import type { Config } from "@libsql/client";
 import { createAuditExtension } from "../../prisma/auditExtension";
 import fs from "node:fs";
 import path from "node:path";
+import { env } from "./utils/environment";
 
 // Fixed UUID placeholder for system/unknown users
 const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
@@ -15,12 +16,6 @@ let currentUserContext: { userId: string } | null = null;
 // the first database call at *runtime*, rather than at module-load time
 // during the build phase (when env vars are not available).
 let _prisma: ReturnType<typeof createPrismaClient> | null = null;
-
-// Helper to read an env var from either process.env (Node/Docker runtime)
-// or import.meta.env (Vite/Astro dev server).
-function env(key: string): string | undefined {
-  return process.env[key] ?? (import.meta.env as Record<string, string>)?.[key];
-}
 
 function createPrismaClient() {
   const connectionString = env("DATABASE_URL");

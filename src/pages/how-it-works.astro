@@ -1,6 +1,9 @@
 ---
 import Button from "../components/Button.astro";
 import Layout from "../layouts/Layout.astro";
+import { env } from "../lib/utils/environment";
+
+const contactEmail = env("CONTACT_EMAIL");
 ---
 
 <Layout title="How It Works - Vote Rutherford">
@@ -366,7 +369,7 @@ import Layout from "../layouts/Layout.astro";
                 keeping this information accurate and helpful.
               </p>
               <a
-                href={`mailto:${import.meta.env.CONTACT_EMAIL}`}
+                href={`mailto:${contactEmail}`}
                 class="text-secondary font-semibold hover:underline"
               >
                 Contact our team →
