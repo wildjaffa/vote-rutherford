@@ -43,6 +43,7 @@ function createPrismaClient() {
 
   const syncUrl = env("SYNC_URL");
   if (syncUrl) {
+    console.log("prisma syncUrl", { syncUrl });
     config.syncUrl = syncUrl;
     if (!config.syncInterval) {
       config.syncInterval = 60; // Default to 1 minute, sync interval is in seconds
