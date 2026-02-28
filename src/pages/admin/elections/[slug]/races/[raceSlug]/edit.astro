@@ -4,6 +4,7 @@ import DeleteButton from "../../../../../../components/forms/DeleteButton.astro"
 import FormSelect from "../../../../../../components/forms/FormSelect.astro";
 import FormTextarea from "../../../../../../components/forms/FormTextarea.astro";
 import AdminLayout from "../../../../../../layouts/AdminLayout.astro";
+import Button from "../../../../../../components/Button.astro";
 import prisma from "../../../../../../lib/prisma";
 import FormInput from "../../../../../../components/forms/FormInput.astro";
 import FormPolicyQuestionSelect from "../../../../../../components/forms/FormPolicyQuestionSelect.astro";
@@ -237,18 +238,13 @@ if (Astro.request.method === "POST") {
       />
 
       <div class="flex justify-end gap-3 border-t border-gray-200 pt-4">
-        <a
+        <Button
+          variant="secondary"
           href={`/admin/elections/${electionSlug}/races`}
-          class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
         >
           Cancel
-        </a>
-        <button
-          type="submit"
-          class="bg-secondary hover:bg-secondary/90 focus:ring-secondary inline-flex items-center rounded-lg px-4 py-2 text-white transition-colors focus:ring-2 focus:ring-offset-2"
-        >
-          Save Changes
-        </button>
+        </Button>
+        <Button type="submit">Save Changes</Button>
       </div>
     </form>
 

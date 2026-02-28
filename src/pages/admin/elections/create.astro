@@ -3,6 +3,7 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 import FormInput from "../../../components/forms/FormInput.astro";
 import FormTextarea from "../../../components/forms/FormTextarea.astro";
 import { actions } from "astro:actions";
+import Button from "../../../components/Button.astro";
 
 export const prerender = false;
 
@@ -99,18 +100,8 @@ if (Astro.request.method === "POST") {
     />
 
     <div class="flex justify-end gap-3 pt-4">
-      <a
-        href="/admin/elections"
-        class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
-      >
-        Cancel
-      </a>
-      <button
-        type="submit"
-        class="bg-secondary hover:bg-secondary/90 focus:ring-secondary inline-flex items-center rounded-lg px-4 py-2 text-white transition-colors focus:ring-2 focus:ring-offset-2"
-      >
-        Create Election
-      </button>
+      <Button variant="secondary" href="/admin/elections">Cancel</Button>
+      <Button type="submit">Create Election</Button>
     </div>
   </form>
 </AdminLayout>
