@@ -1,6 +1,9 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Button from "../components/Button.astro";
+import { env } from "../lib/utils/environment";
+
+const contactEmail = env("CONTACT_EMAIL");
 ---
 
 <Layout title="Privacy Policy - Vote Rutherford">
@@ -295,9 +298,8 @@ import Button from "../components/Button.astro";
               <h3 class="mb-3 font-bold">Ask Questions</h3>
               <p class="text-sm text-gray-600">
                 Contact us with questions at <a
-                  href={`mailto:${import.meta.env.CONTACT_EMAIL}`}
-                  class="text-primary hover:underline"
-                  >{import.meta.env.CONTACT_EMAIL}</a
+                  href={`mailto:${contactEmail}`}
+                  class="text-primary hover:underline">{contactEmail}</a
                 >.
               </p>
             </div>
@@ -320,9 +322,8 @@ import Button from "../components/Button.astro";
             </h2>
             <p class="mb-8 text-lg text-gray-700">
               Questions about privacy? Email us at <a
-                href={`mailto:${import.meta.env.CONTACT_EMAIL}`}
-                class="text-primary hover:underline"
-                >{import.meta.env.CONTACT_EMAIL}</a
+                href={`mailto:${contactEmail}`}
+                class="text-primary hover:underline">{contactEmail}</a
               >.
             </p>
             <Button href="/" size="lg">Back to Home</Button>

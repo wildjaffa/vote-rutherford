@@ -5,10 +5,11 @@ import {
   type DecodedIdToken,
   type UserRecord,
 } from "firebase-admin/auth";
+import { env } from "../lib/utils/environment";
 
 const activeApps = getApps();
 const getServiceAccount = (): ServiceAccount | undefined => {
-  const base64Config = import.meta.env.FIREBASE_SERVICE_ACCOUNT_64;
+  const base64Config = env("FIREBASE_SERVICE_ACCOUNT_64");
   if (base64Config) {
     try {
       const json = Buffer.from(base64Config, "base64").toString("utf-8");
@@ -19,14 +20,14 @@ const getServiceAccount = (): ServiceAccount | undefined => {
   }
 
   // Fallback to individual env vars
-  if (import.meta.env.FIREBASE_PROJECT_ID) {
+  if (env("FIREBASE_PROJECT_ID")) {
     return {
       type: "service_account",
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.split(
-        String.raw`\n`,
-      ).join("\n"),
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      projectId: env("FIREBASE_PROJECT_ID"),
+      privateKey: env("FIREBASE_PRIVATE_KEY")
+        ?.split(String.raw`\n`)
+        .join("\n"),
+      clientEmail: env("FIREBASE_CLIENT_EMAIL"),
     } as ServiceAccount;
   }
 

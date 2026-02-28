@@ -1,6 +1,9 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Button from "../components/Button.astro";
+import { env } from "../lib/utils/environment";
+
+const contactEmail = env("CONTACT_EMAIL");
 ---
 
 <Layout title="Terms of Service - Vote Rutherford">
@@ -396,9 +399,8 @@ import Button from "../components/Button.astro";
             </h2>
             <p class="mb-8 text-lg text-gray-700">
               Questions about these Terms? Email us at <a
-                href={`mailto:${import.meta.env.CONTACT_EMAIL}`}
-                class="text-primary hover:underline"
-                >{import.meta.env.CONTACT_EMAIL}</a
+                href={`mailto:${contactEmail}`}
+                class="text-primary hover:underline">{contactEmail}</a
               >.
             </p>
 
