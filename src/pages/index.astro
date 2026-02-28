@@ -2,10 +2,9 @@
 import Layout from "../layouts/Layout.astro";
 import AddressSearch from "../components/AddressSearch.astro";
 import "@fontsource-variable/montserrat";
-import LILAGraphic from "../assets/LILA-Graphic.png";
 import { Image } from "astro:assets";
 import CandidateAboutSection from "../components/CandidateAboutSection.astro";
-import CourtHouseSilhouette from "../assets/Courthouse-silhouette-no-weather-vain-no-background.png";
+import QuoteBlock from "../assets/Quote-Block.png";
 import InstagramEmbed from "../components/InstagramEmbed.astro";
 import NextElectionCarousel from "../components/NextElectionCarousel.astro";
 import NextElectionSkeleton from "../components/NextElectionSkeleton.astro";
@@ -22,27 +21,11 @@ export const prerender = true;
       <div class="col-span-12 h-8"></div>
 
       <div class="col-span-12 pt-4 md:col-span-7">
-        <div class="mx-auto mb-12 w-6/10">
-          <Image src={LILAGraphic} alt="LILA Graphic" loading="eager" />
-        </div>
-        <div class="relative">
-          <Image
-            src={CourtHouseSilhouette}
-            alt="Rutherford County Courthouse"
-            class="float-left hidden w-full md:block lg:w-2/3"
-            style={`shape-outside: url(${CourtHouseSilhouette.src}); shape-image-threshold: 0.1; shape-margin: 8rem;`}
-            loading="eager"
-          />
-          <div class="sorts-mill-goudy pl-8 text-2xl leading-tight lg:text-4xl">
-            “Wherever the people are well informed they can be trusted with
-            their own government”
-            <div class="mt-4 text-right">
-              <span class="text-secondary mr-4 text-2xl lg:text-3xl"
-                >- Thomas Jefferson</span
-              >
-            </div>
-          </div>
-        </div>
+        <Image
+          src={QuoteBlock}
+          alt="Wherever the people are well informed they can be trusted with their own government"
+          loading="eager"
+        />
       </div>
       <div class="col-span-12 grid w-full grid-cols-1 md:col-span-5">
         <div
