@@ -43,6 +43,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           build-args: |
             DATABASE_URL=file:/tmp/build-placeholder.db
+            CONTACT_EMAIL=${{ vars.CONTACT_EMAIL }}
 
       - name: Output image digest
         run: echo "Image digest ${{ steps.build.outputs.digest }}"
