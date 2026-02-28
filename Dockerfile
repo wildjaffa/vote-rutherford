@@ -5,7 +5,9 @@ WORKDIR /app
 # DATABASE_URL is required by Prisma at generate/build time.
 # We use a dummy placeholder here; the real value is injected at runtime.
 ARG DATABASE_URL=file:/tmp/build-placeholder.db
+ARG CONTACT_EMAIL
 ENV DATABASE_URL=${DATABASE_URL}
+ENV CONTACT_EMAIL=${CONTACT_EMAIL}
 
 # Install dependencies
 COPY package*.json ./
