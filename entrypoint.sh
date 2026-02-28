@@ -1,4 +1,2 @@
-node ./dist/server/entry.mjs & 
-sleep 5
-npx prisma migrate deploy
-wait
+#!/bin/sh
+node ./dist/server/entry.mjs
