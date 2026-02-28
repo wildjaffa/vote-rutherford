@@ -18,6 +18,13 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 4321,
   },
+  site: "https://govoterutherford.com",
+
+  // Disable CSRF origin check in production which can cause false positives
+  // when the site is behind a reverse proxy (Nginx/Traefik/etc)
+  // security: {
+  //   checkOrigin: false,
+  // },
 
   integrations: [],
   vite: {
