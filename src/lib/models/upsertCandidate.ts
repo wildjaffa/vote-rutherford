@@ -9,7 +9,7 @@ export const upsertCandidateSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   partyAffiliation: z.string().min(1, "Party Affiliation is required"),
   birthYear: z.preprocess(
-    (val) => (val === "" ? undefined : Number(val)),
+    (val) => (!val || val === "" ? undefined : Number(val)),
     z.number().min(1900).optional().nullable(),
   ),
   isIncumbent: z.boolean().default(false),
