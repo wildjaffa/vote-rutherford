@@ -40,23 +40,40 @@ function createPrismaClient() {
     const metadataPath = `${absolutePath}-metadata`;
 
     try {
-      if (fs.existsSync(absolutePath) && !fs.existsSync(metadataPath)) {
-        console.warn(
-          "LibSQL invalid local state detected: db file exists but metadata file does not. Cleaning up local db file to trigger fresh sync.",
-          { absolutePath, metadataPath },
-        );
-        fs.unlinkSync(absolutePath);
+      const sidecarSuffixes = ["-metadata", "-info", "-wal", "-shm"];
+      const dbExists = fs.existsSync(absolutePath);
+      const metadataExists = fs.existsSync(metadataPath);
 
-        // Also clean up wal/shm files if they exist
-        ["-wal", "-shm"].forEach((suffix) => {
+      // Condition 1: DB exists but metadata is missing (LibSQL's explicit error case)
+      // Condition 2: DB is missing but sidecars exist (Orphaned state)
+      const isInvalidState =
+        (dbExists && !metadataExists) ||
+        (!dbExists &&
+          sidecarSuffixes.some((s) => fs.existsSync(absolutePath + s)));
+
+      if (isInvalidState) {
+        console.warn(
+          "LibSQL invalid/inconsistent local state detected. Cleaning up local database files to ensure a clean sync.",
+          { absolutePath, dbExists, metadataExists },
+        );
+
+        if (dbExists) {
+          fs.unlinkSync(absolutePath);
+        }
+
+        sidecarSuffixes.forEach((suffix) => {
           const sidecar = absolutePath + suffix;
           if (fs.existsSync(sidecar)) {
-            fs.unlinkSync(sidecar);
+            try {
+              fs.unlinkSync(sidecar);
+            } catch (e) {
+              console.warn(`Failed to remove sidecar file: ${sidecar}`, e);
+            }
           }
         });
       }
     } catch (err) {
-      console.error("Failed to clean up invalid LibSQL state", err);
+      console.error("Failed to check or clean up LibSQL state", err);
     }
   }
 
