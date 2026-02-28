@@ -3,6 +3,7 @@ import { actions } from "astro:actions";
 import DeleteButton from "../../../../../../../../components/forms/DeleteButton.astro";
 import FormInput from "../../../../../../../../components/forms/FormInput.astro";
 import AdminLayout from "../../../../../../../../layouts/AdminLayout.astro";
+import Button from "../../../../../../../../components/Button.astro";
 import FormExternalLinkInput from "../../../../../../../../components/forms/FormExternalLinkInput.astro";
 import FormCandidatePolicyResponseInput from "../../../../../../../../components/forms/FormCandidatePolicyResponseInput.astro";
 import prisma from "../../../../../../../../lib/prisma";
@@ -326,18 +327,13 @@ const profileImageUrl = convertKeyToPublicUrl(
       </div>
 
       <div class="flex justify-end gap-3 border-t border-gray-200 pt-4">
-        <a
+        <Button
+          variant="secondary"
           href={`/admin/elections/${electionSlug}/races/${raceSlug}/candidates`}
-          class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
         >
           Cancel
-        </a>
-        <button
-          type="submit"
-          class="bg-secondary hover:bg-secondary/90 focus:ring-secondary inline-flex items-center rounded-lg px-4 py-2 text-white transition-colors focus:ring-2 focus:ring-offset-2"
-        >
-          Save Changes
-        </button>
+        </Button>
+        <Button type="submit">Save Changes</Button>
       </div>
 
       <script type="module">

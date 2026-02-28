@@ -11,13 +11,13 @@ interface Props {
 const { title, breadcrumbs = [] } = Astro.props;
 ---
 
-<Layout title={`Admin - ${title}`}>
+<Layout title={`Admin - ${title}`} fullWidth={true}>
   <!-- Admin Header -->
-  <div class="bg-secondary w-full text-white shadow-md">
-    <div class="container mx-auto px-4 py-4">
+  <header class="bg-secondary w-full text-white shadow-md">
+    <div class="mx-auto max-w-7xl px-4 py-4">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold">Admin Dashboard</h1>
-        <div>
+        <div class="flex gap-4">
           <Button
             class="inline-flex items-center"
             href="/"
@@ -28,7 +28,7 @@ const { title, breadcrumbs = [] } = Astro.props;
             Back to Site
           </Button>
           <Button
-            class="ml-4 inline-flex items-center"
+            class="inline-flex items-center"
             href="/api/auth/signout"
             variant="secondary"
             size="md"
@@ -39,12 +39,13 @@ const { title, breadcrumbs = [] } = Astro.props;
         </div>
       </div>
     </div>
-  </div>
+  </header>
 
-  <div class="container mx-auto px-4 py-8">
+  <!-- Main Content Wrapper -->
+  <div class="mx-auto max-w-7xl px-4 py-8">
     <div class="flex flex-col gap-8 lg:flex-row">
       <!-- Sidebar Navigation -->
-      <aside class="shrink-0 lg:w-64">
+      <aside class="w-full shrink-0 lg:w-64">
         <nav class="sticky top-4 rounded-lg bg-white p-4 shadow-md">
           <h2 class="mb-4 text-lg font-semibold text-gray-900">Admin Menu</h2>
           <ul class="space-y-2">
@@ -59,7 +60,7 @@ const { title, breadcrumbs = [] } = Astro.props;
             </li>
           </ul>
 
-          <!-- Help Section -->
+          <!-- Quick Links Section -->
           <div class="mt-8 border-t border-gray-200 pt-6">
             <h3 class="mb-3 text-sm font-semibold text-gray-700">
               Quick Links
@@ -87,7 +88,7 @@ const { title, breadcrumbs = [] } = Astro.props;
       </aside>
 
       <!-- Main Content -->
-      <main class="flex-1">
+      <main class="min-w-0 flex-1">
         <!-- Breadcrumbs -->
         {
           breadcrumbs.length > 0 && (
