@@ -92,6 +92,7 @@ const noIncumbent = candidates.filter((c) => c.isIncumbent).length === 0;
             {candidates.map((candidate) => (
               <CandidateCard
                 candidate={candidate}
+                profileImage={candidate.profileImage}
                 raceSlug={raceData.slug}
                 electionSlug={raceData.election.slug}
                 subtext={
