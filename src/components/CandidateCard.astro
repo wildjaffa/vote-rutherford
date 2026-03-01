@@ -1,5 +1,8 @@
 ---
-import type { Candidate } from "../generated/prisma/client";
+import type {
+  BlobStorageReference,
+  Candidate,
+} from "../generated/prisma/browser";
 import { ArrowRight } from "../lib/icons";
 import CandidateProfilePicture from "./CandidateProfilePicture.astro";
 
@@ -8,9 +11,11 @@ interface Props {
   raceSlug: string;
   electionSlug: string;
   subtext?: string;
+  profileImage?: BlobStorageReference | null;
 }
 
-const { candidate, raceSlug, electionSlug, subtext } = Astro.props;
+const { candidate, raceSlug, electionSlug, subtext, profileImage } =
+  Astro.props;
 
 const fullName = `${candidate.firstName} ${candidate.middleName ? candidate.middleName + " " : ""}${candidate.lastName}`;
 ---
@@ -21,7 +26,10 @@ const fullName = `${candidate.firstName} ${candidate.middleName ? candidate.midd
   <div
     class="mb-4 flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100"
   >
-    <CandidateProfilePicture candidate={candidate} />
+    <CandidateProfilePicture
+      candidate={candidate}
+      profileImage={profileImage ?? null}
+    />
   </div>
 
   <h3
