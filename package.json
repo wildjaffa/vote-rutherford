@@ -35,12 +35,14 @@
     "firebase-admin": "^13.6.1",
     "formidable": "^3.5.4",
     "pg": "^8.17.2",
+    "pm2": "^5.4.3",
     "simple-icons-astro": "^16.1.0",
     "tailwindcss": "^4.1.18",
     "ts-node": "^10.9.2",
     "vite-plugin-entry-shaking": "^0.5.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/pg": "^8.16.0",
     "@typescript-eslint/parser": "^8.54.0",
     "eslint": "^9.39.2",

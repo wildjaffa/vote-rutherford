@@ -218,7 +218,7 @@ if (mobileFullName.length > 15) {
           {
             candidateData.externalLinks.length > 0 && (
               <CandidateAboutSection title="Links">
-                <ul>
+                <ul class="list-inside list-disc">
                   {websiteLink && (
                     <li>
                       <a
@@ -281,7 +281,7 @@ if (mobileFullName.length > 15) {
           {
             awards.length > 0 && (
               <CandidateAboutSection title="Awards">
-                <ul>
+                <ul class="list-inside list-disc">
                   {awards.map((award) => (
                     <li>
                       <QualificationDescription qualification={award} />
@@ -294,7 +294,7 @@ if (mobileFullName.length > 15) {
           {
             endorsements.length > 0 && (
               <CandidateAboutSection title="Endorsements">
-                <ul>
+                <ul class="list-inside list-disc">
                   {endorsements.map((endorsement) => (
                     <li>
                       <QualificationDescription qualification={endorsement} />
@@ -307,9 +307,11 @@ if (mobileFullName.length > 15) {
           {
             education.length > 0 && (
               <CandidateAboutSection title="Education">
-                <ul>
+                <ul class="list-inside list-disc">
                   {education.map((education) => (
-                    <QualificationDescription qualification={education} />
+                    <li>
+                      <QualificationDescription qualification={education} />
+                    </li>
                   ))}
                 </ul>
               </CandidateAboutSection>
@@ -318,7 +320,7 @@ if (mobileFullName.length > 15) {
           {
             workExperience.length > 0 && (
               <CandidateAboutSection title="Professional Experience">
-                <ul>
+                <ul class="list-inside list-disc">
                   {workExperience.map((experience) => (
                     <li>
                       <QualificationDescription qualification={experience} />
@@ -331,7 +333,7 @@ if (mobileFullName.length > 15) {
           {
             politicalExperience.length > 0 && (
               <CandidateAboutSection title="Political Experience">
-                <ul>
+                <ul class="list-inside list-disc">
                   {politicalExperience.map((experience) => (
                     <li>
                       <QualificationDescription qualification={experience} />
@@ -344,7 +346,7 @@ if (mobileFullName.length > 15) {
           {
             otherQualifications.length > 0 && (
               <CandidateAboutSection title="Other Qualifications">
-                <ul>
+                <ul class="list-inside list-disc">
                   {otherQualifications.map((qualification) => (
                     <li>
                       <QualificationDescription qualification={qualification} />

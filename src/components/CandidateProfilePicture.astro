@@ -1,5 +1,4 @@
 ---
-import Image from "astro/components/Image.astro";
 import type {
   Candidate,
   BlobStorageReference,
@@ -21,11 +20,10 @@ const imageUrl = convertKeyToPublicUrl(profileImage?.fileLocation);
 
 {
   imageUrl ? (
-    <Image
+    <img
       class="h-full w-full"
       src={imageUrl}
       alt={fullName}
-      inferSize={true}
       loading={loading}
     />
   ) : (
