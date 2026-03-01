@@ -23,7 +23,7 @@ export default defineConfig({
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**.govoterutherford.com/**",
+        hostname: "images.govoterutherford.com",
       },
     ],
   },
