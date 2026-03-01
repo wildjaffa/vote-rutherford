@@ -19,6 +19,14 @@ export default defineConfig({
     port: 4321,
   },
   site: "https://govoterutherford.com",
+  image: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.GoVoteRutherford.com",
+      },
+    ],
+  },
 
   // Disable CSRF origin check in production which can cause false positives
   // when the site is behind a reverse proxy (Nginx/Traefik/etc)

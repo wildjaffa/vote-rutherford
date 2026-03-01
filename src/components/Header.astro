@@ -11,15 +11,17 @@ import { X } from "@lucide/astro";
 <header
   class="bg-secondary relative flex w-full items-center justify-between p-1 shadow-md"
 >
-  <a href="/"
-    ><Image
-      src={Logo}
-      alt="Vote Rutherford Logo"
-      class="w-30 sm:w-40"
-      fetchpriority={"low"}
-      loading={"eager"}
-    /></a
-  >
+  <div class="flex items-center">
+    <a href="/"
+      ><Image
+        src={Logo}
+        alt="Vote Rutherford Logo"
+        class="w-30 sm:w-40"
+        fetchpriority={"low"}
+        loading={"eager"}
+      /></a
+    ><div class="bg-accent ml-2 rounded px-2 py-1 text-xs text-white">Beta</div>
+  </div>
 
   <!-- Desktop Navigation -->
   <nav class="hidden md:block">
@@ -32,6 +34,9 @@ import { X } from "@lucide/astro";
       </li>
       <li class="pr-2">
         <a href="/about" class="hover:text-accent text-white">About</a>
+      </li>
+      <li class="pr-2">
+        <a href="/elections" class="hover:text-accent text-white">Elections</a>
       </li>
       <li class="pr-4">
         <Button
@@ -76,6 +81,11 @@ import { X } from "@lucide/astro";
       </li>
       <li>
         <a href="/about" class="hover:text-accent block text-white">About</a>
+      </li>
+      <li>
+        <a href="/elections" class="hover:text-accent block text-white"
+          >Elections</a
+        >
       </li>
       <li>
         <Button

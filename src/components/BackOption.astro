@@ -4,14 +4,15 @@ import { ArrowLeft } from "../lib/icons";
 interface Props {
   href: string;
   text: string;
+  selfPosition?: boolean;
 }
 
-const { href, text } = Astro.props;
+const { href, text, selfPosition = true } = Astro.props;
 ---
 
 <a
   href={href}
-  class="group text-secondary hover:text-primary mt-6 ml-6 flex w-fit items-center"
+  class={`group text-secondary hover:text-primary ${selfPosition ? "mt-6 ml-6" : ""} flex w-fit items-center`}
 >
   <ArrowLeft
     size={20}
