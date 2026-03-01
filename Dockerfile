@@ -37,7 +37,9 @@ COPY --from=builder /app/prisma ./prisma
 # Copy prisma config for migrations
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
-# Copy entrypoint script
+# Copy entrypoint script and support scripts
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/ecosystem.config.cjs ./ecosystem.config.cjs
 COPY --from=builder /app/entrypoint.sh ./
 RUN chmod +x ./entrypoint.sh
 

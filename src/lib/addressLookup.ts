@@ -1,5 +1,4 @@
-import { Prisma } from "../generated/prisma/client";
-import prisma from "./prisma";
+import { getLibsql } from "./prisma";
 import { normalizeAddress } from "./utils/addressNormalizer";
 
 export interface AddressSearchResult {
@@ -16,9 +15,6 @@ export async function searchAddresses(
   const normalizedQuery = normalizeAddress(q);
   if (!normalizedQuery) return [];
 
-  // Sanitize input to prevent FTS injection (e.g. users typing '*', 'OR', 'AND')
-  // We keep only uppercase alphanumeric characters and spaces
-  // Replace other chars with space to treat them as separators
   const sanitaryQuery = normalizedQuery.replace(/[^A-Z0-9\s]/g, " ");
   const terms = sanitaryQuery.split(/\s+/).filter(Boolean);
 
@@ -26,23 +22,29 @@ export async function searchAddresses(
 
   const ftsQuery = terms.map((t) => `${t}*`).join(" ");
 
-  // 1. Get matching IDs from FTS
-  // We select 'id' from the FTS table
-  try {
-    const matches = await prisma.$queryRaw<
-      { id: string; address: string; city: string; zip: string }[]
-    >(Prisma.sql`
-      SELECT id, normalizedAddress as [address], city, zip FROM voter_addresses_fts 
-      WHERE voter_addresses_fts MATCH ${ftsQuery} 
-      ORDER BY rank
-      LIMIT ${limit}
-    `);
+  const libsql = getLibsql();
 
-    return matches;
+  try {
+    const rs: {
+      rows: { id: string; address: string; city: string; zip: string }[];
+    } = await libsql.execute({
+      sql: `
+        SELECT id, normalizedAddress as [address], city, zip FROM voter_addresses_fts 
+        WHERE voter_addresses_fts MATCH ? 
+        ORDER BY rank
+        LIMIT ?
+      `,
+      args: [ftsQuery, limit],
+    });
+
+    return rs.rows.map((row) => ({
+      id: row.id as string,
+      address: row.address as string,
+      city: row.city as string,
+      zip: row.zip as string,
+    }));
   } catch (error) {
     console.error("Search failed:", error);
-    // Fallback or rethrow?
-    // If FTS table doesn't exist (e.g. migration failed), this will throw.
     return [];
   }
 }

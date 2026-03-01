@@ -1,6 +1,6 @@
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
-import type { Config } from "@libsql/client";
+import { createClient, type Client, type Config } from "@libsql/client";
 import { createAuditExtension } from "../../prisma/auditExtension";
 import fs from "node:fs";
 import path from "node:path";
@@ -12,12 +12,13 @@ const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000000";
 // Store user context for the current request
 let currentUserContext: { userId: string } | null = null;
 
-// Lazily-initialized Prisma client. This defers DATABASE_URL resolution to
+// Lazily-initialized clients. This defers DATABASE_URL resolution to
 // the first database call at *runtime*, rather than at module-load time
 // during the build phase (when env vars are not available).
 let _prisma: ReturnType<typeof createPrismaClient> | null = null;
+let _libsql: Client | null = null;
 
-function createPrismaClient() {
+function getLibsqlConfig(): Config {
   const connectionString = env("DATABASE_URL");
 
   if (!connectionString) {
@@ -29,9 +30,6 @@ function createPrismaClient() {
   const syncInterval = env("SYNC_INTERVAL");
 
   // Robust LibSQL initialization:
-  // If we are using a local replica (DATABASE_URL is a file), we need to ensure
-  // the local state is valid. LibSQL throws error if the .db file exists but its
-  // metadata file is missing.
   if (connectionString.startsWith("file:") && syncUrl) {
     const dbPath = connectionString.replace("file:", "");
     const absolutePath = path.isAbsolute(dbPath)
@@ -44,8 +42,6 @@ function createPrismaClient() {
       const dbExists = fs.existsSync(absolutePath);
       const metadataExists = fs.existsSync(metadataPath);
 
-      // Condition 1: DB exists but metadata is missing (LibSQL's explicit error case)
-      // Condition 2: DB is missing but sidecars exist (Orphaned state)
       const isInvalidState =
         (dbExists && !metadataExists) ||
         (!dbExists &&
@@ -97,6 +93,17 @@ function createPrismaClient() {
     }
   }
 
+  return config;
+}
+
+function createLibsqlClient(): Client {
+  const config = getLibsqlConfig();
+  return createClient(config);
+}
+
+function createPrismaClient() {
+  const config = getLibsqlConfig();
+
   try {
     const adapter = new PrismaLibSql(config);
     const basePrisma = new PrismaClient({ adapter });
@@ -109,11 +116,16 @@ function createPrismaClient() {
   } catch (error) {
     console.error("Failed to initialize Prisma client with LibSQL adapter", {
       error,
-      connectionString,
-      syncUrl: !!syncUrl,
     });
     throw error;
   }
+}
+
+export function getLibsql(): Client {
+  if (!_libsql) {
+    _libsql = createLibsqlClient();
+  }
+  return _libsql;
 }
 
 function getPrisma() {
