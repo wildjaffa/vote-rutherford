@@ -23,7 +23,7 @@ export default defineConfig({
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**.GoVoteRutherford.com",
+        hostname: "**.govoterutherford.com/**",
       },
     ],
   },
