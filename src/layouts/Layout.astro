@@ -8,10 +8,12 @@ import "@fontsource/sorts-mill-goudy";
 
 interface Props {
   title: string;
+  description: string;
   fullWidth?: boolean;
+  noIndex?: boolean;
 }
 
-const { title, fullWidth = false } = Astro.props;
+const { title, description, fullWidth = false, noIndex = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -23,6 +25,8 @@ const { title, fullWidth = false } = Astro.props;
     <link rel="icon" href="/favicon.ico" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
+    <meta name="description" content={description} />
+    {noIndex && <meta name="robots" content="noindex, nofollow" />}
   </head>
   <body>
     <Header />

@@ -11,7 +11,12 @@ interface Props {
 const { title, breadcrumbs = [] } = Astro.props;
 ---
 
-<Layout title={`Admin - ${title}`} fullWidth={true}>
+<Layout
+  description="Administrative pages for Vote Rutherford"
+  title={`Admin - ${title}`}
+  fullWidth={true}
+  noIndex={true}
+>
   <!-- Admin Header -->
   <header class="bg-secondary w-full text-white shadow-md">
     <div class="mx-auto max-w-7xl px-4 py-4">
