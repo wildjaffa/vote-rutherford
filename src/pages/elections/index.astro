@@ -13,7 +13,10 @@ const elections = await prisma.election.findMany({
 });
 ---
 
-<Layout title="Elections">
+<Layout
+  description="Browse upcoming elections in Rutherford County"
+  title="Elections"
+>
   <main class="container mx-auto flex-1 px-4 py-8">
     <div class="mb-12 text-center">
       <h1 class="mb-4 text-4xl font-bold text-gray-900">Elections</h1>

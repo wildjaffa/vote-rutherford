@@ -6,7 +6,10 @@ import BallotLoadingSkeleton from "../components/BallotLoadingSkeleton.astro";
 export const prerender = true;
 ---
 
-<Layout title="Vote Plan">
+<Layout
+  description="For residents of Rutherford County, Tennessee, view the candidates for your ballot in the upcoming election and plan out your vote, securely and anonymously."
+  title="Vote Plan"
+>
   <main class="flex-1 px-4 py-8">
     <VotePlanBallot server:defer>
       <BallotLoadingSkeleton slot="fallback" />
