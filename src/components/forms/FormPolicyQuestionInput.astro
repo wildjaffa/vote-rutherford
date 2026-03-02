@@ -1,0 +1,171 @@
+---
+import { Plus, Trash2 } from "../../lib/icons";
+
+interface Props {
+  questions?: {
+    id?: string;
+    questionText: string;
+    descriptionText?: string | null;
+    order: number;
+  }[];
+}
+
+const { questions = [] } = Astro.props;
+
+// Sort questions by order initially
+const sortedQuestions = [...questions].sort((a, b) => a.order - b.order);
+---
+
+<div id="policy-questions-container" class="space-y-4">
+  <div class="flex items-center justify-between">
+    <label class="block text-sm font-medium text-gray-700"
+      >Policy Questions</label
+    >
+    <button
+      type="button"
+      id="add-question-btn"
+      class="inline-flex items-center gap-2 rounded-md bg-white px-3 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-300 transition-colors ring-inset hover:bg-gray-50"
+    >
+      <Plus class="size-4" />
+      Add Question
+    </button>
+  </div>
+
+  <div id="questions-list" class="space-y-4">
+    {
+      sortedQuestions.map((q, index) => (
+        <div
+          class="question-row flex gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 transition-all"
+          data-index={index}
+        >
+          <div class="flex flex-1 flex-col gap-3">
+            <input type="hidden" name="question-id" value={q.id || ""} />
+            <div class="flex items-center gap-3">
+              <div class="flex-1">
+                <input
+                  type="text"
+                  name="question-text"
+                  value={q.questionText}
+                  placeholder="Question (e.g., What is your stance on property taxes?)"
+                  class="focus:border-secondary focus:ring-secondary block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+                  required
+                />
+              </div>
+              <div class="w-20">
+                <input
+                  type="number"
+                  name="question-order"
+                  value={q.order}
+                  placeholder="Order"
+                  title="Display order"
+                  class="focus:border-secondary focus:ring-secondary block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+                  required
+                />
+              </div>
+            </div>
+            <textarea
+              name="question-description"
+              placeholder="Description/Context (optional)"
+              rows="2"
+              class="focus:border-secondary focus:ring-secondary block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+            >
+              {q.descriptionText || ""}
+            </textarea>
+          </div>
+          <button
+            type="button"
+            class="remove-question-btn mt-2 self-start text-gray-400 transition-colors hover:text-red-500"
+            title="Remove question"
+          >
+            <Trash2 class="size-5" />
+          </button>
+        </div>
+      ))
+    }
+  </div>
+</div>
+
+<template id="question-row-template">
+  <div
+    class="question-row animate-in fade-in slide-in-from-top-2 flex gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 duration-200"
+  >
+    <div class="flex flex-1 flex-col gap-3">
+      <input type="hidden" name="question-id" value="" />
+      <div class="flex items-center gap-3">
+        <div class="flex-1">
+          <input
+            type="text"
+            name="question-text"
+            placeholder="Question (e.g., What is your stance on property taxes?)"
+            class="focus:border-secondary focus:ring-secondary block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+            required
+          />
+        </div>
+        <div class="w-20">
+          <input
+            type="number"
+            name="question-order"
+            value="0"
+            placeholder="Order"
+            title="Display order"
+            class="focus:border-secondary focus:ring-secondary block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+            required
+          />
+        </div>
+      </div>
+      <textarea
+        name="question-description"
+        placeholder="Description/Context (optional)"
+        rows="2"
+        class="focus:border-secondary focus:ring-secondary block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+      ></textarea>
+    </div>
+    <button
+      type="button"
+      class="remove-question-btn mt-2 self-start text-gray-400 transition-colors hover:text-red-500"
+      title="Remove question"
+    >
+      <Trash2 class="size-5" />
+    </button>
+  </div>
+</template>
+
+<script>
+  const questionsList = document.getElementById("questions-list");
+  const addBtn = document.getElementById("add-question-btn");
+  const template = document.getElementById(
+    "question-row-template",
+  ) as HTMLTemplateElement;
+
+  function attachRemoveHandler(btn: HTMLButtonElement) {
+    btn.addEventListener("click", () => {
+      btn.closest(".question-row")?.remove();
+    });
+  }
+
+  // Initial handlers
+  document
+    .querySelectorAll(".remove-question-btn")
+    .forEach((btn) => attachRemoveHandler(btn as HTMLButtonElement));
+
+  addBtn?.addEventListener("click", () => {
+    const rowFragment = template.content.cloneNode(true) as DocumentFragment;
+    const row = rowFragment.firstElementChild as HTMLElement;
+    if (!row) return;
+
+    // Set order based on current count
+    const orderInput = row.querySelector(
+      'input[name="question-order"]',
+    ) as HTMLInputElement;
+    if (orderInput) {
+      orderInput.value = (questionsList?.children.length || 0).toString();
+    }
+
+    const removeBtn = row.querySelector(
+      ".remove-question-btn",
+    ) as HTMLButtonElement;
+    attachRemoveHandler(removeBtn);
+
+    questionsList?.appendChild(row);
+  });
+</script>

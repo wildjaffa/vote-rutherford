@@ -1,0 +1,273 @@
+---
+import AdminLayout from "../../../../../layouts/AdminLayout.astro";
+import FormInput from "../../../../../components/forms/FormInput.astro";
+import FormTextarea from "../../../../../components/forms/FormTextarea.astro";
+import FormSelect from "../../../../../components/forms/FormSelect.astro";
+import { actions } from "astro:actions";
+import Button from "../../../../../components/Button.astro";
+import prisma from "../../../../../lib/prisma";
+import {
+  DistrictType,
+  type RaceType,
+} from "../../../../../generated/prisma/browser";
+import { PartyCategories } from "../../../../../constants";
+
+export const prerender = false;
+
+const { slug: electionSlug } = Astro.params;
+
+if (!electionSlug) {
+  return Astro.redirect("/admin/elections");
+}
+
+const election = await prisma.election.findUnique({
+  where: { slug: electionSlug },
+});
+
+if (!election) {
+  return Astro.redirect("/admin/elections");
+}
+
+// Get race types for dropdown
+const raceTypes = await prisma.raceType.findMany();
+const raceTypeOptions = raceTypes.map((rt: RaceType) => ({
+  value: rt.id.toString(),
+  label: rt.value,
+}));
+
+// Get districts for dropdown
+const districts = await prisma.district.findMany({
+  where: { deletedAt: null },
+  orderBy: [{ type: "asc" }, { name: "asc" }],
+});
+
+// Get unique district types for filter
+const districtTypes = Object.values(DistrictType); // Array.from(new Set(districts.map((d) => d.type)));
+const districtTypeOptions = districtTypes.map((type) => ({
+  value: type,
+  label: type.replace(/_/g, " "),
+}));
+
+let error: string | null = null;
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const name = formData.get("name") as string;
+    const raceTypeId = parseInt(formData.get("raceType") as string);
+    const description = formData.get("description") as string;
+    const status = formData.get("status") as string;
+    const slug = formData.get("slug") as string;
+    const districtId = formData.get("districtId") as string | null;
+    const partyCategory = formData.get("partyCategory") as string;
+
+    const result = await Astro.callAction(actions.createRace, {
+      electionId: election.id,
+      name,
+      partyCategory,
+      raceTypeId,
+      description,
+      status,
+      slug,
+      numSelections: parseInt(formData.get("numSelections") as string) || 1,
+      ...(districtId && { districtId }),
+    });
+
+    if (result.data) {
+      return Astro.redirect(
+        `/admin/elections/${electionSlug}/races/${result.data.data.slug}/edit`,
+      );
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to create race";
+  }
+}
+---
+
+<AdminLayout
+  title="Create Race"
+  breadcrumbs={[
+    { label: "Elections", href: "/admin/elections" },
+    { label: election.name, href: `/admin/elections/${electionSlug}/edit` },
+    { label: "Races", href: `/admin/elections/${electionSlug}/races` },
+    { label: "Create" },
+  ]}
+>
+  <form method="POST" class="max-w-2xl space-y-6">
+    {
+      error && (
+        <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p class="text-sm font-medium text-red-800">{error}</p>
+        </div>
+      )
+    }
+
+    <FormInput
+      label="Race Name"
+      name="name"
+      type="text"
+      placeholder="e.g., Mayor"
+      required
+    />
+    <FormInput
+      label="Slug"
+      name="slug"
+      type="text"
+      placeholder="e.g., mayor"
+      required
+    />
+
+    <FormSelect
+      label="Race Type"
+      name="raceType"
+      options={raceTypeOptions}
+      required
+    />
+
+    <FormSelect
+      label="District Type (Optional)"
+      name="districtType"
+      options={[
+        { value: "", label: "-- All Districts --" },
+        ...districtTypeOptions,
+      ]}
+    />
+
+    <FormSelect
+      label="District (Optional)"
+      name="districtId"
+      options={[
+        { value: "", label: "-- No District --" },
+        ...districts.map((d) => ({
+          value: d.id,
+          label: `${d.name}${d.number ? ` #${d.number}` : ""} (${d.type.replace(/_/g, " ")})`,
+        })),
+      ]}
+    />
+
+    <FormSelect
+      label="Party Category"
+      name="partyCategory"
+      options={[
+        { value: PartyCategories.GENERAL, label: PartyCategories.GENERAL },
+        {
+          value: PartyCategories.DEMOCRATIC,
+          label: PartyCategories.DEMOCRATIC,
+        },
+        {
+          value: PartyCategories.REPUBLICAN,
+          label: PartyCategories.REPUBLICAN,
+        },
+      ]}
+      required
+    />
+
+    <FormInput
+      label="Number of Selections"
+      name="numSelections"
+      type="number"
+      value="1"
+      required
+    />
+
+    <FormSelect
+      label="Status"
+      name="status"
+      options={[
+        { value: "draft", label: "Draft" },
+        { value: "published", label: "Published" },
+      ]}
+      required
+    />
+
+    <FormTextarea
+      label="Description"
+      name="description"
+      placeholder="Enter race description..."
+    />
+
+    <div class="flex justify-end gap-3 pt-4">
+      <Button
+        variant="secondary"
+        href={`/admin/elections/${electionSlug}/races`}>Cancel</Button
+      >
+      <Button type="submit">Create Race</Button>
+    </div>
+  </form>
+</AdminLayout>
+
+<script>
+  import { generateSlug } from "../../../../../lib/slugUtils";
+
+  const nameInput = document.querySelector(
+    'input[name="name"]',
+  ) as HTMLInputElement;
+  const slugInput = document.querySelector(
+    'input[name="slug"]',
+  ) as HTMLInputElement;
+
+  if (nameInput && slugInput) {
+    nameInput.addEventListener("input", (e) => {
+      const value = (e.target as HTMLInputElement).value;
+      slugInput.value = generateSlug(value);
+    });
+  }
+
+  // Districts map with their types - passed from server
+  //const districtsByType: Record<
+  //  string,
+  //  Array<{ id: string; name: string; number?: number; type: string }>
+  //> = {
+  //  US_HOUSE: [],
+  //  STATE_SENATE: [],
+  //  STATE_HOUSE: [],
+  //  JUDICIAL: [],
+  //  COUNTY: [],
+  //  MUNICIPAL: [],
+  //  SCHOOL: [],
+  //  ROAD: [],
+  //  PRECINCT: [],
+  //};
+
+  // Populate districts from the rendered options
+  const districtSelect = document.querySelector(
+    'select[name="districtId"]',
+  ) as HTMLSelectElement;
+
+  if (districtSelect) {
+    // Store all options
+    const allOptions = Array.from(districtSelect.options).map((opt) => ({
+      value: opt.value,
+      text: opt.text,
+      type: opt.text.match(/\(([^)]+)\)/)?.[1] || "",
+    }));
+
+    const districtTypeSelect = document.querySelector(
+      'select[name="districtType"]',
+    ) as HTMLSelectElement;
+
+    if (districtTypeSelect) {
+      districtTypeSelect.addEventListener("change", (e) => {
+        const selectedType = (e.target as HTMLSelectElement).value;
+
+        // Clear current options except the first one
+        while (districtSelect.options.length > 1) {
+          districtSelect.remove(1);
+        }
+
+        // Add filtered options
+        const filtered =
+          selectedType === ""
+            ? allOptions.filter((opt) => opt.value !== "")
+            : allOptions.filter((opt) => opt.type === selectedType);
+
+        filtered.forEach((opt) => {
+          const optionEl = document.createElement("option");
+          optionEl.value = opt.value;
+          optionEl.text = opt.text;
+          districtSelect.appendChild(optionEl);
+        });
+      });
+    }
+  }
+</script>

@@ -1,0 +1,307 @@
+---
+import FormInput from "../../../../../../../components/forms/FormInput.astro";
+import AdminLayout from "../../../../../../../layouts/AdminLayout.astro";
+import Button from "../../../../../../../components/Button.astro";
+import prisma from "../../../../../../../lib/prisma";
+import { actions } from "astro:actions";
+import FormExternalLinkInput from "../../../../../../../components/forms/FormExternalLinkInput.astro";
+import FormCandidatePolicyResponseInput from "../../../../../../../components/forms/FormCandidatePolicyResponseInput.astro";
+import FormQualificationInput from "../../../../../../../components/forms/FormQualificationInput.astro";
+
+export const prerender = false;
+
+const { slug: electionSlug, raceSlug } = Astro.params;
+
+if (!electionSlug || !raceSlug) {
+  return Astro.redirect("/admin/elections");
+}
+
+const race = await prisma.race.findFirst({
+  where: { slug: raceSlug, election: { slug: electionSlug } },
+  include: {
+    election: {
+      include: {
+        policyQuestions: true,
+      },
+    },
+    policyQuestionsToRaces: true,
+  },
+});
+
+if (!race) {
+  return Astro.redirect(`/admin/elections/${electionSlug}/races`);
+}
+
+// Verify the race belongs to this election
+const election = race.election;
+
+if (!election || race.electionId !== election.id) {
+  return Astro.redirect(`/admin/elections/${electionSlug}/races`);
+}
+
+const prioritizedQuestionIds = race.policyQuestionsToRaces.map(
+  (p) => p.policyQuestionId,
+);
+
+const questions = election.policyQuestions.map((q) => ({
+  ...q,
+  isPrioritized: prioritizedQuestionIds.includes(q.id),
+}));
+
+let error: string | null = null;
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+
+    const externalLinksUrls = formData.getAll("link-url") as string[];
+    const externalLinksTypes = formData.getAll("link-type") as string[];
+    const externalLinksTexts = formData.getAll("link-displayText") as string[];
+
+    const externalLinks = externalLinksUrls
+      .map((url, i) => ({
+        url,
+        type: externalLinksTypes[i] as string,
+        displayText: externalLinksTexts[i] || null,
+      }))
+      .filter((l) => l.url);
+
+    const qualificationTypes = formData.getAll(
+      "qualification-type",
+    ) as string[];
+    const qualificationUrls = formData.getAll("qualification-url") as string[];
+    const qualificationDisplayTexts = formData.getAll(
+      "qualification-displayText",
+    ) as string[];
+    const qualificationIds = formData.getAll("qualification-id") as string[];
+
+    const qualifications = qualificationTypes
+      .map((type, i) => ({
+        type,
+        url: qualificationUrls[i] || null,
+        displayText: qualificationDisplayTexts[i] as string,
+        id: qualificationIds[i] || undefined,
+      }))
+      .filter((q) => q.type);
+
+    const responseQuestionIds = formData.getAll(
+      "response-question-id",
+    ) as string[];
+    const responseTexts = formData.getAll("response-text") as string[];
+
+    const policyResponses = responseQuestionIds
+      .map((questionId, i) => {
+        const clarificationIds = formData.getAll(
+          `clarification-id-${questionId}`,
+        ) as string[];
+        const clarificationTexts = formData.getAll(
+          `clarification-text-${questionId}`,
+        ) as string[];
+
+        const clarifications = clarificationTexts
+          .map((text, j) => ({
+            id: clarificationIds[j] || undefined,
+            clarificationText: text,
+          }))
+          .filter((c) => c.clarificationText.trim());
+
+        return {
+          questionId,
+          responseText: responseTexts[i] || "",
+          clarifications,
+        };
+      })
+      .filter((r) => r.responseText.trim() || r.clarifications?.length);
+
+    const result = await Astro.callAction(actions.createCandidate, {
+      firstName: formData.get("firstName") as string,
+      lastName: formData.get("lastName") as string,
+      partyAffiliation: formData.get("partyAffiliation") as string,
+      birthYear: (formData.get("birthYear") as string) || undefined, // Schema handles string -> number coercion
+      profileImageId: (formData.get("profileImageId") as string) || undefined,
+      isIncumbent: formData.get("isIncumbent") === "on",
+      slug: formData.get("slug") as string,
+      externalLinks,
+      policyResponses,
+      qualifications,
+      raceId: race.id,
+    });
+
+    if (result.data) {
+      return Astro.redirect(
+        `/admin/elections/${electionSlug}/races/${raceSlug}/candidates/${result.data.data.slug}/edit`,
+      );
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to create candidate";
+  }
+}
+---
+
+<AdminLayout
+  title="Create Candidate"
+  breadcrumbs={[
+    { label: "Elections", href: "/admin/elections" },
+    { label: election.name, href: `/admin/elections/${electionSlug}/edit` },
+    { label: "Races", href: `/admin/elections/${electionSlug}/races` },
+    {
+      label: race.name,
+      href: `/admin/elections/${electionSlug}/races/${raceSlug}/edit`,
+    },
+    {
+      label: "Candidates",
+      href: `/admin/elections/${electionSlug}/races/${raceSlug}/candidates`,
+    },
+    { label: "Create" },
+  ]}
+>
+  <form method="POST" class="max-w-2xl space-y-6">
+    {
+      error && (
+        <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p class="text-sm font-medium text-red-800">{error}</p>
+        </div>
+      )
+    }
+
+    <div class="grid grid-cols-2 gap-4">
+      <FormInput
+        label="First Name"
+        name="firstName"
+        type="text"
+        placeholder="First name"
+        required
+      />
+      <FormInput
+        label="Last Name"
+        name="lastName"
+        type="text"
+        placeholder="Last name"
+        required
+      />
+    </div>
+
+    <FormInput
+      label="Party Affiliation"
+      name="partyAffiliation"
+      type="text"
+      placeholder="e.g., Moose Party"
+      required
+    />
+
+    <FormInput
+      label="Slug"
+      name="slug"
+      type="text"
+      placeholder="e.g., mayor"
+      required
+    />
+
+    <FormInput
+      label="Birth Year"
+      name="birthYear"
+      type="number"
+      placeholder="e.g., 1980"
+      min="1900"
+    />
+
+    <FormExternalLinkInput />
+
+    <hr class="border-gray-200" />
+
+    <FormQualificationInput />
+
+    <hr class="border-gray-200" />
+
+    <FormCandidatePolicyResponseInput questions={questions} />
+
+    <FormInput label="Is Incumbent" name="isIncumbent" type="checkbox" />
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700"
+        >Profile Image</label
+      >
+      <input
+        type="file"
+        accept="image/*"
+        id="profileImageInput"
+        class="mt-1 block w-full"
+      />
+      <input type="hidden" name="profileImageId" id="profileImageId" />
+      <p id="profileImageStatus" class="mt-1 text-xs text-gray-500"></p>
+    </div>
+
+    <div class="flex justify-end gap-3 pt-4">
+      <Button
+        variant="secondary"
+        href={`/admin/elections/${electionSlug}/races/${raceSlug}/candidates`}
+        >Cancel</Button
+      >
+      <Button type="submit">Create Candidate</Button>
+    </div>
+
+    <script type="module">
+      const input = document.getElementById("profileImageInput");
+      const hidden = document.getElementById("profileImageId");
+      const status = document.getElementById("profileImageStatus");
+
+      input.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (!file.type.startsWith("image/")) {
+          status.textContent = "Only images allowed";
+          return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          status.textContent = "File must be <= 5 MB";
+          return;
+        }
+        status.textContent = "Uploading...";
+        const fd = new FormData();
+        fd.append("file", file);
+        try {
+          const res = await fetch("/api/admin/blobs/upload.json", {
+            method: "POST",
+            body: fd,
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            status.textContent = err.error || "Upload failed";
+            return;
+          }
+          const data = await res.json();
+          hidden.value = data.id;
+          status.textContent = "Uploaded";
+        } catch (err) {
+          console.error(err);
+          status.textContent = "Upload failed";
+        }
+      });
+    </script>
+  </form>
+</AdminLayout>
+
+<script>
+  import { generateSlug } from "../../../../../../../lib/slugUtils";
+
+  const firstNameInput = document.querySelector(
+    'input[name="firstName"]',
+  ) as HTMLInputElement;
+  const lastNameInput = document.querySelector(
+    'input[name="lastName"]',
+  ) as HTMLInputElement;
+  const slugInput = document.querySelector(
+    'input[name="slug"]',
+  ) as HTMLInputElement;
+
+  if (firstNameInput && lastNameInput && slugInput) {
+    firstNameInput.addEventListener("input", (e) => {
+      const value = (e.target as HTMLInputElement).value;
+      slugInput.value = generateSlug(value, lastNameInput.value);
+    });
+    lastNameInput.addEventListener("input", (e) => {
+      const value = (e.target as HTMLInputElement).value;
+      slugInput.value = generateSlug(firstNameInput.value, value);
+    });
+  }
+</script>

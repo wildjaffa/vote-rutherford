@@ -1,0 +1,42 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import ElectionCard from "../../components/ElectionCard.astro";
+import prisma from "../../lib/prisma";
+
+export const prerender = false;
+
+// Fetch all elections ordered by date (newest first)
+// Include races to get the count for the card
+const elections = await prisma.election.findMany({
+  orderBy: { date: "asc" },
+  include: { races: true },
+});
+---
+
+<Layout
+  description="Browse upcoming elections in Rutherford County"
+  title="Elections"
+>
+  <main class="container mx-auto flex-1 px-4 py-8">
+    <div class="mb-12 text-center">
+      <h1 class="mb-4 text-4xl font-bold text-gray-900">Elections</h1>
+      <p class="mx-auto max-w-3xl text-xl text-gray-600">
+        Browse upcoming elections in Rutherford County.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {
+        elections.length > 0 ? (
+          elections.map((election) => (
+            <ElectionCard election={election} races={election.races} />
+          ))
+        ) : (
+          <div class="col-span-full py-12 text-center">
+            <p class="text-lg text-gray-500">No elections found.</p>
+          </div>
+        )
+      }
+    </div>
+  </main>
+</Layout>

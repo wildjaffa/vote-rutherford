@@ -1,0 +1,54 @@
+@import "tailwindcss";
+@import "@fontsource-variable/montserrat";
+@import "@fontsource/sorts-mill-goudy";
+
+@theme {
+  --color-primary: #002d65;
+  --color-secondary: #318171;
+  --color-tertiary: #aa0423;
+  --color-accent: #e2a336;
+
+  --font-sans: "Montserrat Variable", sans-serif;
+
+  --default-font-family: var(--font-sans);
+}
+
+.sorts-mill-goudy {
+  font-family: "Sorts Mill Goudy", serif;
+}
+
+/* Toast Animations */
+.toast {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.toast-enter {
+  animation: toastSlideIn 0.3s ease-out forwards;
+}
+
+.toast-exit {
+  animation: toastSlideOut 0.3s ease-in forwards;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}

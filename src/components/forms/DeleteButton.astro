@@ -1,0 +1,72 @@
+---
+import { Trash2 } from "../../lib/icons";
+
+interface Props {
+  itemName: string;
+  deleteUrl: string;
+  redirectUrl: string;
+}
+
+const { itemName, deleteUrl, redirectUrl } = Astro.props;
+---
+
+<button
+  type="button"
+  class="inline-flex items-center rounded-lg bg-red-600 px-3 py-2 text-white transition-colors hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+  data-delete-url={deleteUrl}
+  data-redirect-url={redirectUrl}
+  data-item-name={itemName}
+  onclick="handleDelete(this)"
+>
+  <Trash2 size="16" stroke-width={2} class="mr-1" />
+  Delete
+</button>
+
+<script>
+  declare global {
+    interface Window {
+      handleDelete: (button: HTMLButtonElement) => void;
+    }
+  }
+
+  window.handleDelete = async function (button: HTMLButtonElement) {
+    const itemName = button.dataset.itemName || "this item";
+    const deleteUrl = button.dataset.deleteUrl;
+    const redirectUrl = button.dataset.redirectUrl;
+
+    if (!deleteUrl || !redirectUrl) {
+      console.error("Missing delete or redirect URL");
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${itemName}?`)) {
+      return;
+    }
+
+    try {
+      button.disabled = true;
+      button.classList.add("opacity-50", "cursor-not-allowed");
+
+      const response = await fetch(deleteUrl, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete");
+      }
+
+      // Redirect on success
+      window.location.href = redirectUrl;
+    } catch (error) {
+      alert(
+        `Error deleting ${itemName}: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+      button.disabled = false;
+      button.classList.remove("opacity-50", "cursor-not-allowed");
+    }
+  };
+</script>

@@ -1,0 +1,338 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Button from "../components/Button.astro";
+import { env } from "../lib/utils/environment";
+
+const contactEmail = env("CONTACT_EMAIL");
+---
+
+<Layout
+  description="How Vote Rutherford protects your privacy and personal information"
+  title="Privacy Policy - Vote Rutherford"
+>
+  <main class="flex-1">
+    <!-- Hero Section -->
+    <section class="bg-primary py-16 text-white md:py-24">
+      <div class="container mx-auto px-4 text-center">
+        <h1 class="sorts-mill-goudy mb-4 text-4xl font-bold md:text-6xl">
+          Privacy Policy
+        </h1>
+        <p class="mx-auto max-w-2xl text-xl opacity-90">
+          Last updated: February 23, 2026
+        </p>
+      </div>
+    </section>
+
+    <div class="container mx-auto max-w-4xl px-4 py-12 md:py-20">
+      <div class="space-y-16 md:space-y-24">
+        <!-- What Information We Collect -->
+        <section class="grid gap-8 md:grid-cols-2 lg:gap-12">
+          <div>
+            <h2 class="sorts-mill-goudy text-primary mb-6 text-3xl font-bold">
+              What Information We Collect
+            </h2>
+            <div class="space-y-4 text-lg leading-relaxed text-gray-700">
+              <p>When you use our address lookup feature, we collect:</p>
+              <ul class="space-y-4">
+                <li class="flex gap-3">
+                  <span class="text-accent font-bold">✓</span>
+                  <span
+                    ><strong>Your address:</strong> Temporarily processed to match
+                    you with your election districts.</span
+                  >
+                </li>
+                <li class="flex gap-3">
+                  <span class="text-accent font-bold">✓</span>
+                  <span
+                    ><strong>Cookie data:</strong> We store your address in a browser
+                    cookie so you don't need to re-enter it on future visits.</span
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div
+            class="bg-accent/10 flex items-center justify-center rounded-3xl p-8"
+          >
+            <div class="text-accent">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="120"
+                height="120"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="lucide lucide-shield-check"
+                ><path
+                  d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"
+                ></path><path d="m9 12 2 2 4-4"></path></svg
+              >
+            </div>
+          </div>
+        </section>
+
+        <!-- How We Use Your Information -->
+        <section class="rounded-4xl bg-gray-50 p-8 md:p-12">
+          <div class="mb-10 text-center">
+            <h2 class="sorts-mill-goudy text-primary mb-4 text-3xl font-bold">
+              How We Use Your Information
+            </h2>
+            <p class="text-secondary text-xl font-medium">
+              We use your address solely to:
+            </p>
+          </div>
+
+          <div class="grid gap-8 md:grid-cols-2">
+            <div class="rounded-2xl bg-white p-6 shadow-sm">
+              <h3 class="mb-2 font-bold text-gray-900">
+                Display Relevant Data
+              </h3>
+              <p class="text-gray-600">
+                Show you which elections and candidates are relevant to your
+                location.
+              </p>
+            </div>
+            <div class="rounded-2xl bg-white p-6 shadow-sm">
+              <h3 class="mb-2 font-bold text-gray-900">
+                Remember for Convenience
+              </h3>
+              <p class="text-gray-600">
+                Remember your address for convenience on return visits so you
+                don't have to re-enter it.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- What We Don't Do -->
+        <section class="border-secondary/20 rounded-4xl border-2 p-8 md:p-12">
+          <h2 class="sorts-mill-goudy text-primary mb-8 text-3xl font-bold">
+            What We Don't Do
+          </h2>
+          <div class="grid gap-6 md:grid-cols-2">
+            {
+              [
+                "Store your address in our database",
+                "Log your searches",
+                "Track your browsing behavior",
+                "Share your information with third parties",
+                "Use your data for advertising or any other purpose",
+              ].map((item) => (
+                <div class="flex items-center gap-3">
+                  <div class="rounded-full bg-red-100 p-1 text-red-600">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="lucide lucide-x"
+                    >
+                      <>
+                        <path d="M18 6 6 18" />
+                        <path d="m6 6 12 12" />
+                      </>
+                    </svg>
+                  </div>
+                  <span class="text-lg text-gray-700">{item}</span>
+                </div>
+              ))
+            }
+          </div>
+        </section>
+
+        <!-- Cookies -->
+        <section class="grid items-center gap-8 md:grid-cols-2">
+          <div
+            class="bg-tertiary/10 order-2 flex items-center justify-center rounded-3xl p-8 md:order-1"
+          >
+            <div class="text-tertiary">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="120"
+                height="120"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="lucide lucide-cookie"
+                ><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"
+                ></path><path d="M8.5 8.5v.01"></path><path d="M16 15.5v.01"
+                ></path><path d="M12 12v.01"></path><path d="M11 17v.01"
+                ></path><path d="M7 14v.01"></path></svg
+              >
+            </div>
+          </div>
+          <div class="order-1 md:order-2">
+            <h2 class="sorts-mill-goudy text-primary mb-6 text-3xl font-bold">
+              Cookies
+            </h2>
+            <div class="space-y-4 text-lg leading-relaxed text-gray-700">
+              <p>
+                We use a single cookie to remember your address. This cookie:
+              </p>
+              <ul class="space-y-4">
+                <li class="flex gap-3">
+                  <span class="text-secondary font-bold">•</span>
+                  <span
+                    >Stays on your device (we don't access it elsewhere)</span
+                  >
+                </li>
+                <li class="flex gap-3">
+                  <span class="text-secondary font-bold">•</span>
+                  <span>Can be deleted by clearing your browser cookies</span>
+                </li>
+                <li class="flex gap-3">
+                  <span class="text-secondary font-bold">•</span>
+                  <span>Is not used for tracking or analytics</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- Vote Plan Feature -->
+        <section
+          class="bg-accent/5 border-accent/20 rounded-4xl border-2 p-8 md:p-12"
+        >
+          <div class="grid items-center gap-8 md:grid-cols-2 lg:gap-12">
+            <div>
+              <h2 class="sorts-mill-goudy text-primary mb-6 text-3xl font-bold">
+                Vote Plan Feature
+              </h2>
+              <div class="space-y-6 text-lg leading-relaxed text-gray-700">
+                <p>
+                  Our vote plan feature allows you to select candidates and save
+                  your choices for reference. This data:
+                </p>
+                <ul class="space-y-4">
+                  <li class="flex gap-3">
+                    <span class="text-accent font-bold">✓</span>
+                    <span
+                      ><strong>Stays on your device:</strong> Saved in your browser's
+                      local storage, never sent to our servers.</span
+                    >
+                  </li>
+                  <li class="flex gap-3">
+                    <span class="text-accent font-bold">✓</span>
+                    <span
+                      ><strong>Is completely private:</strong> We cannot see your
+                      vote plan—only you can.</span
+                    >
+                  </li>
+                  <li class="flex gap-3">
+                    <span class="text-accent font-bold">✓</span>
+                    <span
+                      ><strong>Doesn't sync:</strong> Your vote plan only exists on
+                      the device where you created it.</span
+                    >
+                  </li>
+                  <li class="flex gap-3">
+                    <span class="text-accent font-bold">✓</span>
+                    <span
+                      ><strong>Can be deleted:</strong> Clear your browser data to
+                      remove your vote plan.</span
+                    >
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="hidden md:block">
+              <div
+                class="border-accent/10 rounded-2xl border bg-white p-6 shadow-xl"
+              >
+                <div class="mb-4 flex items-center gap-2">
+                  <div class="h-3 w-3 rounded-full bg-red-400"></div>
+                  <div class="h-3 w-3 rounded-full bg-yellow-400"></div>
+                  <div class="h-3 w-3 rounded-full bg-green-400"></div>
+                </div>
+                <div class="space-y-3">
+                  <div class="h-4 w-3/4 rounded bg-gray-100"></div>
+                  <div class="h-4 w-full rounded bg-gray-100"></div>
+                  <div class="h-4 w-5/6 rounded bg-gray-100"></div>
+                </div>
+                <div
+                  class="mt-6 border-t border-gray-100 pt-4 font-mono text-xs text-gray-400"
+                >
+                  browser.localStorage.getItem('vote-plan')
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Your Rights -->
+        <section>
+          <h2
+            class="sorts-mill-goudy text-primary mb-8 text-center text-3xl font-bold"
+          >
+            Your Rights
+          </h2>
+          <div class="grid gap-8 md:grid-cols-2">
+            <div
+              class="rounded-2xl border border-gray-100 bg-white p-6 text-center shadow-sm"
+            >
+              <h3 class="mb-3 font-bold">Clear Data</h3>
+              <p class="text-sm text-gray-600">
+                Clear your address by deleting your browser cookies at any time.
+              </p>
+            </div>
+            <!-- <div
+              class="rounded-2xl border border-gray-100 bg-white p-6 text-center shadow-sm"
+            >
+              <h3 class="mb-3 font-bold">Opt-out</h3>
+              <p class="text-sm text-gray-600">
+                Use the site without saving your address (just don't click
+                "remember me" or clear cookies after each visit).
+              </p>
+            </div> -->
+            <div
+              class="rounded-2xl border border-gray-100 bg-white p-6 text-center shadow-sm"
+            >
+              <h3 class="mb-3 font-bold">Ask Questions</h3>
+              <p class="text-sm text-gray-600">
+                Contact us with questions at <a
+                  href={`mailto:${contactEmail}`}
+                  class="text-primary hover:underline">{contactEmail}</a
+                >.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Changes & Contact -->
+        <section class="text-center">
+          <div class="mx-auto max-w-2xl rounded-3xl bg-gray-50 p-8 md:p-12">
+            <h2 class="sorts-mill-goudy text-primary mb-6 text-3xl font-bold">
+              Changes to This Policy
+            </h2>
+            <p class="mb-8 text-lg text-gray-700">
+              We may update this policy occasionally. Changes will be posted on
+              this page.
+            </p>
+            <div class="mb-8 h-px w-full bg-gray-200"></div>
+            <h2 class="sorts-mill-goudy text-primary mb-6 text-2xl font-bold">
+              Contact Us
+            </h2>
+            <p class="mb-8 text-lg text-gray-700">
+              Questions about privacy? Email us at <a
+                href={`mailto:${contactEmail}`}
+                class="text-primary hover:underline">{contactEmail}</a
+              >.
+            </p>
+            <Button href="/" size="lg">Back to Home</Button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</Layout>

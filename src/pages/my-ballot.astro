@@ -1,0 +1,20 @@
+---
+import Layout from "../layouts/Layout.astro";
+import PersonalizedBallot from "../components/PersonalizedBallot.astro";
+import BallotLoadingSkeleton from "../components/BallotLoadingSkeleton.astro";
+
+export const prerender = true;
+---
+
+<Layout
+  description="For residents of Rutherford County Tennessee, view your personalized ballot for the upcoming election based on your address"
+  title="My Ballot"
+>
+  <main class="mx-auto flex-1 px-4 py-8">
+    <PersonalizedBallot server:defer>
+      <BallotLoadingSkeleton slot="fallback" />
+    </PersonalizedBallot>
+  </main>
+</Layout>
+
+<style></style>

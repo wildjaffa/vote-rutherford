@@ -1,0 +1,205 @@
+---
+import { actions } from "astro:actions";
+import DeleteButton from "../../../../components/forms/DeleteButton.astro";
+import FormInput from "../../../../components/forms/FormInput.astro";
+import FormTextarea from "../../../../components/forms/FormTextarea.astro";
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import prisma from "../../../../lib/prisma";
+import FormPolicyQuestionInput from "../../../../components/forms/FormPolicyQuestionInput.astro";
+import Button from "../../../../components/Button.astro";
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  return Astro.redirect("/admin/elections");
+}
+
+let election = await prisma.election.findUnique({
+  where: { slug },
+  include: {
+    policyQuestions: true,
+  },
+});
+
+if (!election) {
+  return Astro.redirect("/admin/elections");
+}
+
+let error: string | null = null;
+let success: string | null = null;
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const name = formData.get("name") as string;
+    const description = formData.get("description") as string;
+    const date = new Date(formData.get("date") as string);
+    const slug = formData.get("slug") as string;
+    const earlyVotingStart = (formData.get("earlyVotingStart") as string)
+      ? new Date(formData.get("earlyVotingStart") as string)
+      : null;
+    const earlyVotingEnd = (formData.get("earlyVotingEnd") as string)
+      ? new Date(formData.get("earlyVotingEnd") as string)
+      : null;
+
+    const questionIds = formData.getAll("question-id") as string[];
+    const questionTexts = formData.getAll("question-text") as string[];
+    const questionDescriptions = formData.getAll(
+      "question-description",
+    ) as string[];
+    const questionOrders = formData.getAll("question-order") as string[];
+
+    const policyQuestions = questionTexts
+      .map((text, i) => ({
+        id: questionIds[i] || undefined,
+        questionText: text,
+        descriptionText: questionDescriptions[i] || null,
+        order: parseInt(questionOrders[i] || "0"),
+      }))
+      .filter((q) => q.questionText);
+
+    const result = await Astro.callAction(actions.updateElection, {
+      id: election.id,
+      name,
+      description,
+      date,
+      slug,
+      earlyVotingStart,
+      earlyVotingEnd,
+      policyQuestions,
+    });
+
+    if (result.data) {
+      success = "Election updated successfully";
+      election = (await prisma.election.findUnique({
+        where: { slug },
+        include: {
+          policyQuestions: true,
+        },
+      }))!;
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to update election";
+  }
+}
+---
+
+<AdminLayout
+  title={`Edit Election: ${election.name}`}
+  breadcrumbs={[
+    { label: "Elections", href: "/admin/elections" },
+    { label: election.name },
+  ]}
+>
+  <div class="space-y-6">
+    {
+      error && (
+        <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p class="text-sm font-medium text-red-800">{error}</p>
+        </div>
+      )
+    }
+
+    {
+      success && (
+        <div class="rounded-lg border border-green-200 bg-green-50 p-4">
+          <p class="text-sm font-medium text-green-800">{success}</p>
+        </div>
+      )
+    }
+
+    <form method="POST" class="max-w-2xl space-y-6">
+      <FormInput
+        label="Election Name"
+        name="name"
+        type="text"
+        value={election.name}
+        placeholder="e.g., 2024 General Election"
+      />
+
+      <FormTextarea
+        label="Description"
+        name="description"
+        value={election.description}
+        placeholder="Enter election description..."
+      />
+
+      <FormInput
+        label="Slug"
+        name="slug"
+        type="text"
+        value={election.slug}
+        placeholder="e.g., 2024-general-election"
+      />
+
+      <FormInput
+        label="Election Date"
+        name="date"
+        type="datetime-local"
+        value={election.date.toISOString().slice(0, 16)}
+      />
+
+      <FormInput
+        label="Early Voting Start"
+        name="earlyVotingStart"
+        type="datetime-local"
+        value={election.earlyVotingStart?.toISOString().slice(0, 16) || ""}
+      />
+
+      <FormInput
+        label="Early Voting End"
+        name="earlyVotingEnd"
+        type="datetime-local"
+        value={election.earlyVotingEnd?.toISOString().slice(0, 16) || ""}
+      />
+
+      <FormPolicyQuestionInput questions={election.policyQuestions} />
+
+      <div class="flex justify-end gap-3 border-t border-gray-200 pt-4">
+        <Button variant="secondary" href="/admin/elections">Cancel</Button>
+        <Button type="submit">Save Changes</Button>
+      </div>
+    </form>
+
+    <!-- Danger Zone -->
+    <div class="border-t border-gray-200 pt-6">
+      <h3 class="mb-4 text-lg font-semibold text-red-900">Danger Zone</h3>
+      <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+        <p class="mb-4 text-sm text-red-800">
+          Deleting this election will archive it and hide it from public view.
+        </p>
+        <DeleteButton
+          itemName={election.name}
+          deleteUrl={`/api/admin/elections/${slug}/delete.json`}
+          redirectUrl="/admin/elections"
+        />
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  // Auto-generate slug from name on edit
+  const nameInput = document.querySelector(
+    'input[name="name"]',
+  ) as HTMLInputElement;
+  const slugInput = document.querySelector(
+    'input[name="slug"]',
+  ) as HTMLInputElement;
+
+  if (nameInput && slugInput) {
+    nameInput.addEventListener("input", (e) => {
+      const value = (e.target as HTMLInputElement).value;
+      const slug = value
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/[^\w-]/g, "")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      slugInput.value = slug;
+    });
+  }
+</script>

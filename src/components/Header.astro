@@ -1,0 +1,132 @@
+---
+import { Image } from "astro:assets";
+import Logo from "../assets/Logo.png";
+import Button from "./Button.astro";
+import "../styles/global.css";
+import { Menu } from "../lib/icons";
+// Because of the company X, we have to import the X icon directly from lucide instead of our icons.ts wrapper
+import { X } from "@lucide/astro";
+---
+
+<header
+  class="bg-secondary relative flex w-full items-center justify-between p-1 shadow-md"
+>
+  <div class="flex items-center">
+    <a href="/"
+      ><Image
+        src={Logo}
+        alt="Vote Rutherford Logo"
+        class="w-30 sm:w-40"
+        fetchpriority={"low"}
+        loading={"eager"}
+      /></a
+    ><div class="bg-accent ml-2 rounded px-2 py-1 text-xs text-white">Beta</div>
+  </div>
+
+  <!-- Desktop Navigation -->
+  <nav class="hidden md:block">
+    <ul class="flex space-x-4">
+      <li class="pr-2">
+        <a href="/" class="hover:text-accent text-white">Find Your Ballot</a>
+      </li>
+      <li class="pr-2">
+        <a href="/my-ballot" class="hover:text-accent text-white">My Ballot</a>
+      </li>
+      <li class="pr-2">
+        <a href="/about" class="hover:text-accent text-white">About</a>
+      </li>
+      <li class="pr-2">
+        <a href="/elections" class="hover:text-accent text-white">Elections</a>
+      </li>
+      <li class="pr-4">
+        <Button
+          variant="secondary"
+          href="https://ovr.govote.tn.gov/"
+          target="_blank"
+          rel="noopener noreferrer">Register to Vote</Button
+        >
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Mobile Hamburger Button -->
+  <button
+    id="menu-toggle"
+    class="flex h-8 w-8 items-center justify-center md:hidden"
+    aria-label="Toggle menu"
+  >
+    <Menu class="menu-icon h-6 w-6 text-white" id="menu-icon" />
+    <X class="close-icon hidden h-6 w-6 text-white" id="close-icon" />
+  </button>
+
+  <!-- Mobile Navigation -->
+  <nav
+    id="mobile-menu"
+    class="bg-secondary absolute top-full right-0 left-0 z-90 hidden shadow-md md:hidden"
+  >
+    <div class="border-b border-white/20"></div>
+    <ul
+      class="flex flex-col space-y-4 p-4 opacity-0 transition-opacity duration-300"
+      id="mobile-menu-list"
+    >
+      <li>
+        <a href="/" class="hover:text-accent block text-white"
+          >Find Your Ballot</a
+        >
+      </li>
+      <li>
+        <a href="/my-ballot" class="hover:text-accent block text-white"
+          >My Ballot</a
+        >
+      </li>
+      <li>
+        <a href="/about" class="hover:text-accent block text-white">About</a>
+      </li>
+      <li>
+        <a href="/elections" class="hover:text-accent block text-white"
+          >Elections</a
+        >
+      </li>
+      <li>
+        <Button
+          variant="secondary"
+          href="https://ovr.govote.tn.gov/"
+          target="_blank"
+          rel="noopener noreferrer">Register to Vote</Button
+        >
+      </li>
+    </ul>
+  </nav>
+</header>
+
+<script>
+  const menuToggle = document.getElementById("menu-toggle");
+  const mobileMenu = document.getElementById("mobile-menu");
+  const menuList = document.getElementById("mobile-menu-list");
+  const menuIcon = document.getElementById("menu-icon");
+  const xIcon = document.getElementById("close-icon");
+
+  menuToggle?.addEventListener("click", () => {
+    const isHidden = mobileMenu?.classList.toggle("hidden");
+
+    if (!isHidden) {
+      menuIcon?.classList.add("hidden");
+      xIcon?.classList.remove("hidden");
+      menuList?.classList.remove("opacity-0");
+    } else {
+      menuIcon?.classList.remove("hidden");
+      xIcon?.classList.add("hidden");
+      menuList?.classList.add("opacity-0");
+    }
+  });
+
+  // Close menu when a link is clicked
+  mobileMenu?.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      mobileMenu.classList.add("hidden");
+      menuIcon?.classList.remove("hidden");
+      xIcon?.classList.add("hidden");
+      menuList?.classList.add("opacity-0");
+    });
+  });
+</script>

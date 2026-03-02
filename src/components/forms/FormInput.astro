@@ -1,0 +1,128 @@
+---
+interface Props {
+  label: string;
+  name: string;
+  type?:
+    | "text"
+    | "email"
+    | "number"
+    | "date"
+    | "datetime-local"
+    | "url"
+    | "checkbox";
+  value?: string | number | boolean;
+  checked?: boolean;
+  required?: boolean;
+  error?: string;
+  placeholder?: string;
+  min?: string | number;
+  max?: string | number;
+  step?: string | number;
+}
+
+const {
+  label,
+  name,
+  type = "text",
+  value = "",
+  checked,
+  required = false,
+  error,
+  placeholder,
+  min,
+  max,
+  step,
+} = Astro.props;
+
+const isCheckbox = type === "checkbox";
+const isChecked =
+  checked ?? (isCheckbox ? value === "on" || value === true : false);
+---
+
+<div class={isCheckbox ? "mb-4" : "mb-4"}>
+  {
+    !isCheckbox && (
+      <label for={name} class="mb-2 block text-sm font-medium text-gray-700">
+        {label}
+        {required && <span class="text-red-500">*</span>}
+      </label>
+    )
+  }
+  <div class={isCheckbox ? "flex items-center space-x-3" : "relative"}>
+    {
+      !isCheckbox && Astro.slots.has("start") && (
+        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+          <slot name="start" />
+        </div>
+      )
+    }
+    {
+      isCheckbox ? (
+        <div class="relative flex items-center">
+          <input
+            type="checkbox"
+            id={name}
+            name={name}
+            value="on"
+            checked={isChecked}
+            required={required}
+            class:list={[
+              "peer h-5 w-5 cursor-pointer appearance-none rounded border border-gray-300 bg-white transition-all focus:ring-2 focus:ring-offset-2",
+              "checked:border-secondary checked:bg-secondary hover:border-secondary focus:ring-secondary",
+              error && "border-red-500",
+            ]}
+          />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="pointer-events-none absolute top-1/2 left-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 transition-opacity peer-checked:opacity-100"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M20 6L9 17L4 12" />
+          </svg>
+        </div>
+      ) : (
+        <input
+          type={type}
+          id={name}
+          name={name}
+          value={value as string | number}
+          required={required}
+          placeholder={placeholder}
+          min={min}
+          max={max}
+          step={step}
+          class:list={[
+            "focus:ring-secondary w-full rounded-lg border py-2 transition-colors focus:border-transparent focus:ring-2",
+            Astro.slots.has("start") ? "pl-10" : "pl-4",
+            Astro.slots.has("end") ? "pr-10" : "pr-4",
+            error ? "border-red-500" : "border-gray-300",
+          ]}
+        />
+      )
+    }
+    {
+      isCheckbox && (
+        <label
+          for={name}
+          class="cursor-pointer text-sm font-medium text-gray-700 select-none"
+        >
+          {label}
+          {required && <span class="text-red-500">*</span>}
+        </label>
+      )
+    }
+    {
+      !isCheckbox && Astro.slots.has("end") && (
+        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
+          <slot name="end" />
+        </div>
+      )
+    }
+  </div>
+  {error && <p class="mt-1 text-sm text-red-500">{error}</p>}
+</div>

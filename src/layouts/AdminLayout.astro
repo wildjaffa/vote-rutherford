@@ -1,0 +1,148 @@
+---
+import Layout from "./Layout.astro";
+import Button from "../components/Button.astro";
+import { House, LogOut, Vote } from "../lib/icons";
+
+interface Props {
+  title: string;
+  breadcrumbs?: Array<{ label: string; href?: string }>;
+}
+
+const { title, breadcrumbs = [] } = Astro.props;
+---
+
+<Layout
+  description="Administrative pages for Vote Rutherford"
+  title={`Admin - ${title}`}
+  fullWidth={true}
+  noIndex={true}
+>
+  <!-- Admin Header -->
+  <header class="bg-secondary w-full text-white shadow-md">
+    <div class="mx-auto max-w-7xl px-4 py-4">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold">Admin Dashboard</h1>
+        <div class="flex gap-4">
+          <Button
+            class="inline-flex items-center"
+            href="/"
+            variant="secondary"
+            size="md"
+          >
+            <House size="16" stroke-width={2} class="mr-2" />
+            Back to Site
+          </Button>
+          <Button
+            class="inline-flex items-center"
+            href="/api/auth/signout"
+            variant="secondary"
+            size="md"
+          >
+            <LogOut size="16" stroke-width={2} class="mr-2" />
+            Sign Out
+          </Button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Wrapper -->
+  <div class="mx-auto max-w-7xl px-4 py-8">
+    <div class="flex flex-col gap-8 lg:flex-row">
+      <!-- Sidebar Navigation -->
+      <aside class="w-full shrink-0 lg:w-64">
+        <nav class="sticky top-4 rounded-lg bg-white p-4 shadow-md">
+          <h2 class="mb-4 text-lg font-semibold text-gray-900">Admin Menu</h2>
+          <ul class="space-y-2">
+            <li>
+              <a
+                href="/admin/elections"
+                class="hover:bg-secondary flex items-center rounded-lg px-4 py-2 text-gray-700 transition-colors hover:text-white"
+              >
+                <Vote size="18" stroke-width={2} class="mr-3" />
+                Elections
+              </a>
+            </li>
+          </ul>
+
+          <!-- Quick Links Section -->
+          <div class="mt-8 border-t border-gray-200 pt-6">
+            <h3 class="mb-3 text-sm font-semibold text-gray-700">
+              Quick Links
+            </h3>
+            <ul class="space-y-2 text-sm">
+              <li>
+                <a
+                  href="/admin/elections"
+                  class="text-secondary hover:text-secondary/80 transition-colors"
+                >
+                  → Manage Elections
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/"
+                  class="text-secondary hover:text-secondary/80 transition-colors"
+                >
+                  → View Public Site
+                </a>
+              </li>
+            </ul>
+          </div>
+        </nav>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="min-w-0 flex-1">
+        <!-- Breadcrumbs -->
+        {
+          breadcrumbs.length > 0 && (
+            <nav class="mb-6" aria-label="Breadcrumb">
+              <ol class="flex items-center space-x-2 text-sm text-gray-600">
+                <li>
+                  <a
+                    href="/admin/elections"
+                    class="hover:text-secondary transition-colors"
+                  >
+                    Admin
+                  </a>
+                </li>
+                {breadcrumbs.map((crumb) => (
+                  <>
+                    <li>
+                      <span class="text-gray-400">/</span>
+                    </li>
+                    <li>
+                      {crumb.href ? (
+                        <a
+                          href={crumb.href}
+                          class="hover:text-secondary transition-colors"
+                        >
+                          {crumb.label}
+                        </a>
+                      ) : (
+                        <span class="font-medium text-gray-900">
+                          {crumb.label}
+                        </span>
+                      )}
+                    </li>
+                  </>
+                ))}
+              </ol>
+            </nav>
+          )
+        }
+
+        <!-- Page Title -->
+        <div class="mb-6">
+          <h2 class="text-3xl font-bold text-gray-900">{title}</h2>
+        </div>
+
+        <!-- Page Content -->
+        <div class="rounded-lg bg-white p-6 shadow-md">
+          <slot />
+        </div>
+      </main>
+    </div>
+  </div>
+</Layout>

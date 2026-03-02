@@ -1,0 +1,389 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Button from "../components/Button.astro";
+---
+
+<Layout
+  description="Learn more about Vote Rutherford and our mission to improve local elections in Rutherford County"
+  title="About - Vote Rutherford"
+>
+  <main class="flex-1">
+    <!-- Hero Section -->
+    <section class="bg-primary py-16 text-white md:py-24">
+      <div class="container mx-auto px-4 text-center">
+        <h1 class="sorts-mill-goudy mb-4 text-4xl font-bold md:text-6xl">
+          About Vote Rutherford
+        </h1>
+        <p class="mx-auto max-w-2xl text-xl opacity-90">
+          A non-partisan project designed to research local issues, investigate
+          candidate positions, and educate the voters of Rutherford County.
+        </p>
+      </div>
+    </section>
+
+    <div class="container mx-auto max-w-4xl px-4 py-12 md:py-20">
+      <div class="space-y-16 md:space-y-24">
+        <!-- The Challenge -->
+        <section class="grid items-center gap-8 md:grid-cols-2 lg:gap-12">
+          <div>
+            <h2 class="sorts-mill-goudy text-primary mb-6 text-3xl font-bold">
+              The Challenge
+            </h2>
+            <div class="space-y-4 text-lg leading-relaxed text-gray-700">
+              <p>
+                Local elections frequently suffer from low voter turnout and
+                limited public awareness of candidates’ backgrounds and policy
+                positions.
+              </p>
+              <p>
+                Existing resources are often fragmented, inconsistent, or
+                difficult to access. Without a centralized, user-friendly source
+                of information, voters are often faced with a difficult choice:
+                vote based on name recognition alone, or skip that portion of
+                the ballot entirely.
+              </p>
+              <p class="text-primary font-medium">
+                We believe this isn't fair to voters, and it isn't fair to the
+                candidates themselves.
+              </p>
+            </div>
+          </div>
+          <div
+            class="bg-tertiary/10 flex aspect-square items-center justify-center rounded-3xl p-8"
+          >
+            <div class="text-tertiary text-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="120"
+                height="120"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="mx-auto mb-4"
+                ><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+                ></path><circle cx="9" cy="7" r="4"></circle><path
+                  d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path
+                  d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg
+              >
+              <span class="sorts-mill-goudy text-2xl font-bold"
+                >Empowering Voters</span
+              >
+            </div>
+          </div>
+        </section>
+
+        <!-- Stats Section -->
+        <section
+          class="grid grid-cols-2 gap-4 border-y border-gray-100 py-12 md:grid-cols-4"
+        >
+          <div class="text-center">
+            <div class="sorts-mill-goudy text-primary text-3xl font-bold">
+              377k+
+            </div>
+            <div
+              class="text-xs font-bold tracking-wider text-gray-500 uppercase"
+            >
+              Residents
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="sorts-mill-goudy text-primary text-3xl font-bold">
+              209k+
+            </div>
+            <div
+              class="text-xs font-bold tracking-wider text-gray-500 uppercase"
+            >
+              Voters
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="sorts-mill-goudy text-primary text-3xl font-bold">
+              75.7%
+            </div>
+            <div
+              class="text-xs font-bold tracking-wider text-gray-500 uppercase"
+            >
+              Adults
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="sorts-mill-goudy text-primary text-3xl font-bold">
+              $85k+
+            </div>
+            <div
+              class="text-xs font-bold tracking-wider text-gray-500 uppercase"
+            >
+              Median Income
+            </div>
+          </div>
+        </section>
+
+        <!-- Our Mission -->
+        <section class="rounded-4xl bg-gray-50 p-8 md:p-12">
+          <div class="mb-10 text-center">
+            <h2 class="sorts-mill-goudy text-primary mb-4 text-3xl font-bold">
+              Our Mission
+            </h2>
+            <p class="text-secondary text-xl font-medium">
+              Bridging the gap between voters and local government.
+            </p>
+          </div>
+
+          <div class="grid gap-8 md:grid-cols-3">
+            <div class="text-center">
+              <div
+                class="bg-secondary/10 text-secondary mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  ><circle cx="11" cy="11" r="8"></circle><path
+                    d="m21 21-4.3-4.3"></path></svg
+                >
+              </div>
+              <h3 class="mb-2 font-bold text-gray-900">Research</h3>
+              <p class="text-gray-600">
+                Identifying the issues most important to Rutherford County
+                residents through polling and focus groups.
+              </p>
+            </div>
+
+            <div class="text-center">
+              <div
+                class="bg-secondary/10 text-secondary mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  ><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"
+                  ></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
+                  ></path></svg
+                >
+              </div>
+              <h3 class="mb-2 font-bold text-gray-900">Investigate</h3>
+              <p class="text-gray-600">
+                Giving all candidates an opportunity to respond to the
+                community's priorities in their own words.
+              </p>
+            </div>
+
+            <div class="text-center">
+              <div
+                class="bg-secondary/10 text-secondary mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  ><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                  ></path></svg
+                >
+              </div>
+              <h3 class="mb-2 font-bold text-gray-900">Educate</h3>
+              <p class="text-gray-600">
+                Publishing candidate data and polling results in a free, open,
+                and easy-to-use platform.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- The Process -->
+        <section class="items-start space-y-12">
+          <h2
+            class="sorts-mill-goudy text-primary text-center text-3xl font-bold"
+          >
+            How We Work
+          </h2>
+
+          <div class="grid gap-12">
+            <!-- Phase 1 -->
+            <div class="flex flex-col gap-8 md:flex-row">
+              <div
+                class="bg-accent/20 text-accent sorts-mill-goudy flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-3xl font-bold"
+              >
+                1
+              </div>
+              <div>
+                <h3 class="mb-3 text-xl font-bold text-gray-900">
+                  Community-Led Research
+                </h3>
+                <p class="text-lg leading-relaxed text-gray-700">
+                  We collaborate with the <strong class="text-primary"
+                    >American Democracy Project</strong
+                  > and the <strong class="text-primary"
+                    >MTSU Department of Political and Global Affairs</strong
+                  > to conduct scientific polling and focus groups. Our goal is to
+                  surface the issues voters prioritize, rather than what political
+                  parties or media think they should care about.
+                </p>
+              </div>
+            </div>
+
+            <!-- Phase 2 -->
+            <div class="flex flex-col gap-8 md:flex-row">
+              <div
+                class="bg-accent/20 text-accent sorts-mill-goudy flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-3xl font-bold"
+              >
+                2
+              </div>
+              <div>
+                <h3 class="mb-3 text-xl font-bold text-gray-900">
+                  Candidate Investigation
+                </h3>
+                <p class="text-lg leading-relaxed text-gray-700">
+                  Using the data we gather, we approach every candidate running
+                  for local office. We provide them a neutral platform to
+                  respond to community priorities. This ensures that voters see
+                  direct responses on key issues, while maintaining a
+                  non-partisan and fair environment for all candidates.
+                </p>
+              </div>
+            </div>
+
+            <!-- Phase 3 -->
+            <div class="flex flex-col gap-8 md:flex-row">
+              <div
+                class="bg-accent/20 text-accent sorts-mill-goudy flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-3xl font-bold"
+              >
+                3
+              </div>
+              <div>
+                <h3 class="mb-3 text-xl font-bold text-gray-900">
+                  Accessible Education
+                </h3>
+                <p class="text-lg leading-relaxed text-gray-700">
+                  Finally, we publish all findings on GoVoteRutherford.com. We
+                  optimize our site for modern search patterns—including the
+                  emerging field of Agentic SEO—to ensure that when a voter asks
+                  their search engine about a candidate, they get accurate,
+                  locally-sourced information.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Open Source Section -->
+        <section
+          class="bg-accent/5 border-accent/20 rounded-4xl border-2 p-8 md:p-12"
+        >
+          <div class="grid items-center gap-8 md:grid-cols-2">
+            <div>
+              <h2 class="sorts-mill-goudy text-primary mb-6 text-3xl font-bold">
+                Open Source & Community
+              </h2>
+              <div class="space-y-4 text-lg leading-relaxed text-gray-700">
+                <p>
+                  We believe that the tools of democracy should be available to
+                  everyone. Vote Rutherford is built entirely in the open under
+                  the <strong>MIT License</strong>.
+                </p>
+                <p>
+                  Anyone can audit our technology, and we encourage other
+                  communities to use our code to stand up their own local
+                  election platforms. By utilizing modern technology, we've
+                  reduced the cost of running these resources from thousands of
+                  dollars to just a few dollars a month.
+                </p>
+                <div class="pt-4">
+                  <a
+                    href="https://github.com/wildjaffa/vote-rutherford"
+                    class="text-primary inline-flex items-center font-bold hover:underline"
+                  >
+                    View on GitHub
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="ml-2"
+                      ><path
+                        d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"
+                      ></path><path d="M9 18c-4.51 2-5-2-7-2"></path></svg
+                    >
+                  </a>
+                </div>
+              </div>
+            </div>
+            <div class="hidden md:block">
+              <div
+                class="border-accent/10 shadow-accent/10 rounded-2xl border bg-white p-6 shadow-xl"
+              >
+                <div class="mb-4 flex items-center gap-3">
+                  <div class="h-3 w-3 rounded-full bg-red-400"></div>
+                  <div class="h-3 w-3 rounded-full bg-yellow-400"></div>
+                  <div class="h-3 w-3 rounded-full bg-green-400"></div>
+                </div>
+                <div class="space-y-2">
+                  <div class="h-2 w-3/4 rounded bg-gray-100"></div>
+                  <div class="h-2 w-full rounded bg-gray-100"></div>
+                  <div class="h-2 w-5/6 rounded bg-gray-100"></div>
+                  <div class="h-2 w-2/3 rounded bg-gray-100"></div>
+                </div>
+                <div class="mt-6 flex items-center justify-between">
+                  <span class="font-mono text-xs text-gray-400"
+                    >MIT License</span
+                  >
+                  <span class="text-accent font-mono text-xs">npm install</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Final Call to Action -->
+        <section class="text-center">
+          <div class="mx-auto max-w-2xl">
+            <h2 class="sorts-mill-goudy text-primary mb-6 text-3xl font-bold">
+              Join Us
+            </h2>
+            <p class="text-xl leading-relaxed font-medium text-gray-800">
+              Our goal is to raise the level of political discourse in our
+              community.
+            </p>
+            <p class="mt-4 text-lg text-gray-600">
+              When voters are educated, they become motivated. By increasing
+              voter turnout, we ensure every member of our community has a voice
+              in our city and county government.
+            </p>
+            <div class="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
+              <Button size="lg" href="/">Get Started</Button>
+              <Button size="lg" variant="secondary" href="/how-it-works"
+                >How It Works</Button
+              >
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</Layout>

@@ -1,0 +1,32 @@
+---
+import type {
+  Candidate,
+  BlobStorageReference,
+} from "../generated/prisma/client";
+import { convertKeyToPublicUrl } from "../lib/blobStorage";
+import { User } from "../lib/icons";
+
+interface Props {
+  candidate: Candidate;
+  profileImage?: BlobStorageReference | null;
+  loading?: "eager" | "lazy";
+}
+
+const { candidate, profileImage, loading = "lazy" } = Astro.props;
+
+const fullName = `${candidate.firstName} ${candidate.middleName ? candidate.middleName + " " : ""}${candidate.lastName}`;
+const imageUrl = convertKeyToPublicUrl(profileImage?.fileLocation);
+---
+
+{
+  imageUrl ? (
+    <img
+      class="h-full w-full"
+      src={imageUrl}
+      alt={fullName}
+      loading={loading}
+    />
+  ) : (
+    <User class="h-full w-full" />
+  )
+}

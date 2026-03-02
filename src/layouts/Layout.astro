@@ -1,3 +1,21 @@
+---
+import "../styles/global.css";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import ToastContainer from "../components/ToastContainer.astro";
+import "@fontsource-variable/montserrat";
+import "@fontsource/sorts-mill-goudy";
+
+interface Props {
+  title: string;
+  description: string;
+  fullWidth?: boolean;
+  noIndex?: boolean;
+}
+
+const { title, description, fullWidth = false, noIndex = false } = Astro.props;
+---
+
 <!doctype html>
 <html lang="en">
   <head>
@@ -6,18 +24,37 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" />
     <meta name="generator" content={Astro.generator} />
-    <title>Vote Rutherford</title>
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {noIndex && <meta name="robots" content="noindex, nofollow" />}
   </head>
   <body>
-    <slot />
+    <Header />
+    <main
+      class:list={[
+        "flex-1",
+        !fullWidth && "mx-auto max-w-7xl px-1 py-8 md:px-4",
+      ]}
+    >
+      <slot />
+    </main>
+    <Footer />
+    <ToastContainer />
   </body>
 </html>
+
+<script>
+  // Initialize the toast service - the import has side effects that set up the global toast object
+  import "../lib/initToast";
+</script>
 
 <style>
   html,
   body {
     margin: 0;
     width: 100%;
-    height: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
 </style>

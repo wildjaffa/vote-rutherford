@@ -1,0 +1,234 @@
+---
+import { Plus, Trash2 } from "../../lib/icons";
+
+interface Props {
+  questions: {
+    id: string;
+    questionText: string;
+    descriptionText?: string | null;
+    isPrioritized?: boolean;
+  }[];
+  existingResponses?: {
+    id?: string;
+    policyQuestionId: string;
+    response: string;
+    clarifications?: {
+      id: string;
+      clarification: string;
+    }[];
+  }[];
+}
+
+const { questions = [], existingResponses = [] } = Astro.props;
+
+// Group questions by priority
+const prioritized = questions.filter((q) => q.isPrioritized);
+const others = questions.filter((q) => !q.isPrioritized);
+
+function getExistingResponse(questionId: string) {
+  return existingResponses.find((r) => r.policyQuestionId === questionId);
+}
+---
+
+<div class="space-y-8">
+  <div class="space-y-4">
+    <h3 class="text-lg font-medium text-gray-900">Policy Question Responses</h3>
+    <p class="text-sm text-gray-500 italic">
+      Provide responses to the following policy questions. Questions prioritized
+      for this race are shown first.
+    </p>
+  </div>
+
+  {
+    [
+      { title: "Prioritized Questions", list: prioritized, showHeader: true },
+      {
+        title: "Other Election Questions",
+        list: others,
+        showHeader: false,
+        collapsible: true,
+      },
+    ].map((section) => {
+      if (section.list.length === 0) return null;
+
+      const content = section.list.map((q) => {
+        const er = getExistingResponse(q.id);
+        return (
+          <div
+            class="response-group hover:border-secondary/30 space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all"
+            data-question-id={q.id}
+          >
+            <div class="space-y-2">
+              <label class="block text-sm font-semibold text-gray-900">
+                {q.questionText}
+              </label>
+              {q.descriptionText && (
+                <p class="text-xs text-gray-500">{q.descriptionText}</p>
+              )}
+              <input type="hidden" name="response-id" value={er?.id || ""} />
+              <input type="hidden" name="response-question-id" value={q.id} />
+              <textarea
+                name="response-text"
+                rows="4"
+                class="focus:border-secondary focus:ring-secondary block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+                placeholder="Enter candidate's response..."
+              >
+                {er?.response || ""}
+              </textarea>
+            </div>
+
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <h5 class="text-xs font-bold tracking-wider text-gray-400 uppercase">
+                  Clarifications
+                </h5>
+                <button
+                  type="button"
+                  class="add-clarification-btn text-secondary hover:text-secondary/80 inline-flex items-center gap-1 text-xs font-medium transition-colors"
+                >
+                  <Plus class="size-3" /> Add Clarification
+                </button>
+              </div>
+
+              <div class="clarifications-list space-y-3">
+                {er?.clarifications?.map((c) => (
+                  <div class="clarification-row animate-in fade-in slide-in-from-top-1 flex gap-3 duration-200">
+                    <input
+                      type="hidden"
+                      name={`clarification-id-${q.id}`}
+                      value={c.id}
+                    />
+                    <textarea
+                      name={`clarification-text-${q.id}`}
+                      rows="2"
+                      class="focus:border-secondary focus:ring-secondary block flex-1 rounded-md border-gray-300 bg-gray-50/50 shadow-sm sm:text-sm"
+                      placeholder="Clarification..."
+                    >
+                      {c.clarification}
+                    </textarea>
+                    <button
+                      type="button"
+                      class="remove-clarification-btn mt-2 self-start text-gray-400 transition-colors hover:text-red-500"
+                    >
+                      <Trash2 class="size-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      });
+
+      if (section.collapsible) {
+        return (
+          <div class="space-y-6">
+            <details class="group">
+              <summary class="hover:text-secondary flex cursor-pointer list-none items-center justify-between font-medium text-gray-700 transition-colors">
+                <span class="text-sm font-semibold tracking-wider uppercase">
+                  {section.title} ({section.list.length})
+                </span>
+                <span class="transition group-open:rotate-180">
+                  <svg
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.5"
+                    viewBox="0 0 24 24"
+                    width="24"
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </span>
+              </summary>
+              <div class="group-open:animate-in group-open:fade-in group-open:slide-in-from-top-2 mt-6 space-y-6 duration-300">
+                {content}
+              </div>
+            </details>
+          </div>
+        );
+      }
+
+      return (
+        <div class="space-y-6">
+          {section.showHeader && (
+            <h4 class="text-secondary text-sm font-semibold tracking-wider uppercase">
+              {section.title}
+            </h4>
+          )}
+          {content}
+        </div>
+      );
+    })
+  }
+
+  {
+    questions.length === 0 && (
+      <p class="text-sm text-gray-500 italic">
+        No policy questions available for this election.
+      </p>
+    )
+  }
+</div>
+
+<template id="clarification-row-template">
+  <div
+    class="clarification-row animate-in fade-in slide-in-from-top-1 flex gap-3 duration-200"
+  >
+    <input type="hidden" name="id-placeholder" value="" />
+    <textarea
+      name="text-placeholder"
+      rows="2"
+      class="focus:border-secondary focus:ring-secondary block flex-1 rounded-md border-gray-300 bg-gray-50/50 shadow-sm sm:text-sm"
+      placeholder="Clarification..."></textarea>
+    <button
+      type="button"
+      class="remove-clarification-btn mt-2 self-start text-gray-400 transition-colors hover:text-red-500"
+    >
+      <Trash2 class="size-4" />
+    </button>
+  </div>
+</template>
+
+<script>
+  function setupClarifications() {
+    const template = document.getElementById(
+      "clarification-row-template",
+    ) as HTMLTemplateElement;
+    if (!template) return;
+
+    document.querySelectorAll(".response-group").forEach((group) => {
+      const qId = (group as HTMLElement).dataset.questionId;
+      const addBtn = group.querySelector(".add-clarification-btn");
+      const list = group.querySelector(".clarifications-list");
+
+      addBtn?.addEventListener("click", () => {
+        const rowWrap = template.content.cloneNode(true) as DocumentFragment;
+        const row = rowWrap.firstElementChild as HTMLElement;
+
+        const idInput = row.querySelector("input");
+        const textInput = row.querySelector("textarea");
+
+        if (idInput) idInput.name = `clarification-id-${qId}`;
+        if (textInput) textInput.name = `clarification-text-${qId}`;
+
+        row
+          .querySelector(".remove-clarification-btn")
+          ?.addEventListener("click", () => row.remove());
+        list?.appendChild(row);
+      });
+
+      group.querySelectorAll(".remove-clarification-btn").forEach((btn) => {
+        btn.addEventListener("click", () =>
+          btn.closest(".clarification-row")?.remove(),
+        );
+      });
+    });
+  }
+
+  // Handle initial setup and potential Astro view transitions
+  setupClarifications();
+  document.addEventListener("astro:after-swap", setupClarifications);
+</script>

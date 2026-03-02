@@ -1,19 +1,48 @@
 ---
-import LandingPage from "../assets/LandingPage.png";
-import MobileLandingPage from "../assets/MobileLandingPage.png";
-import { Image } from "astro:assets";
+import "@fontsource/sorts-mill-goudy";
+import "@fontsource-variable/montserrat";
+
+import "../styles/global.css";
+import RaceCard from "./RaceCard.astro";
+import prisma from "../lib/prisma";
+
+export const prerender = false;
+
+const elections = await prisma.election.findMany({
+  orderBy: { date: "desc" },
+  include: {
+    races: {
+      include: {
+        candidates: true,
+      },
+    },
+  },
+});
 ---
 
-<div class="home-page-container" id="desktop-container">
-  <Image id="background" src={LandingPage} alt="" fetchpriority="high" />
-</div>
-<div class="home-page-container" id="mobile-container">
-  <Image id="background" src={MobileLandingPage} alt="" fetchpriority="high" />
+<div id="container">
+  {
+    elections.map((election) => (
+      <div class="election-section">
+        <h2>{election.name}</h2>
+        <p>{election.description}</p>
+        <div class="grid grid-cols-2 gap-4">
+          {election.races.map((race) => (
+            <RaceCard
+              race={race}
+              election={election}
+              candidates={race.candidates}
+            />
+          ))}
+        </div>
+      </div>
+    ))
+  }
 </div>
 
 <style>
   body {
-    background: linear-gradient(to right, #002d65, #318171);
+    /* background: linear-gradient(to right, #002d65, #318171); */
   }
   #background {
     max-width: 95%;
@@ -29,6 +58,35 @@ import { Image } from "astro:assets";
     display: flex;
     justify-content: center;
     align-items: center;
+  }
+
+  #container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .election-section {
+    margin-bottom: 40px;
+  }
+
+  .election-section h2 {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    color: #002d65;
+  }
+
+  .election-section p {
+    font-size: 1.1rem;
+    color: #555;
+    margin-bottom: 20px;
+  }
+
+  .races-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
   }
 
   #desktop-container {

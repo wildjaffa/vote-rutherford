@@ -1,0 +1,22 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vote-rutherford-app
+    restart: unless-stopped
+    ports:
+      - "4321:4321"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=file:./prisma/dev.db
+    # volumes:
+    # Mount source code for hot-reload
+    # - ./src:/app/src
+    # - ./public:/app/public
+    # - ./prisma:/app/prisma
+    # - ./astro.config.mjs:/app/astro.config.mjs
+    # - ./tsconfig.json:/app/tsconfig.json
+    # - ./package.json:/app/package.json
+    # # Prevent overwriting node_modules
+    # - /app/node_modules

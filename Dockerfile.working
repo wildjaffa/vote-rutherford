@@ -1,0 +1,19 @@
+FROM node:lts AS runtime
+WORKDIR /app
+
+COPY . .
+
+RUN npm install
+RUN npx prisma generate
+RUN npm run build
+RUN chmod +x ./entrypoint.sh
+
+# Install only production dependencies
+# RUN npm install --omit=dev
+# RUN npm install
+
+# Expose SSR port
+EXPOSE 4321
+
+# Start SSR server
+CMD ["./entrypoint.sh"]

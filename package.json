@@ -6,9 +6,54 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "import:addresses": "tsx voter-data-parsing/parseVoterData.ts",
+    "import:addresses:dry-run": "tsx voter-data-parsing/parseVoterData.ts --dry-run",
+    "import:addresses:verbose": "tsx voter-data-parsing/parseVoterData.ts --verbose"
+  },
+  "overrides": {
+    "@libsql/client": "^0.17.0",
+    "esbuild": "0.27.3"
   },
   "dependencies": {
-    "astro": "^5.16.15"
+    "@astrojs/check": "^0.9.6",
+    "@astrojs/node": "^9.5.2",
+    "@aws-sdk/client-s3": "^3.500.0",
+    "@fontsource-variable/montserrat": "^5.2.8",
+    "@fontsource/sorts-mill-goudy": "^5.2.8",
+    "@iconify-json/lucide": "^1.2.86",
+    "@libsql/client": "^0.17.0",
+    "@lucide/astro": "^0.563.0",
+    "@prisma/adapter-libsql": "^7.3.0",
+    "@prisma/client": "^7.3.0",
+    "@tailwindcss/vite": "^4.1.18",
+    "@turf/turf": "^7.3.3",
+    "astro": "^5.17.1",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^17.2.3",
+    "firebase": "^12.9.0",
+    "firebase-admin": "^13.6.1",
+    "formidable": "^3.5.4",
+    "pg": "^8.17.2",
+    "pm2": "^5.4.3",
+    "simple-icons-astro": "^16.1.0",
+    "tailwindcss": "^4.1.18",
+    "ts-node": "^10.9.2",
+    "vite-plugin-entry-shaking": "^0.5.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/pg": "^8.16.0",
+    "@typescript-eslint/parser": "^8.54.0",
+    "eslint": "^9.39.2",
+    "eslint-plugin-astro": "^1.5.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "prettier": "^3.8.1",
+    "prettier-plugin-astro": "^0.14.1",
+    "prettier-plugin-tailwindcss": "^0.7.2",
+    "prisma": "^7.3.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.54.0"
   }
 }

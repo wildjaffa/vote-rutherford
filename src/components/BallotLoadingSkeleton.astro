@@ -1,0 +1,27 @@
+---
+
+---
+
+<div class="animate-pulse">
+  {/* Header skeleton */}
+  <div class="mb-8">
+    <div class="mb-4 h-10 w-2/3 rounded bg-gray-200"></div>
+    <div class="h-6 w-1/2 rounded bg-gray-200"></div>
+  </div>
+
+  {/* Cards skeleton */}
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+    {
+      Array.from({ length: 9 }).map(() => (
+        <div class="flex h-[300px] flex-col rounded-lg border border-gray-200 bg-white p-6 shadow-md">
+          <div class="mb-4 h-8 w-3/4 rounded bg-gray-200" />
+          <div class="grow space-y-4">
+            <div class="h-12 rounded bg-gray-100" />
+            <div class="h-12 rounded bg-gray-100" />
+            <div class="h-12 rounded bg-gray-100" />
+          </div>
+        </div>
+      ))
+    }
+  </div>
+</div>

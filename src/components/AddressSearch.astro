@@ -1,0 +1,178 @@
+---
+import { CircleQuestionMark } from "../lib/icons";
+
+interface Props {
+  subTitle?: string;
+  class?: string;
+}
+
+const { class: className, subTitle } = Astro.props as Props;
+---
+
+<div
+  class={`bg-primary  rounded-[50px] py-6 px-4 md:px-6 shadow-lg ${className || ""}`}
+>
+  <h1 class="font-montserrat text-4xl font-semibold text-white">
+    Find Your Ballot
+  </h1>
+  <div class="relative w-full py-2">
+    <div class="relative">
+      <input
+        type="text"
+        id="address-search"
+        placeholder="Address"
+        class="border-accent w-full rounded-4xl border-4 bg-white px-4 py-2 text-gray-900 transition-all duration-200 outline-none focus:border-transparent focus:ring-2"
+        autocomplete="off"
+      />
+      <div
+        id="loading-indicator"
+        class="absolute top-1/2 right-3 hidden -translate-y-1/2"
+      >
+        <svg
+          class="h-5 w-5 animate-spin text-gray-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          ></path>
+        </svg>
+      </div>
+    </div>
+
+    <ul
+      id="search-results"
+      class="absolute z-10 mt-1 hidden max-h-60 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg"
+    >
+    </ul>
+  </div>
+  <h3 class="inline-flex items-center gap-2 pt-2 text-white">
+    {
+      subTitle ||
+        "Type your address to see ONLY the candidates YOU can vote for"
+    }
+    <a
+      href="/how-it-works"
+      title="How it works"
+      aria-label="How it works"
+      class="text-accent text-sm font-medium hover:underline"
+    >
+      <CircleQuestionMark size="16" />
+    </a>
+  </h3>
+</div>
+
+<script>
+  import type { AddressSearchResult } from "../lib/addressLookup";
+
+  const input = document.getElementById("address-search") as HTMLInputElement;
+  const resultsList = document.getElementById(
+    "search-results",
+  ) as HTMLUListElement;
+  const loadingIndicator = document.getElementById(
+    "loading-indicator",
+  ) as HTMLDivElement;
+
+  let debounceTimer: ReturnType<typeof setTimeout>;
+
+  const handleSelect = (result: AddressSearchResult) => {
+    console.log("Selected address:", result);
+    input.value = result.address;
+    resultsList.classList.add("hidden");
+    resultsList.innerHTML = "";
+
+    // Set voterAddressId cookie (max-age 1 year = 31536000 seconds)
+    document.cookie = `voterAddressId=${result.id}; max-age=31536000; path=/`;
+
+    // Redirect to my-ballot page
+    window.location.href = `/my-ballot?addressId=${result.id}`;
+  };
+
+  const updateResults = (results: AddressSearchResult[]) => {
+    resultsList.innerHTML = "";
+
+    if (results.length === 0) {
+      const li = document.createElement("li");
+      li.className = "px-4 py-2 text-gray-500 italic";
+      li.textContent = "No addresses found";
+      resultsList.appendChild(li);
+    } else {
+      results.forEach((result) => {
+        const li = document.createElement("li");
+        li.className =
+          "px-4 py-2 hover:bg-gray-100 cursor-pointer text-gray-900 border-b border-gray-100 last:border-0";
+
+        const mainText = document.createElement("div");
+        mainText.className = "font-medium";
+        mainText.textContent = result.address;
+
+        const subText = document.createElement("div");
+        subText.className = "text-sm text-gray-500";
+        subText.textContent = [result.city, result.zip]
+          .filter(Boolean)
+          .join(", ");
+
+        li.appendChild(mainText);
+        li.appendChild(subText);
+
+        li.addEventListener("click", () => handleSelect(result));
+        resultsList.appendChild(li);
+      });
+    }
+
+    resultsList.classList.remove("hidden");
+  };
+
+  const performSearch = async (query: string) => {
+    if (!query.trim()) {
+      resultsList.classList.add("hidden");
+      return;
+    }
+
+    loadingIndicator.classList.remove("hidden");
+
+    try {
+      const response = await fetch(
+        `/api/addresses/lookup?q=${encodeURIComponent(query)}`,
+      );
+      if (!response.ok) throw new Error("Search failed");
+
+      const data: { results: AddressSearchResult[] } = await response.json();
+      updateResults(data.results);
+    } catch (error) {
+      console.error("Search error:", error);
+      // Optionally show error state in UI
+    } finally {
+      loadingIndicator.classList.add("hidden");
+    }
+  };
+
+  input?.addEventListener("input", (e) => {
+    const query = (e.target as HTMLInputElement).value;
+
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      performSearch(query);
+    }, 300); // 300ms debounce
+  });
+
+  // Close results when clicking outside
+  document.addEventListener("click", (e) => {
+    if (
+      !input.contains(e.target as Node) &&
+      !resultsList.contains(e.target as Node)
+    ) {
+      resultsList.classList.add("hidden");
+    }
+  });
+</script>

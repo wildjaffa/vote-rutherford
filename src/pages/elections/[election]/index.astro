@@ -1,0 +1,68 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import RaceCard from "../../../components/RaceCard.astro";
+import prisma from "../../../lib/prisma";
+
+export const prerender = false;
+
+const { election } = Astro.params;
+
+if (!election) {
+  return Astro.redirect("/404");
+}
+
+const electionData = await prisma.election.findUnique({
+  where: { slug: election },
+  include: {
+    races: {
+      include: {
+        candidates: {
+          include: {
+            profileImage: true,
+          },
+        },
+      },
+    },
+  },
+});
+
+if (!electionData) {
+  return Astro.redirect("/404");
+}
+---
+
+<Layout
+  description={`View all races in ${electionData.name} slated for ${electionData.date}`}
+  title={`${electionData.name} | Races`}
+>
+  <main class="container mx-auto flex-1 px-4 py-8">
+    <div class="mb-12 text-center">
+      <h1 class="mb-4 text-4xl font-bold text-gray-900">
+        {electionData.name}
+      </h1>
+      <p class="mx-auto max-w-3xl text-xl text-gray-600">
+        {electionData.description}
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {
+        electionData.races.length > 0 ? (
+          electionData.races.map((race) => (
+            <RaceCard
+              election={electionData}
+              race={race}
+              candidates={race.candidates}
+            />
+          ))
+        ) : (
+          <div class="col-span-full py-12 text-center">
+            <p class="text-lg text-gray-500">
+              No races found for this election.
+            </p>
+          </div>
+        )
+      }
+    </div>
+  </main>
+</Layout>

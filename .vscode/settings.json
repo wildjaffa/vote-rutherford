@@ -1,0 +1,27 @@
+{
+  "cSpell.words": [
+    "Agentic",
+    "autoincrement",
+    "cuid",
+    "docsize",
+    "fkey",
+    "fontsource",
+    "iconify",
+    "instgrm",
+    "libsql",
+    "lucide",
+    "MTSU",
+    "pgno",
+    "prerendered",
+    "prerendering",
+    "segid",
+    "Timestamptz",
+    "UNINDEXED",
+    "voterutherford"
+  ],
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[astro]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
+}

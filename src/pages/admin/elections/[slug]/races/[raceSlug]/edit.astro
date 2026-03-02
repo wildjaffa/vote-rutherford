@@ -1,0 +1,326 @@
+---
+import { actions } from "astro:actions";
+import DeleteButton from "../../../../../../components/forms/DeleteButton.astro";
+import FormSelect from "../../../../../../components/forms/FormSelect.astro";
+import FormTextarea from "../../../../../../components/forms/FormTextarea.astro";
+import AdminLayout from "../../../../../../layouts/AdminLayout.astro";
+import Button from "../../../../../../components/Button.astro";
+import prisma from "../../../../../../lib/prisma";
+import FormInput from "../../../../../../components/forms/FormInput.astro";
+import FormPolicyQuestionSelect from "../../../../../../components/forms/FormPolicyQuestionSelect.astro";
+import { DistrictType } from "../../../../../../generated/prisma/browser";
+import { PartyCategories } from "../../../../../../constants";
+
+export const prerender = false;
+
+const { slug: electionSlug, raceSlug } = Astro.params;
+
+if (!electionSlug || !raceSlug) {
+  return Astro.redirect("/admin/elections");
+}
+
+let race = await prisma.race.findFirst({
+  where: { slug: raceSlug, election: { slug: electionSlug } },
+  include: {
+    raceType: true,
+    election: {
+      include: {
+        policyQuestions: true,
+      },
+    },
+    policyQuestionsToRaces: true,
+  },
+});
+
+if (!race) {
+  return Astro.redirect(`/admin/elections/${electionSlug}/races`);
+}
+
+// Verify the race belongs to this election
+const election = race.election;
+
+if (!election || race.electionId !== election.id) {
+  return Astro.redirect(`/admin/elections/${electionSlug}/races`);
+}
+
+// Get race types for dropdown
+const raceTypes = await prisma.raceType.findMany();
+const raceTypeOptions = raceTypes.map((rt) => ({
+  value: rt.id.toString(),
+  label: rt.value,
+}));
+
+// Get districts for dropdown
+const districts = await prisma.district.findMany({
+  where: { deletedAt: null },
+  orderBy: [{ type: "asc" }, { name: "asc" }],
+});
+
+// Get unique district types for filter
+const districtTypes = Object.values(DistrictType);
+const districtTypeOptions = districtTypes.map((type) => ({
+  value: type,
+  label: type.replace(/_/g, " "),
+}));
+
+let error: string | null = null;
+let success: string | null = null;
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const name = formData.get("name") as string;
+    const raceTypeId = parseInt(formData.get("raceType") as string);
+    const description = formData.get("description") as string;
+    const status = formData.get("status") as string;
+    const slug = formData.get("slug") as string;
+    const districtId = formData.get("districtId") as string | null;
+    const partyCategory = formData.get("partyCategory") as string;
+
+    const policyQuestionIds = formData.getAll(
+      "policy-question-ids",
+    ) as string[];
+
+    const result = await Astro.callAction(actions.updateRace, {
+      id: race.id,
+      name: name,
+      partyCategory,
+      raceTypeId,
+      description: description || undefined,
+      status: status,
+      slug,
+      numSelections: parseInt(formData.get("numSelections") as string) || 1,
+      ...(districtId && { districtId }),
+      policyQuestionIds,
+    });
+
+    if (result.data) {
+      success = "Race updated successfully";
+      race = (await prisma.race.findFirst({
+        where: { slug: raceSlug, election: { slug: electionSlug } },
+        include: {
+          raceType: true,
+          election: {
+            include: {
+              policyQuestions: true,
+            },
+          },
+          policyQuestionsToRaces: true,
+        },
+      }))!;
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to update race";
+  }
+}
+---
+
+<AdminLayout
+  title={`Edit Race: ${race.name}`}
+  breadcrumbs={[
+    { label: "Elections", href: "/admin/elections" },
+    { label: election.name, href: `/admin/elections/${electionSlug}/edit` },
+    { label: "Races", href: `/admin/elections/${electionSlug}/races` },
+    { label: race.name },
+  ]}
+>
+  <div class="space-y-6">
+    {
+      error && (
+        <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p class="text-sm font-medium text-red-800">{error}</p>
+        </div>
+      )
+    }
+
+    {
+      success && (
+        <div class="rounded-lg border border-green-200 bg-green-50 p-4">
+          <p class="text-sm font-medium text-green-800">{success}</p>
+        </div>
+      )
+    }
+
+    <form method="POST" class="max-w-2xl space-y-6">
+      <FormInput
+        label="Race Name"
+        name="name"
+        type="text"
+        value={race.name}
+        placeholder="e.g., Mayor"
+      />
+
+      <FormInput
+        label="Slug"
+        name="slug"
+        type="text"
+        value={race.slug}
+        placeholder="e.g., mayor"
+      />
+
+      <FormSelect
+        label="Race Type"
+        name="raceType"
+        options={raceTypeOptions}
+        value={race.raceTypeId.toString()}
+      />
+
+      <FormSelect
+        label="District Type (Optional)"
+        name="districtType"
+        options={[
+          { value: "", label: "-- All Districts --" },
+          ...districtTypeOptions,
+        ]}
+      />
+
+      <FormSelect
+        label="District (Optional)"
+        name="districtId"
+        options={[
+          { value: "", label: "-- No District --" },
+          ...districts.map((d) => ({
+            value: d.id,
+            label: `${d.name}${d.number ? ` #${d.number}` : ""} (${d.type.replace(/_/g, " ")})`,
+          })),
+        ]}
+        value={race.districtId || ""}
+      />
+
+      <FormSelect
+        label="Party Category"
+        name="partyCategory"
+        options={[
+          { value: PartyCategories.GENERAL, label: PartyCategories.GENERAL },
+          {
+            value: PartyCategories.DEMOCRATIC,
+            label: PartyCategories.DEMOCRATIC,
+          },
+          {
+            value: PartyCategories.REPUBLICAN,
+            label: PartyCategories.REPUBLICAN,
+          },
+        ]}
+        value={race.partyCategory}
+        required
+      />
+
+      <FormInput
+        label="Number of Selections"
+        name="numSelections"
+        type="number"
+        value={race.numSelections.toString()}
+        required
+      />
+
+      <FormSelect
+        label="Status"
+        name="status"
+        options={[
+          { value: "draft", label: "Draft" },
+          { value: "published", label: "Published" },
+        ]}
+        value={race.status}
+      />
+
+      <FormTextarea
+        label="Description"
+        name="description"
+        value={race.description}
+        placeholder="Enter race description..."
+      />
+
+      <FormPolicyQuestionSelect
+        allQuestions={election.policyQuestions}
+        selectedQuestionIds={race.policyQuestionsToRaces.map(
+          (p) => p.policyQuestionId,
+        )}
+      />
+
+      <div class="flex justify-end gap-3 border-t border-gray-200 pt-4">
+        <Button
+          variant="secondary"
+          href={`/admin/elections/${electionSlug}/races`}
+        >
+          Cancel
+        </Button>
+        <Button type="submit">Save Changes</Button>
+      </div>
+    </form>
+
+    <!-- Danger Zone -->
+    <div class="border-t border-gray-200 pt-6">
+      <h3 class="mb-4 text-lg font-semibold text-red-900">Danger Zone</h3>
+      <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+        <p class="mb-4 text-sm text-red-800">
+          Deleting this race will archive it and hide it from public view.
+        </p>
+        <DeleteButton
+          itemName={race.name}
+          deleteUrl={`/api/admin/races/${race.id}/delete.json`}
+          redirectUrl={`/admin/elections/${electionSlug}/races`}
+        />
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { generateSlug } from "../../../../../../lib/slugUtils";
+
+  const nameInput = document.querySelector(
+    'input[name="name"]',
+  ) as HTMLInputElement;
+  const slugInput = document.querySelector(
+    'input[name="slug"]',
+  ) as HTMLInputElement;
+
+  if (nameInput && slugInput) {
+    nameInput.addEventListener("input", (e) => {
+      const value = (e.target as HTMLInputElement).value;
+      slugInput.value = generateSlug(value);
+    });
+  }
+
+  // Populate districts from the rendered options
+  const districtSelect = document.querySelector(
+    'select[name="districtId"]',
+  ) as HTMLSelectElement;
+
+  if (districtSelect) {
+    // Store all options
+    const allOptions = Array.from(districtSelect.options).map((opt) => ({
+      value: opt.value,
+      text: opt.text,
+      type: opt.text.match(/\(([^)]+)\)/)?.[1] || "",
+    }));
+
+    const districtTypeSelect = document.querySelector(
+      'select[name="districtType"]',
+    ) as HTMLSelectElement;
+
+    if (districtTypeSelect) {
+      districtTypeSelect.addEventListener("change", (e) => {
+        const selectedType = (e.target as HTMLSelectElement).value;
+
+        // Clear current options except the first one
+        while (districtSelect.options.length > 1) {
+          districtSelect.remove(1);
+        }
+
+        // Add filtered options
+        const filtered =
+          selectedType === ""
+            ? allOptions.filter((opt) => opt.value !== "")
+            : allOptions.filter((opt) => opt.type === selectedType);
+
+        filtered.forEach((opt) => {
+          const optionEl = document.createElement("option");
+          optionEl.value = opt.value;
+          optionEl.text = opt.text;
+          districtSelect.appendChild(optionEl);
+        });
+      });
+    }
+  }
+</script>
