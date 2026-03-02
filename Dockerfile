@@ -6,8 +6,10 @@ WORKDIR /app
 # We use a dummy placeholder here; the real value is injected at runtime.
 ARG DATABASE_URL=file:/tmp/build-placeholder.db
 ARG CONTACT_EMAIL
+ARG FIREBASE_CLIENT_ACCOUNT_KEY
 ENV DATABASE_URL=${DATABASE_URL}
 ENV CONTACT_EMAIL=${CONTACT_EMAIL}
+ENV FIREBASE_CLIENT_ACCOUNT_KEY=${FIREBASE_CLIENT_ACCOUNT_KEY}
 
 # Install dependencies
 COPY package*.json ./

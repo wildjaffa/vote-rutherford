@@ -44,6 +44,7 @@ jobs:
           build-args: |
             DATABASE_URL=file:/tmp/build-placeholder.db
             CONTACT_EMAIL=${{ vars.CONTACT_EMAIL }}
+            FIREBASE_CLIENT_ACCOUNT_KEY=${{ secrets.FIREBASE_CLIENT_ACCOUNT_KEY }}
 
       - name: Output image digest
         run: echo "Image digest ${{ steps.build.outputs.digest }}"
