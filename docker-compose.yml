@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - PUBLIC_FIREBASE_CLIENT_ACCOUNT_KEY=${PUBLIC_FIREBASE_CLIENT_ACCOUNT_KEY}
     container_name: vote-rutherford-app
     restart: unless-stopped
     ports:

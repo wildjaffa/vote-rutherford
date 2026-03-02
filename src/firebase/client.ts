@@ -1,12 +1,11 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { env } from "../lib/utils/environment";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: env("FIREBASE_CLIENT_ACCOUNT_KEY") ?? "",
+  apiKey: import.meta.env.PUBLIC_FIREBASE_CLIENT_ACCOUNT_KEY,
   authDomain: "vote-rutherford.firebaseapp.com",
   projectId: "vote-rutherford",
   storageBucket: "vote-rutherford.firebasestorage.app",

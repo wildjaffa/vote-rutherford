@@ -7,7 +7,7 @@ interface ImportMetaEnv {
   readonly R2_BUCKET?: string;
   readonly R2_PUBLIC_URL?: string;
   readonly FIREBASE_SERVICE_ACCOUNT_64: string;
-  readonly FIREBASE_CLIENT_ACCOUNT_KEY: string;
+  readonly PUBLIC_FIREBASE_CLIENT_ACCOUNT_KEY: string;
   readonly CONTACT_EMAIL: string;
 }
 
