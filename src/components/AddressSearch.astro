@@ -91,11 +91,22 @@ const { class: className, subTitle } = Astro.props as Props;
     resultsList.classList.add("hidden");
     resultsList.innerHTML = "";
 
-    // Set voterAddressId cookie (max-age 1 year = 31536000 seconds)
-    document.cookie = `voterAddressId=${result.id}; max-age=31536000; path=/`;
+    // Set voterDistrictGroupId cookie (max-age 1 year = 31536000 seconds)
+    if (result.districtGroupId) {
+      document.cookie = `voterDistrictGroupId=${result.districtGroupId}; max-age=31536000; path=/`;
+    }
+
+    localStorage.setItem(
+      "voterAddressDisplay",
+      JSON.stringify({
+        normalizedAddress: result.address,
+        city: result.city,
+        zip: result.zip,
+      }),
+    );
 
     // Redirect to my-ballot page
-    window.location.href = `/my-ballot?addressId=${result.id}`;
+    window.location.href = `/my-ballot?groupId=${result.districtGroupId || ""}`;
   };
 
   const updateResults = (results: AddressSearchResult[]) => {

@@ -6,6 +6,7 @@ export interface AddressSearchResult {
   address: string;
   city: string;
   zip: string;
+  districtGroupId: string | null;
 }
 
 export async function searchAddresses(
@@ -25,11 +26,16 @@ export async function searchAddresses(
   const libsql = getLibsql();
 
   try {
-    const rs: {
-      rows: { id: string; address: string; city: string; zip: string }[];
-    } = await libsql.execute({
+    const rs = await libsql.execute({
       sql: `
-        SELECT id, normalizedAddress as [address], city, zip FROM voter_addresses_fts 
+        SELECT 
+          v.id, 
+          v.normalizedAddress as [address], 
+          v.city, 
+          v.zip,
+          a.districtGroupId
+        FROM voter_addresses_fts v
+        LEFT JOIN voter_addresses a ON v.id = a.id
         WHERE voter_addresses_fts MATCH ? 
         ORDER BY rank
         LIMIT ?
@@ -42,6 +48,7 @@ export async function searchAddresses(
       address: row.address as string,
       city: row.city as string,
       zip: row.zip as string,
+      districtGroupId: row.districtGroupId as string | null,
     }));
   } catch (error) {
     console.error("Search failed:", error);

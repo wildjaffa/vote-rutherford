@@ -93,6 +93,7 @@ interface AddressData {
 interface BatchItem {
   addressData: AddressData;
   districts: Prisma.DistrictToVoterAddressCreateWithoutVoterAddressInput[];
+  districtGroupId: string;
 }
 
 async function loadLayers(): Promise<LoadedLayer[]> {
@@ -232,6 +233,8 @@ async function processAddresses(
   let batch: BatchItem[] = [];
   let count = 0;
 
+  const districtGroupMap = new Map<string, string>();
+
   console.log("Starting address processing...");
 
   for await (const row of stream) {
@@ -312,6 +315,28 @@ async function processAddresses(
       }
     }
 
+    const districtIds = Array.from(addedDistrictIds).sort();
+    const groupHash = districtIds.join(",");
+
+    let districtGroupId = districtGroupMap.get(groupHash);
+    if (!districtGroupId && !DRY_RUN) {
+      const g = await prisma.districtGroup.upsert({
+        where: { hash: groupHash },
+        create: {
+          hash: groupHash,
+          districts: {
+            create: districtIds.map((dId) => ({ districtId: dId })),
+          },
+        },
+        update: {},
+      });
+      districtGroupId = g.id;
+      districtGroupMap.set(groupHash, districtGroupId);
+    } else if (!districtGroupId && DRY_RUN) {
+      districtGroupId = "dry-run-group-" + groupHash;
+      districtGroupMap.set(groupHash, districtGroupId);
+    }
+
     batch.push({
       addressData: {
         address: fullAddress,
@@ -322,6 +347,7 @@ async function processAddresses(
         longitude: lon,
       },
       districts: districtConnects,
+      districtGroupId: districtGroupId as string,
     });
 
     count++;
@@ -349,6 +375,7 @@ async function saveBatch(batch: BatchItem[]) {
       await prisma.voterAddress.create({
         data: {
           ...item.addressData,
+          districtGroupId: item.districtGroupId,
           districts: {
             create: item.districts,
           },

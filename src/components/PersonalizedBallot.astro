@@ -5,22 +5,17 @@ import { DistrictType } from "../generated/prisma/browser";
 import AddressSearch from "./AddressSearch.astro";
 
 // Inside a server island we can access Astro.url and Astro.cookies.
-const addressId = Astro.url.searchParams.get("addressId");
-const cookieAddressId = Astro.cookies.get("voterAddressId")?.value;
+const queryGroupId = Astro.url.searchParams.get("groupId");
+const cookieGroupId = Astro.cookies.get("voterDistrictGroupId")?.value;
 
-const selectedAddressId = addressId || cookieAddressId;
+const selectedGroupId = queryGroupId || cookieGroupId;
 
 let error: string | null = null;
 
-let voterAddress: {
-  normalizedAddress: string;
-  city: string | null;
-  zip: string | null;
-} | null = null;
 const districtRaces = [];
 
 // Fetch everything we need in one query to avoid N+1 issues.
-if (!selectedAddressId) {
+if (!selectedGroupId) {
   const globalDistrictData = await prisma.district.findMany({
     where: {
       deletedAt: null,
@@ -44,8 +39,8 @@ if (!selectedAddressId) {
   });
   districtRaces.push(...globalDistrictData.flatMap((d) => d.races ?? []));
 } else {
-  const voterAddressData = await prisma.voterAddress.findUnique({
-    where: { id: selectedAddressId },
+  const districtGroupData = await prisma.districtGroup.findUnique({
+    where: { id: selectedGroupId },
     include: {
       districts: {
         include: {
@@ -71,18 +66,12 @@ if (!selectedAddressId) {
     },
   });
 
-  if (!voterAddressData) {
+  if (!districtGroupData) {
     error = "Address not found. Please search for your address again.";
   } else {
-    voterAddress = {
-      normalizedAddress: voterAddressData.normalizedAddress,
-      city: voterAddressData.city,
-      zip: voterAddressData.zip,
-    };
-
-    // Work with races for the first matched district (preserve existing behavior)
+    // Work with races for the given district group
     districtRaces.push(
-      ...voterAddressData.districts.flatMap((d) => d.district.races ?? []),
+      ...districtGroupData.districts.flatMap((d) => d.district.races ?? []),
     );
   }
 }
@@ -180,7 +169,7 @@ for (const race of races) {
 ---
 
 {
-  !voterAddress && (
+  !selectedGroupId && (
     <div class="mb-12">
       <AddressSearch class="col-span-12 md:col-span-8" />
     </div>
@@ -195,13 +184,13 @@ for (const race of races) {
     }
   </h1>
   {
-    voterAddress && (
-      <p class="text-lg text-gray-600">
-        Address:{" "}
-        <span class="font-semibold">
-          {voterAddress.normalizedAddress}, {voterAddress.city}{" "}
-          {voterAddress.zip}
-        </span>
+    selectedGroupId && (
+      <p
+        class="text-lg text-gray-600"
+        id="address-display-container"
+        style="display: none;"
+      >
+        Address: <span class="font-semibold" id="address-display-text" />
         <button
           id="change-address-btn"
           class="text-secondary ml-2 cursor-pointer underline"
@@ -212,7 +201,7 @@ for (const race of races) {
     )
   }
   {
-    !voterAddress && (
+    !selectedGroupId && (
       <p class="text-lg text-gray-600">
         Elections applicable to all residents of Rutherford County
       </p>
@@ -279,11 +268,31 @@ for (const race of races) {
 <script>
   const clearAddressAndReload = (e: Event) => {
     e.preventDefault();
-    // Clear voterAddressId cookie
-    document.cookie = "voterAddressId=; max-age=0; path=/";
+    // Clear voterDistrictGroupId cookie
+    document.cookie = "voterDistrictGroupId=; max-age=0; path=/";
+    localStorage.removeItem("voterAddressDisplay");
     // Redirect to home page / ballot page to search again
     window.location.href = "/my-ballot";
   };
+
+  const addressContainer = document.getElementById("address-display-container");
+  const addressText = document.getElementById("address-display-text");
+  if (addressContainer && addressText) {
+    try {
+      const stored = localStorage.getItem("voterAddressDisplay");
+      if (stored) {
+        const data = JSON.parse(stored);
+        const parts = [data.normalizedAddress, data.city, data.zip].filter(
+          Boolean,
+        );
+        addressText.textContent = parts.join(", ");
+        addressContainer.style.display = "block";
+      }
+    } catch (e) {
+      console.error("Error loading address from localStorage:", e);
+      /* ignore */
+    }
+  }
 
   const changeAddressBtn = document.getElementById("change-address-btn");
   if (changeAddressBtn) {
