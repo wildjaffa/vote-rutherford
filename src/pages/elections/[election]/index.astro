@@ -16,15 +16,20 @@ const electionData = await prisma.election.findUnique({
   include: {
     races: {
       include: {
-        candidates: {
-          include: {
-            profileImage: true,
-          },
-        },
+        candidates: true,
       },
     },
   },
 });
+
+if (electionData) {
+  electionData.races.sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    }),
+  );
+}
 
 if (!electionData) {
   return Astro.redirect("/404");

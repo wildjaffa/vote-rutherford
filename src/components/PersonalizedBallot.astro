@@ -1,8 +1,10 @@
 ---
-import RaceCard from "./RaceCard.astro";
+import VotePlanRace from "./VotePlanRace.astro";
+import { PartyCategories } from "../constants";
 import prisma from "../lib/prisma";
 import { DistrictType } from "../generated/prisma/browser";
 import AddressSearch from "./AddressSearch.astro";
+import { SquareCheckBig } from "../lib/icons";
 
 // Inside a server island we can access Astro.url and Astro.cookies.
 const addressId = Astro.url.searchParams.get("addressId");
@@ -141,7 +143,10 @@ const races = election
       .sort((a, b) => {
         const typeDiff = b.raceType.id - a.raceType.id;
         if (typeDiff !== 0) return typeDiff;
-        return a.name.localeCompare(b.name);
+        return a.name.localeCompare(b.name, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
       })
   : [];
 
@@ -177,6 +182,27 @@ for (const race of races) {
     }
   }
 }
+
+const hasDemocraticPrimary = races.some(
+  (r) => r.partyCategory === PartyCategories.DEMOCRATIC,
+);
+const hasRepublicanPrimary = races.some(
+  (r) => r.partyCategory === PartyCategories.REPUBLICAN,
+);
+const showPrimaryFilters = hasDemocraticPrimary && hasRepublicanPrimary;
+
+const clientRaces = races.map((r) => ({
+  id: r.id,
+  name: r.name,
+  shortName: r.shortName,
+  typeLabel:
+    raceTypeLabels[r.raceType.id] || (r.raceType.value as string) || "Other",
+  candidates: r.candidates.map((c) => ({
+    id: c.id,
+    name: `${c.firstName}${c.middleName ? " " + c.middleName : ""} ${c.lastName}`,
+    party: c.partyAffiliation,
+  })),
+}));
 ---
 
 {
@@ -187,7 +213,7 @@ for (const race of races) {
   )
 }
 
-<div class="center mb-6">
+<div class="mb-8">
   <h1 class="mb-2 text-4xl font-bold text-gray-900">
     {
       election &&
@@ -221,6 +247,31 @@ for (const race of races) {
 </div>
 
 {
+  showPrimaryFilters && (
+    <div class="mb-8 flex flex-wrap gap-3" id="primary-filters">
+      <button
+        class="primary-filter-btn bg-secondary flex-1 rounded-full px-4 py-2 text-sm font-semibold text-white transition-colors hover:opacity-90 md:flex-none"
+        data-filter="All"
+      >
+        All
+      </button>
+      <button
+        class="primary-filter-btn bg-secondary flex-1 rounded-full px-4 py-2 text-sm font-semibold text-white transition-colors hover:opacity-90 md:flex-none"
+        data-filter={PartyCategories.DEMOCRATIC}
+      >
+        Democratic Primary
+      </button>
+      <button
+        class="primary-filter-btn bg-secondary flex-1 rounded-full px-4 py-2 text-sm font-semibold text-white transition-colors hover:opacity-90 md:flex-none"
+        data-filter={PartyCategories.REPUBLICAN}
+      >
+        Republican Primary
+      </button>
+    </div>
+  )
+}
+
+{
   error && (
     <div class="mb-8 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
       <p>{error}</p>
@@ -247,15 +298,15 @@ for (const race of races) {
     <div class="space-y-12">
       {raceSections.map((section) => (
         <section>
-          <div class="mb-6 items-center">
+          <div class="mb-8 flex items-center gap-6">
             <h2 class="text-3xl font-bold tracking-tight text-gray-900">
               {section.label}
             </h2>
-            <div class="bg-primary h-1 w-full md:w-[32%]" />
+            <div class="h-px flex-1 bg-linear-to-r from-gray-200 to-transparent" />
           </div>
           <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {section.races.map((race) => (
-              <RaceCard
+              <VotePlanRace
                 race={race}
                 election={election}
                 candidates={race.candidates}
@@ -264,9 +315,52 @@ for (const race of races) {
           </div>
         </section>
       ))}
+
+      <div class="mt-20 flex flex-col items-center justify-center pb-20">
+        <button
+          id="view-summary-btn"
+          class="bg-primary hover:bg-primary/90 flex scale-95 cursor-pointer items-center gap-3 rounded-full px-10 py-5 text-xl font-bold text-white shadow-2xl transition-all duration-700 ease-in-out hover:scale-105 active:scale-95"
+        >
+          <SquareCheckBig size="24" />
+          View My Ballot Summary
+        </button>
+      </div>
     </div>
   )
 }
+
+<!-- Summary Modal -->
+<dialog
+  id="summary-modal"
+  class="fixed inset-0 z-100 m-auto h-fit max-h-[90vh] w-[98vw] max-w-4xl overflow-hidden rounded-2xl border-none bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+>
+  <div class="flex h-full max-h-[85vh] flex-col">
+    <div
+      class="bg-primary flex items-center justify-between border-b px-6 py-2 text-white"
+    >
+      <h2 class="text-2xl font-bold">Your Ballot Summary</h2>
+      <!-- <button
+        id="close-modal-btn"
+        class="cursor-pointer text-white/80 transition-colors hover:text-white"
+      >
+        <X size="24" />
+      </button> -->
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-2" id="summary-content">
+      <!-- Content populated by JS -->
+    </div>
+
+    <div class="flex items-center justify-end border-t bg-gray-50 px-6 py-2">
+      <button
+        id="close-modal-footer-btn"
+        class="bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer rounded-lg px-6 py-2 font-semibold transition-colors"
+      >
+        Close
+      </button>
+    </div>
+  </div>
+</dialog>
 
 {
   !error && !election && (
@@ -276,8 +370,8 @@ for (const race of races) {
   )
 }
 
-<script>
-  const clearAddressAndReload = (e: Event) => {
+<script define:vars={{ clientRaces }}>
+  const clearAddressAndReload = (e) => {
     e.preventDefault();
     // Clear voterAddressId cookie
     document.cookie = "voterAddressId=; max-age=0; path=/";
@@ -296,4 +390,139 @@ for (const race of races) {
   if (errorChangeAddressBtn) {
     errorChangeAddressBtn.addEventListener("click", clearAddressAndReload);
   }
+
+  // // Scroll visibility for summary button
+  const viewSummaryBtn = document.getElementById("view-summary-btn");
+  // if (viewSummaryBtn) {
+  //   const handleScroll = () => {
+  //     const scrollPosition = window.innerHeight + window.scrollY;
+  //     const threshold = document.documentElement.scrollHeight - 300; // Trigger slightly before the absolute bottom
+
+  //     if (scrollPosition >= threshold) {
+  //       viewSummaryBtn.classList.remove(
+  //         "opacity-0",
+  //         "scale-95",
+  //         "pointer-events-none",
+  //       );
+  //       viewSummaryBtn.classList.add(
+  //         "opacity-100",
+  //         "scale-100",
+  //         "pointer-events-auto",
+  //       );
+  //     }
+  //   };
+
+  //   window.addEventListener("scroll", handleScroll);
+  //   // Initial check in case they are already at bottom
+  //   setTimeout(handleScroll, 500);
+  // }
+
+  // Modal logic
+  const modal = document.getElementById("summary-modal");
+  const closeModalBtns = [
+    document.getElementById("close-modal-btn"),
+    document.getElementById("close-modal-footer-btn"),
+  ];
+  const summaryContent = document.getElementById("summary-content");
+
+  const STORAGE_KEY = "vote_plan_selections";
+
+  const renderSummary = () => {
+    const selections = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+
+    if (Object.keys(selections).length === 0) {
+      summaryContent.innerHTML = `
+        <div class="py-12 text-center">
+          <p class="text-gray-500 text-lg">You haven't made any selections yet.</p>
+          <p class="text-gray-400">Close this and select your candidates to see a summary here.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const categories = {};
+    clientRaces.forEach((race) => {
+      const selectedIds = selections[race.id] || [];
+      if (selectedIds.length === 0) return;
+
+      if (!categories[race.typeLabel]) categories[race.typeLabel] = [];
+      categories[race.typeLabel].push({
+        ...race,
+        selectedCandidates: race.candidates.filter((c) =>
+          selectedIds.includes(c.id),
+        ),
+      });
+    });
+
+    let html = '<div class="space-y-4">';
+
+    // Order categories by the same priority as the main list
+    const labelOrder = ["Federal", "State", "County", "City"];
+    const sortedCategories = Object.keys(categories).sort((a, b) => {
+      const idxA = labelOrder.indexOf(a);
+      const idxB = labelOrder.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.localeCompare(b);
+    });
+
+    sortedCategories.forEach((label) => {
+      const races = categories[label];
+      html += `
+        <div>
+          <div class="flex items-center gap-1 mb-1">
+            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-primary/40">${label}</span>
+            <div class="h-px flex-1 bg-gray-100"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-x-4 lg:grid-cols-3 sm:gap-x-12 gap-y-2">
+            ${races
+              .map(
+                (race) => `
+              <div class="min-w-0">
+                <div class="text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-1 truncate" title="${race.name}">${race.shortName || race.name}</div>
+                <div class="space-y-1.5">
+                  ${race.selectedCandidates
+                    .map(
+                      (c) => `
+                    <div class="text-sm font-bold text-gray-900 flex items-start gap-2 leading-snug">
+                       <div class="w-1.5 h-1.5 rounded-full bg-secondary mt-1 shrink-0"></div>
+                       <div class="flex flex-col">
+                         <span>${c.name}</span>
+                         ${c.party ? `<span class="text-[10px] font-medium text-gray-500 uppercase tracking-tighter">(${c.party})</span>` : ""}
+                       </div>
+                    </div>
+                  `,
+                    )
+                    .join("")}
+                </div>
+              </div>
+            `,
+              )
+              .join("")}
+          </div>
+        </div>
+      `;
+    });
+
+    html += "</div>";
+    summaryContent.innerHTML = html;
+  };
+
+  viewSummaryBtn?.addEventListener("click", () => {
+    renderSummary();
+    modal?.showModal();
+    document.body.style.overflow = "hidden"; // Prevent background scroll
+  });
+
+  const closeModal = () => {
+    modal?.close();
+    document.body.style.overflow = "auto";
+  };
+
+  closeModalBtns.forEach((btn) => btn?.addEventListener("click", closeModal));
+
+  modal?.addEventListener("click", (e) => {
+    if (e.target === modal) closeModal();
+  });
 </script>

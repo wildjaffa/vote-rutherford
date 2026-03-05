@@ -227,6 +227,7 @@ if (mobileFullName.length > 15) {
                       <a
                         class="text-secondary underline"
                         href={websiteLink.hyperlink}
+                        target="_blank"
                       >
                         Campaign Website
                       </a>
@@ -237,6 +238,7 @@ if (mobileFullName.length > 15) {
                       <a
                         class="text-secondary underline"
                         href={wikipediaLink.hyperlink}
+                        target="_blank"
                       >
                         Wikipedia
                       </a>
@@ -247,6 +249,7 @@ if (mobileFullName.length > 15) {
                       <a
                         class="text-secondary underline"
                         href={newsLink.hyperlink}
+                        target="_blank"
                       >
                         {newsLink.displayText}
                       </a>
@@ -257,6 +260,7 @@ if (mobileFullName.length > 15) {
                       <a
                         class="text-secondary underline"
                         href={otherLink.hyperlink}
+                        target="_blank"
                       >
                         {otherLink.displayText}
                       </a>
@@ -272,7 +276,7 @@ if (mobileFullName.length > 15) {
                       return null;
                     }
                     return (
-                      <a href={externalLink.hyperlink}>
+                      <a href={externalLink.hyperlink} target="_blank">
                         <Icon />
                       </a>
                     );

@@ -89,9 +89,8 @@ if (!election) {
                     {race.description.substring(0, 50)}
                     {race.description.length > 50 && "..."}
                   </td>
-                  <td class="px-4 py-3 text-sm text-gray-600">
-                    {race.candidates.length} candidate
-                    {race.candidates.length !== 1 ? "s" : ""}
+                  <td class="px-4 py-3 text-sm whitespace-nowrap text-gray-600">
+                    {`${race.candidates.length} ${race.candidates.length !== 1 ? "candidates" : "candidate"}`}
                   </td>
                   <td class="space-x-2 px-4 py-3 text-right text-sm">
                     <a

@@ -53,7 +53,15 @@ const raceTypeOptions = raceTypes.map((rt) => ({
 // Get districts for dropdown
 const districts = await prisma.district.findMany({
   where: { deletedAt: null },
-  orderBy: [{ type: "asc" }, { name: "asc" }],
+});
+
+districts.sort((a, b) => {
+  const typeCompare = a.type.localeCompare(b.type);
+  if (typeCompare !== 0) return typeCompare;
+  return a.name.localeCompare(b.name, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
 });
 
 // Get unique district types for filter
@@ -70,6 +78,7 @@ if (Astro.request.method === "POST") {
   try {
     const formData = await Astro.request.formData();
     const name = formData.get("name") as string;
+    const shortName = formData.get("shortName") as string | null;
     const raceTypeId = parseInt(formData.get("raceType") as string);
     const description = formData.get("description") as string;
     const status = formData.get("status") as string;
@@ -84,6 +93,7 @@ if (Astro.request.method === "POST") {
     const result = await Astro.callAction(actions.updateRace, {
       id: race.id,
       name: name,
+      shortName: shortName || undefined,
       partyCategory,
       raceTypeId,
       description: description || undefined,
@@ -148,6 +158,14 @@ if (Astro.request.method === "POST") {
         type="text"
         value={race.name}
         placeholder="e.g., Mayor"
+      />
+
+      <FormInput
+        label="Short Race Name"
+        name="shortName"
+        type="text"
+        value={race.shortName ?? ""}
+        placeholder="e.g., Commissioner 13 (shown on ballot summary)"
       />
 
       <FormInput

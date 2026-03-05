@@ -46,6 +46,7 @@ model Election {
 model Race {
   id          String    @id @default(uuid()) 
   name        String
+  shortName   String?
   slug        String                @default(cuid())
   description String
   election    Election  @relation(fields: [electionId], references: [id])
