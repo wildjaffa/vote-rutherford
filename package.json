@@ -34,6 +34,7 @@
     "firebase": "^12.9.0",
     "firebase-admin": "^13.6.1",
     "formidable": "^3.5.4",
+    "meilisearch": "^0.55.0",
     "pg": "^8.17.2",
     "pm2": "^5.4.3",
     "simple-icons-astro": "^16.1.0",

@@ -1,5 +1,6 @@
-import { getLibsql } from "./prisma";
+import { MeiliSearch } from "meilisearch";
 import { normalizeAddress } from "./utils/addressNormalizer";
+import { env } from "./utils/environment";
 
 export interface AddressSearchResult {
   id: string;
@@ -9,49 +10,35 @@ export interface AddressSearchResult {
   districtGroupId: string | null;
 }
 
+const meilisearchClient = new MeiliSearch({
+  host: env("MEILISEARCH_HOST") || "http://localhost:7700",
+  apiKey: env("MEILISEARCH_API_KEY") || "masterKey",
+});
+
 export async function searchAddresses(
   q: string,
-  limit = 10,
+  limit = 4,
 ): Promise<AddressSearchResult[]> {
   const normalizedQuery = normalizeAddress(q);
   if (!normalizedQuery) return [];
 
-  const sanitaryQuery = normalizedQuery.replace(/[^A-Z0-9\s]/g, " ");
-  const terms = sanitaryQuery.split(/\s+/).filter(Boolean);
-
-  if (terms.length === 0) return [];
-
-  const ftsQuery = terms.map((t) => `${t}*`).join(" ");
-
-  const libsql = getLibsql();
-
   try {
-    const rs = await libsql.execute({
-      sql: `
-        SELECT 
-          v.id, 
-          v.normalizedAddress as [address], 
-          v.city, 
-          v.zip,
-          a.districtGroupId
-        FROM voter_addresses_fts v
-        LEFT JOIN voter_addresses a ON v.id = a.id
-        WHERE voter_addresses_fts MATCH ? 
-        ORDER BY rank
-        LIMIT ?
-      `,
-      args: [ftsQuery, limit],
-    });
+    const response = await meilisearchClient
+      .index("addresses")
+      .search(normalizedQuery, {
+        limit,
+        matchingStrategy: "all",
+      });
 
-    return rs.rows.map((row) => ({
-      id: row.id as string,
-      address: row.address as string,
-      city: row.city as string,
-      zip: row.zip as string,
-      districtGroupId: row.districtGroupId as string | null,
+    return response.hits.map((hit) => ({
+      id: hit.id as string,
+      address: hit.address as string,
+      city: hit.city as string,
+      zip: hit.zip as string,
+      districtGroupId: hit.districtGroupId as string | null,
     }));
   } catch (error) {
-    console.error("Search failed:", error);
+    console.error("Meilisearch search failed:", error);
     return [];
   }
 }
