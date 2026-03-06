@@ -4,7 +4,7 @@ import { PartyCategories } from "../constants";
 import prisma from "../lib/prisma";
 import { DistrictType } from "../generated/prisma/browser";
 import AddressSearch from "./AddressSearch.astro";
-import { SquareCheckBig } from "../lib/icons";
+import { SquareCheckBig, Share } from "../lib/icons";
 
 // Inside a server island we can access Astro.url and Astro.cookies.
 const addressId = Astro.url.searchParams.get("addressId");
@@ -332,19 +332,28 @@ const clientRaces = races.map((r) => ({
 <!-- Summary Modal -->
 <dialog
   id="summary-modal"
-  class="fixed inset-0 z-100 m-auto h-fit max-h-[90vh] w-[98vw] max-w-4xl overflow-hidden rounded-2xl border-none bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+  class="m-auto h-fit max-h-[90vh] w-[98vw] max-w-4xl overflow-hidden rounded-2xl border-none bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+  data-client-races={JSON.stringify(clientRaces)}
 >
-  <div class="flex h-full max-h-[85vh] flex-col">
+  <div class="flex max-h-[85vh] flex-col">
     <div
       class="bg-primary flex items-center justify-between border-b px-6 py-2 text-white"
     >
       <h2 class="text-2xl font-bold">Your Ballot Summary</h2>
-      <!-- <button
-        id="close-modal-btn"
-        class="cursor-pointer text-white/80 transition-colors hover:text-white"
-      >
-        <X size="24" />
-      </button> -->
+      <div class="flex items-center gap-2">
+        <button
+          id="share-modal-btn"
+          class="hidden cursor-pointer items-center gap-2 rounded-lg bg-white/20 px-3 py-1 text-sm font-semibold transition-colors hover:bg-white/30"
+        >
+          <Share size="18" />
+        </button>
+        <!-- <button
+          id="close-modal-btn"
+          class="cursor-pointer text-white/80 transition-colors hover:text-white"
+        >
+          <X size="24" />
+        </button> -->
+      </div>
     </div>
 
     <div class="flex-1 overflow-y-auto px-6 py-2" id="summary-content">
@@ -370,8 +379,29 @@ const clientRaces = races.map((r) => ({
   )
 }
 
-<script define:vars={{ clientRaces }}>
-  const clearAddressAndReload = (e) => {
+<script>
+  import * as htmlToImage from "html-to-image";
+
+  interface ClientCandidate {
+    id: number;
+    name: string;
+    party: string | null;
+  }
+
+  interface ClientRace {
+    id: number;
+    name: string;
+    shortName: string | null;
+    typeLabel: string;
+    candidates: ClientCandidate[];
+  }
+
+  const summaryModal = document.getElementById("summary-modal");
+  const clientRaces: ClientRace[] = JSON.parse(
+    summaryModal ? summaryModal.dataset.clientRaces || "[]" : "[]",
+  );
+
+  const clearAddressAndReload = (e: Event) => {
     e.preventDefault();
     // Clear voterAddressId cookie
     document.cookie = "voterAddressId=; max-age=0; path=/";
@@ -393,66 +423,130 @@ const clientRaces = races.map((r) => ({
 
   // // Scroll visibility for summary button
   const viewSummaryBtn = document.getElementById("view-summary-btn");
-  // if (viewSummaryBtn) {
-  //   const handleScroll = () => {
-  //     const scrollPosition = window.innerHeight + window.scrollY;
-  //     const threshold = document.documentElement.scrollHeight - 300; // Trigger slightly before the absolute bottom
-
-  //     if (scrollPosition >= threshold) {
-  //       viewSummaryBtn.classList.remove(
-  //         "opacity-0",
-  //         "scale-95",
-  //         "pointer-events-none",
-  //       );
-  //       viewSummaryBtn.classList.add(
-  //         "opacity-100",
-  //         "scale-100",
-  //         "pointer-events-auto",
-  //       );
-  //     }
-  //   };
-
-  //   window.addEventListener("scroll", handleScroll);
-  //   // Initial check in case they are already at bottom
-  //   setTimeout(handleScroll, 500);
-  // }
 
   // Modal logic
-  const modal = document.getElementById("summary-modal");
+  const modal = document.getElementById(
+    "summary-modal",
+  ) as HTMLDialogElement | null;
+  const shareBtn = document.getElementById("share-modal-btn");
   const closeModalBtns = [
     document.getElementById("close-modal-btn"),
     document.getElementById("close-modal-footer-btn"),
   ];
-  const summaryContent = document.getElementById("summary-content");
+  const summaryContent = document.getElementById(
+    "summary-content",
+  ) as HTMLElement | null;
+
+  if (modal && typeof modal.showModal !== "function") {
+    // If showModal is not supported, we can fallback to a simple display: block
+    // though modern Safari supports it.
+    console.warn("Dialog showModal not supported");
+  }
+
+  // Check if sharing is supported (specifically for files)
+  const checkShareSupport = async () => {
+    if (!navigator.share || !navigator.canShare) return false;
+
+    try {
+      // Create a tiny dummy file to test if the browser supports sharing files
+      const testFile = new File([" "], "test.txt", { type: "text/plain" });
+      return navigator.canShare({ files: [testFile] });
+    } catch {
+      return false;
+    }
+  };
+
+  const handleShare = async () => {
+    if (!summaryContent || !shareBtn) return;
+
+    try {
+      // Set a temporary style to ensure the image looks good (e.g. padding and background)
+      const originalStyle = summaryContent.style.cssText;
+      summaryContent.style.backgroundColor = "white";
+      summaryContent.style.padding = "20px";
+
+      const blob = await htmlToImage.toBlob(summaryContent, {
+        backgroundColor: "white",
+        pixelRatio: 2,
+      });
+
+      // Restore style
+      summaryContent.style.cssText = originalStyle;
+
+      if (!blob) throw new Error("Could not generate image");
+
+      const file = new File([blob], "ballot-summary.png", {
+        type: "image/png",
+      });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "My Ballot Summary",
+          text: `Here is my ballot summary from Vote Rutherford! Check yours at: ${window.location.origin}/my-ballot`,
+        });
+      } else {
+        // Fallback or alert if sharing files is not supported
+        alert("Sharing files is not supported on this browser.");
+      }
+    } catch (err) {
+      console.error("Error sharing:", err);
+      alert("Something went wrong while trying to share.");
+    }
+  };
+
+  shareBtn?.addEventListener("click", handleShare);
 
   const STORAGE_KEY = "vote_plan_selections";
 
   const renderSummary = () => {
-    const selections = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    if (!summaryContent) return;
 
-    if (Object.keys(selections).length === 0) {
+    let selections: Record<string, string[]> = {};
+    try {
+      const selectionsData = localStorage.getItem(STORAGE_KEY);
+      selections = selectionsData ? JSON.parse(selectionsData) : {};
+    } catch (e) {
+      console.error("Error parsing selections from localStorage:", e);
+    }
+
+    const categories: Record<
+      string,
+      (ClientRace & { selectedCandidates: ClientCandidate[] })[]
+    > = {};
+    let hasActiveSelection = false;
+
+    for (const race of clientRaces) {
+      const id = String(race.id);
+      const selectedIds = selections[id] || [];
+      if (!selectedIds || selectedIds.length === 0) continue;
+
+      const selectedCandidates = race.candidates.filter((c) =>
+        selectedIds.includes(String(c.id)),
+      );
+
+      if (selectedCandidates.length > 0) {
+        hasActiveSelection = true;
+        const typeLabel = race.typeLabel;
+        if (!categories[typeLabel]) {
+          categories[typeLabel] = [];
+        }
+        categories[typeLabel]?.push({
+          ...race,
+          selectedCandidates,
+        });
+      }
+    }
+
+    if (!hasActiveSelection) {
       summaryContent.innerHTML = `
         <div class="py-12 text-center">
           <p class="text-gray-500 text-lg">You haven't made any selections yet.</p>
           <p class="text-gray-400">Close this and select your candidates to see a summary here.</p>
         </div>
       `;
-      return;
+      return false;
     }
-
-    const categories = {};
-    clientRaces.forEach((race) => {
-      const selectedIds = selections[race.id] || [];
-      if (selectedIds.length === 0) return;
-
-      if (!categories[race.typeLabel]) categories[race.typeLabel] = [];
-      categories[race.typeLabel].push({
-        ...race,
-        selectedCandidates: race.candidates.filter((c) =>
-          selectedIds.includes(c.id),
-        ),
-      });
-    });
 
     let html = '<div class="space-y-4">';
 
@@ -469,6 +563,7 @@ const clientRaces = races.map((r) => ({
 
     sortedCategories.forEach((label) => {
       const races = categories[label];
+      if (!races) return;
       html += `
         <div>
           <div class="flex items-center gap-1 mb-1">
@@ -507,12 +602,22 @@ const clientRaces = races.map((r) => ({
 
     html += "</div>";
     summaryContent.innerHTML = html;
+    return true;
   };
 
-  viewSummaryBtn?.addEventListener("click", () => {
-    renderSummary();
+  viewSummaryBtn?.addEventListener("click", async () => {
+    const hasActiveSelection = renderSummary();
     modal?.showModal();
     document.body.style.overflow = "hidden"; // Prevent background scroll
+
+    // Toggle share button visibility based on support and content
+    if (hasActiveSelection && (await checkShareSupport())) {
+      shareBtn?.classList.remove("hidden");
+      shareBtn?.classList.add("flex");
+    } else {
+      shareBtn?.classList.add("hidden");
+      shareBtn?.classList.remove("flex");
+    }
   });
 
   const closeModal = () => {
@@ -520,9 +625,35 @@ const clientRaces = races.map((r) => ({
     document.body.style.overflow = "auto";
   };
 
+  modal?.addEventListener("close", () => {
+    document.body.style.overflow = "auto";
+  });
+
   closeModalBtns.forEach((btn) => btn?.addEventListener("click", closeModal));
 
   modal?.addEventListener("click", (e) => {
     if (e.target === modal) closeModal();
   });
 </script>
+
+<style>
+  /* Safari specific backdrop filter support */
+  dialog::backdrop {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+
+  /* Centering fix for Safari when using showModal() */
+  dialog[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Some older Safari versions don't handle h-fit well with auto margins */
+  @supports not (height: fit-content) {
+    dialog {
+      height: auto;
+    }
+  }
+</style>
