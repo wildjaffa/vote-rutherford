@@ -11,6 +11,8 @@
   --font-sans: "Montserrat Variable", sans-serif;
 
   --default-font-family: var(--font-sans);
+
+  --breakpoint-tablet: 821px;
 }
 
 .sorts-mill-goudy {
