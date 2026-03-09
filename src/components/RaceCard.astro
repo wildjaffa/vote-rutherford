@@ -27,9 +27,9 @@ const typeLabel = getRaceTypeLabel(race.raceTypeId);
 ---
 
 <div
-  class="group transform-gpu overflow-hidden rounded-lg border border-gray-200 bg-white p-6 shadow transition-transform hover:-translate-y-1 hover:shadow-lg"
+  class="group flex h-full transform-gpu flex-col overflow-hidden rounded-lg border border-gray-200 bg-white p-6 shadow transition-transform hover:-translate-y-1 hover:shadow-lg"
 >
-  <div class="">
+  <div class="flex-none">
     {
       race.partyCategory && (
         <span
@@ -51,13 +51,16 @@ const typeLabel = getRaceTypeLabel(race.raceTypeId);
       {typeLabel}
     </span>
   </div>
-  <div class="pt-4">
+  <div class="flex flex-1 flex-col pt-4">
     <h3
       class="group-hover:text-secondary m-0 mb-2 text-xl font-bold text-gray-900"
     >
       {race.name}
     </h3>
     <p class="m-0 mb-3 leading-relaxed text-gray-600">{race.description}</p>
+
+    <div class="grow"></div>
+
     <p class="mb-3">
       <Calendar size="18" stroke-width={2} class="text-secondary mr-1 inline" />
       {
@@ -77,14 +80,16 @@ const typeLabel = getRaceTypeLabel(race.raceTypeId);
         )
       }
     </p>
-    <a
-      href={`/elections/${election.slug}/${race.slug}`}
-      class="text-secondary hover:text-primary font-medium"
-      >View Candidates<ArrowRight
-        size="16"
-        stroke-width={2}
-        class="ml-1 inline"
-      /></a
-    >
+    <div>
+      <a
+        href={`/elections/${election.slug}/${race.slug}`}
+        class="text-secondary hover:text-primary font-medium"
+        >View Candidates<ArrowRight
+          size="16"
+          stroke-width={2}
+          class="ml-1 inline"
+        /></a
+      >
+    </div>
   </div>
 </div>

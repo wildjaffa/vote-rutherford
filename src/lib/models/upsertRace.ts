@@ -5,6 +5,7 @@ export const upsertRaceSchema = z.object({
   id: z.string().optional(),
   electionId: z.string().optional(), // required on create but validated in service
   name: z.string().min(1, "Race name is required"),
+  shortName: z.string().optional().nullable(),
   raceTypeId: z.number().min(0, "Race type is required"),
   description: z.string().optional().nullable(),
   status: z.string().min(1, "Status is required"),

@@ -10,7 +10,11 @@ const { qualification } = Astro.props;
 
 {
   qualification.qualification_url && (
-    <a class="text-secondary underline" href={qualification.qualification_url}>
+    <a
+      class="text-secondary underline"
+      href={qualification.qualification_url}
+      target="_blank"
+    >
       {qualification.qualification_description}
     </a>
   )
