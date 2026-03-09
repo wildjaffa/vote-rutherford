@@ -385,6 +385,14 @@ async function setupMeilisearch() {
   console.log("Setting up Meilisearch index...");
   const index = meilisearchClient.index("addresses");
 
+  console.log("  Clearing existing Meilisearch documents...");
+  try {
+    const deleteBatch = await index.deleteAllDocuments();
+    console.log(`  ✓ Meilisearch clear task enqueued: ${deleteBatch.taskUid}`);
+  } catch (e) {
+    console.error("  ❌ Failed to clear Meilisearch documents:", e);
+  }
+
   // Basic configuration
   await index.updateSettings({
     searchableAttributes: ["address", "city", "zip"],
@@ -471,6 +479,14 @@ async function main() {
       const deletedAddresses = await prisma.voterAddress.deleteMany({});
       console.log(
         `  ✓ Deleted ${deletedAssoc.count} associations and ${deletedAddresses.count} addresses.`,
+      );
+
+      console.log("Cleaning up existing district groups...");
+      const deletedGroupAssoc =
+        await prisma.districtGroupToDistrict.deleteMany({});
+      const deletedGroups = await prisma.districtGroup.deleteMany({});
+      console.log(
+        `  ✓ Deleted ${deletedGroupAssoc.count} group associations and ${deletedGroups.count} groups.`,
       );
     }
 
