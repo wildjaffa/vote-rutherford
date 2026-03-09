@@ -25,6 +25,8 @@ import {
   Square,
   SquareCheck,
   Check,
+  SquareCheckBig,
+  Share,
 } from "@lucide/astro";
 
 import {
@@ -64,6 +66,8 @@ export {
   Square,
   SquareCheck,
   Check,
+  SquareCheckBig,
+  Share,
 };
 
 export const qualificationTypeToIcon: Record<string, AstroComponent> = {

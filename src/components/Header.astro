@@ -24,7 +24,7 @@ import { X } from "@lucide/astro";
   </div>
 
   <!-- Desktop Navigation -->
-  <nav class="hidden md:block">
+  <nav class="tablet:block hidden">
     <ul class="flex space-x-4">
       <li class="pr-2">
         <a href="/" class="hover:text-accent text-white">Find Your Ballot</a>
@@ -52,7 +52,7 @@ import { X } from "@lucide/astro";
   <!-- Mobile Hamburger Button -->
   <button
     id="menu-toggle"
-    class="flex h-8 w-8 items-center justify-center md:hidden"
+    class="tablet:hidden flex h-8 w-8 items-center justify-center"
     aria-label="Toggle menu"
   >
     <Menu class="menu-icon h-6 w-6 text-white" id="menu-icon" />
@@ -62,7 +62,7 @@ import { X } from "@lucide/astro";
   <!-- Mobile Navigation -->
   <nav
     id="mobile-menu"
-    class="bg-secondary absolute top-full right-0 left-0 z-90 hidden shadow-md md:hidden"
+    class="bg-secondary tablet:hidden absolute top-full right-0 left-0 z-90 hidden shadow-md"
   >
     <div class="border-b border-white/20"></div>
     <ul
@@ -87,7 +87,7 @@ import { X } from "@lucide/astro";
           >Elections</a
         >
       </li>
-      <li>
+      <li class="mt-2">
         <Button
           variant="secondary"
           href="https://ovr.govote.tn.gov/"

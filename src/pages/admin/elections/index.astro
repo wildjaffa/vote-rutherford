@@ -67,8 +67,7 @@ const elections = await prisma.election.findMany({
                     {election.description.length > 50 && "..."}
                   </td>
                   <td class="px-4 py-3 text-sm text-gray-600">
-                    {election.races.length} race
-                    {election.races.length !== 1 ? "s" : ""}
+                    {`${election.races.length} ${election.races.length !== 1 ? "races" : "race"}`}
                   </td>
                   <td class="space-x-2 px-4 py-3 text-right text-sm">
                     <a
