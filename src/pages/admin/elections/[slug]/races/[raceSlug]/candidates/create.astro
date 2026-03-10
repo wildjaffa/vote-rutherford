@@ -116,6 +116,7 @@ if (Astro.request.method === "POST") {
     const result = await Astro.callAction(actions.createCandidate, {
       firstName: formData.get("firstName") as string,
       lastName: formData.get("lastName") as string,
+      email: (formData.get("email") as string) || undefined,
       partyAffiliation: formData.get("partyAffiliation") as string,
       birthYear: (formData.get("birthYear") as string) || undefined, // Schema handles string -> number coercion
       profileImageId: (formData.get("profileImageId") as string) || undefined,
@@ -180,6 +181,13 @@ if (Astro.request.method === "POST") {
         required
       />
     </div>
+
+    <FormInput
+      label="Email"
+      name="email"
+      type="email"
+      placeholder="candidate@example.com"
+    />
 
     <FormInput
       label="Party Affiliation"

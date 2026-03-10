@@ -28,19 +28,24 @@
     "@prisma/client": "^7.3.0",
     "@tailwindcss/vite": "^4.1.18",
     "@turf/turf": "^7.3.3",
+    "@types/node": "^25.3.5",
     "astro": "^5.17.1",
+    "bullmq": "^5.70.4",
     "csv-parser": "^3.2.0",
     "dotenv": "^17.2.3",
     "firebase": "^12.9.0",
     "firebase-admin": "^13.6.1",
     "formidable": "^3.5.4",
+    "googleapis": "^171.4.0",
     "html-to-image": "^1.11.13",
+    "ioredis": "^5.10.0",
     "pg": "^8.17.2",
     "pm2": "^5.4.3",
     "simple-icons-astro": "^16.1.0",
     "tailwindcss": "^4.1.18",
     "ts-node": "^10.9.2",
-    "vite-plugin-entry-shaking": "^0.5.1"
+    "vite-plugin-entry-shaking": "^0.5.1",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
@@ -53,7 +58,6 @@
     "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "prisma": "^7.3.0",
-    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0"
   }

@@ -48,6 +48,7 @@ export async function createCandidate(
       lastName,
       slug,
       middleName,
+      email,
       partyAffiliation,
       birthYear,
       profileImageId,
@@ -62,6 +63,7 @@ export async function createCandidate(
       raceId,
       slug,
       middleName: middleName ?? null,
+      email: email ?? null,
       partyAffiliation,
       birthYear: birthYear ?? null,
       profileImageId: profileImageId ?? null,
@@ -163,6 +165,7 @@ export async function updateCandidate(
     firstName,
     middleName,
     lastName,
+    email,
     partyAffiliation,
     birthYear,
     profileImageId,
@@ -177,6 +180,7 @@ export async function updateCandidate(
       ...(firstName && { firstName }),
       ...(middleName !== undefined && { middleName: middleName || null }),
       ...(lastName && { lastName }),
+      ...(email !== undefined && { email: email || null }),
       ...(partyAffiliation && { partyAffiliation }),
       ...(birthYear !== undefined && { birthYear: birthYear || null }),
       updatedAt: new Date(),
@@ -419,6 +423,67 @@ export async function updateCandidate(
       }
     }
 
+    return updatedCandidate;
+  });
+
+  return updated;
+}
+
+export async function partialUpdateCandidate(
+  id: string,
+  body: Partial<UpsertCandidateType>,
+  userId: string,
+): Promise<Candidate> {
+  const hasPermission = await canManageCandidate(id);
+  if (!hasPermission) {
+    throw makeError("Unauthorized", 403);
+  }
+
+  const existingCandidate = await prisma.candidate.findUnique({
+    where: { id },
+  });
+  if (!existingCandidate) {
+    throw makeError("Candidate not found", 404);
+  }
+
+  // We only run validation on provided keys using Zod's safeParse on the partial schema
+  // We avoid validateCandidatePayload because it expects full data
+  const { UpsertCandidate, upsertCandidateSchema } = await import("../models/upsertCandidate");
+  const validation = upsertCandidateSchema.partial().safeParse(body);
+  
+  if (!validation.success) {
+    throw makeError("Validation failed", undefined, validation.error);
+  }
+
+  const dataToUpdate: Prisma.CandidateUncheckedUpdateInput = {
+    updatedAt: new Date(),
+  };
+
+  const {
+    firstName,
+    lastName,
+    middleName,
+    email,
+    partyAffiliation,
+    birthYear,
+    isIncumbent,
+    slug
+  } = validation.data;
+
+  if (firstName !== undefined) dataToUpdate.firstName = firstName;
+  if (lastName !== undefined) dataToUpdate.lastName = lastName;
+  if (middleName !== undefined) dataToUpdate.middleName = middleName || null;
+  if (email !== undefined) dataToUpdate.email = email || null;
+  if (partyAffiliation !== undefined) dataToUpdate.partyAffiliation = partyAffiliation;
+  if (birthYear !== undefined) dataToUpdate.birthYear = birthYear || null;
+  if (isIncumbent !== undefined) dataToUpdate.isIncumbent = isIncumbent;
+  if (slug !== undefined) dataToUpdate.slug = slug;
+
+  const updated = await withUserContext(userId, async () => {
+    const updatedCandidate = await prisma.candidate.update({
+      where: { id },
+      data: dataToUpdate,
+    });
     return updatedCandidate;
   });
 
