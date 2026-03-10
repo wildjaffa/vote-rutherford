@@ -201,19 +201,24 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
                 Body content (Supports variables)
               </label>
               <p class="text-xs text-gray-500 mb-2">
-                Available variables: 
-                <code class="bg-gray-100 px-1 rounded">{"{{candidate name}}"}</code>, 
-                <code class="bg-gray-100 px-1 rounded">{"{{first name}}"}</code>, 
-                <code class="bg-gray-100 px-1 rounded">{"{{last name}}"}</code>,
-                <code class="bg-gray-100 px-1 rounded">{"{{race}}"}</code>,
-                <code class="bg-gray-100 px-1 rounded">{"{{party}}"}</code>
+                Available variables (Click to insert): 
               </p>
+              <div class="flex flex-wrap gap-2 mb-3">
+                <button type="button" class="var-btn bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-xs font-mono" data-var="{{candidate name}}">&lcub;&lcub;candidate name&rcub;&rcub;</button>
+                <button type="button" class="var-btn bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-xs font-mono" data-var="{{first name}}">&lcub;&lcub;first name&rcub;&rcub;</button>
+                <button type="button" class="var-btn bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-xs font-mono" data-var="{{last name}}">&lcub;&lcub;last name&rcub;&rcub;</button>
+                <button type="button" class="var-btn bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-xs font-mono" data-var="{{race}}">&lcub;&lcub;race&rcub;&rcub;</button>
+                <button type="button" class="var-btn bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-xs font-mono" data-var="{{party}}">&lcub;&lcub;party&rcub;&rcub;</button>
+              </div>
               <textarea 
                 id="emailBody" 
                 rows="10" 
                 placeholder="Dear {{first name}},&#10;&#10;Regarding the {{race}} race...&#10;&#10;Sincerely,&#10;Vote Rutherford"
                 class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm"
               ></textarea>
+              <p class="text-[10px] text-gray-400 mt-1 italic">
+                Tip: Standard newlines are converted to &lt;br&gt; tags. Basic HTML is supported but not required.
+              </p>
             </div>
 
             <!-- Preview Toggle -->
@@ -224,10 +229,11 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
 
           <!-- Preview Pane -->
           <div id="previewPane" class="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow hidden">
-             <h4 class="text-sm font-bold text-gray-700 mb-2 border-b pb-2">Preview (Based on first selected candidate)</h4>
-             <div class="text-sm mb-1"><span class="font-medium text-gray-500">To:</span> <span id="previewTo"></span></div>
-             <div class="text-sm mb-4"><span class="font-medium text-gray-500">Subject:</span> <span id="previewSubject"></span></div>
-             <div class="text-sm whitespace-pre-wrap font-mono bg-white p-3 rounded border border-gray-200" id="previewBody">
+             <div class="text-sm border-t pt-4">
+               <div class="text-sm mb-1"><span class="font-medium text-gray-500">To:</span> <span id="previewTo"></span></div>
+               <div class="text-sm mb-4"><span class="font-medium text-gray-500">Subject:</span> <span id="previewSubject"></span></div>
+               <div class="bg-white p-4 rounded border border-gray-200 mt-2 shadow-inner" style="font-family: sans-serif; min-height: 100px;" id="previewBody">
+               </div>
              </div>
           </div>
 
@@ -248,7 +254,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
             <button 
               type="button" 
               id="sendBtn"
-              class="bg-secondary hover:bg-secondary/90 text-white px-6 py-2 rounded-md font-medium shadow transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+              class="bg-secondary hover:bg-secondary/90 cursor-pointer text-white px-6 py-2 rounded-md font-medium shadow transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
               disabled
             >
               Send <span id="btnCount">0</span> Emails
@@ -404,7 +410,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
       if (targets.length === 0) {
         previewTo.textContent = "Nobody selected";
         previewSubject.textContent = emailSubject.value || "(No subject)";
-        previewBody.textContent = emailBody.value || "(No body)";
+        previewBody.innerHTML = (emailBody.value || "(No body)").split("\n").join("<br />");
         return;
       }
 
@@ -420,8 +426,30 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
         personalizedBody = personalizedBody.replace(regex, value as string);
       }
       
-      previewBody.textContent = personalizedBody;
+      // Convert newlines to BR for the preview to match final email
+      // We also escape HTML to show it as literal if they typed it, 
+      // OR we just render it. Given the preview is for them, rendering it is better.
+      previewBody.innerHTML = personalizedBody.split("\n").join("<br />");
     }
+
+    // Variable insertion
+    document.querySelectorAll(".var-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const variable = (btn as HTMLButtonElement).dataset.var;
+        if (!variable || !emailBody) return;
+        
+        const start = emailBody.selectionStart;
+        const end = emailBody.selectionEnd;
+        const text = emailBody.value;
+        emailBody.value = text.substring(0, start) + variable + text.substring(end);
+        
+        // Return focus and move cursor
+        emailBody.focus();
+        emailBody.selectionStart = emailBody.selectionEnd = start + variable.length;
+        
+        updateSelectionState();
+      });
+    });
 
     togglePreviewBtn?.addEventListener("click", () => {
       previewPane.classList.toggle("hidden");
