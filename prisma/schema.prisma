@@ -90,6 +90,7 @@ model Candidate {
   slug              String                @default(cuid())
   birthYear         Int?
   partyAffiliation  String?
+  email             String?
   isIncumbent       Boolean               @default(false)
   profileImage      BlobStorageReference? @relation("CandidateProfileImage", fields: [profileImageId], references: [id])
   profileImageId    String?               
@@ -103,6 +104,7 @@ model Candidate {
   policyResponses CandidatePolicyResponse[]
   qualifications  CandidateQualification[]
   historicalLinks Candidate[]               @relation("HistoricalLink")
+  emailOutreach   EmailOutreach[]
 
   @@unique([raceId, slug])
   @@map("candidates")
@@ -317,6 +319,17 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+model EmailOutreach {
+  id           String     @id @default(uuid())
+  candidateId  String?    
+  candidate    Candidate? @relation(fields: [candidateId], references: [id])
+  emailAddress String
+  subject      String
+  body         String
+  sentAt       DateTime   @default(now())
+
+  @@map("email_outreach")
+}
 
 enum DistrictType {
   US_HOUSE

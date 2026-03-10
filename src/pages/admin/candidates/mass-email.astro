@@ -1,0 +1,488 @@
+---
+import type { Election } from "../../../generated/prisma/browser";
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import prisma from "../../../lib/prisma";
+
+import { Prisma } from "../../../generated/prisma/browser";
+
+export const prerender = false;
+
+interface CandidateEmail {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  partyAffiliation: string;
+  raceName: string;
+  raceType: string;
+}
+
+type CandidateWithRace = Prisma.CandidateGetPayload<{
+  include: {
+    race: {
+      include: {
+        raceType: true;
+      }
+    }
+  }
+}>;
+
+// Fetch all elections for the dropdown
+const elections = await prisma.election.findMany({
+  orderBy: { date: "desc" },
+});
+
+// Determine selected election
+const url = new URL(Astro.request.url);
+const selectedElectionId = url.searchParams.get("electionId") || (elections.length > 0 ? elections[0]?.id : null);
+
+let candidates: CandidateEmail[] = [];
+let error: string | null = null;
+
+if (selectedElectionId) {
+  try {
+    const rawCandidates = (await prisma.candidate.findMany({
+      where: {
+        race: {
+          electionId: selectedElectionId,
+        },
+        deletedAt: null,
+      },
+      include: {
+        race: {
+          include: {
+            raceType: true,
+          }
+        }
+      },
+      orderBy: [
+        { race: { name: 'asc' } },
+        { lastName: 'asc' }
+      ]
+    })) as CandidateWithRace[];
+    
+    candidates = rawCandidates.map(c => ({
+      id: c.id,
+      firstName: c.firstName,
+      lastName: c.lastName,
+      email: c.email || '',
+      partyAffiliation: c.partyAffiliation || '',
+      raceName: c.race.name,
+      raceType: c.race.raceType.value,
+    }));
+  } catch (err) {
+    error = "Failed to load candidates";
+    console.error(err);
+  }
+}
+
+// Extract unique filters
+const raceTypes = [...new Set(candidates.map(c => c.raceType))].sort();
+const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boolean).sort();
+---
+
+<AdminLayout title="Mass Email Candidates">
+  <div class="space-y-6">
+    <!-- Header & Election Selector -->
+    <div class="flex items-center justify-between border-b pb-4">
+      <div>
+        <h2 class="text-xl font-bold text-gray-900">Select Election</h2>
+        <p class="text-sm text-gray-500">Choose an election to target candidates.</p>
+      </div>
+      <div>
+        <form method="GET" class="flex items-center gap-3">
+          <select 
+            name="electionId"
+            class="rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-secondary focus:outline-none focus:ring-secondary sm:text-sm"
+            onchange="this.form.submit()"
+          >
+            {elections.map((election: Election) => (
+              <option value={election.id} selected={election.id === selectedElectionId}>
+                {election.name} ({new Date(election.date).toLocaleDateString()})
+              </option>
+            ))}
+          </select>
+        </form>
+      </div>
+    </div>
+
+    {error && (
+      <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+        <p class="text-sm font-medium text-red-800">{error}</p>
+      </div>
+    )}
+
+    {selectedElectionId && candidates.length > 0 && (
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Left Column: Selection Table -->
+        <div class="space-y-4">
+          <h3 class="text-lg font-semibold text-gray-900">1. Select Recipients</h3>
+          
+          <!-- Filters -->
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 bg-gray-50 p-4 rounded-lg border border-gray-200" id="filter-container">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Search Component</label>
+              <input type="text" id="searchName" placeholder="Name or Email..." class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Race Type</label>
+              <select id="filterRaceType" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm">
+                <option value="">All Types</option>
+                {raceTypes.map(type => <option value={type}>{type}</option>)}
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Party</label>
+              <select id="filterParty" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm">
+                <option value="">All Parties</option>
+                {parties.map(party => <option value={party}>{party}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="overflow-hidden rounded-lg border border-gray-200 shadow bg-white max-h-[600px] overflow-y-auto relative">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50 sticky top-0 z-10">
+                <tr>
+                  <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <input type="checkbox" id="selectAll" class="rounded border-gray-300 text-secondary focus:ring-secondary" />
+                  </th>
+                  <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Candidate / Race</th>
+                  <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                </tr>
+              </thead>
+              <tbody id="candidates-tbody" class="bg-white divide-y divide-gray-200">
+                {candidates.map(candidate => (
+                  <tr class="candidate-row hover:bg-gray-50" data-id={candidate.id} data-racetype={candidate.raceType} data-email={candidate.email}>
+                    <td class="px-3 py-3 whitespace-nowrap">
+                      <input 
+                        type="checkbox" 
+                        class="candidate-cb rounded border-gray-300 text-secondary focus:ring-secondary disabled:opacity-50"
+                        data-id={candidate.id}
+                        data-email={candidate.email}
+                        data-first={candidate.firstName}
+                        data-last={candidate.lastName}
+                        data-race={candidate.raceName}
+                        data-party={candidate.partyAffiliation}
+                        disabled={!candidate.email}
+                      />
+                    </td>
+                    <td class="px-3 py-3">
+                      <div class="text-sm font-medium text-gray-900 candidate-name">{candidate.firstName} {candidate.lastName}</div>
+                      <div class="text-xs text-gray-500 candidate-party">{candidate.raceName} ({candidate.partyAffiliation || 'N/A'})</div>
+                    </td>
+                    <td class="px-3 py-3 text-sm text-gray-500 candidate-email-display">
+                      {candidate.email ? candidate.email : <span class="text-red-400 italic">No email</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div class="text-sm text-gray-500 text-right">
+            <span id="selectedCount">0</span> candidates selected
+          </div>
+        </div>
+
+        <!-- Right Column: Email Composition & Preview -->
+        <div class="space-y-4">
+          <h3 class="text-lg font-semibold text-gray-900">2. Compose Email</h3>
+          
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+              <input type="text" id="emailSubject" placeholder="Email Subject line..." class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm" />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Body content (Supports variables)
+              </label>
+              <p class="text-xs text-gray-500 mb-2">
+                Available variables: 
+                <code class="bg-gray-100 px-1 rounded">{"{{candidate name}}"}</code>, 
+                <code class="bg-gray-100 px-1 rounded">{"{{first name}}"}</code>, 
+                <code class="bg-gray-100 px-1 rounded">{"{{last name}}"}</code>,
+                <code class="bg-gray-100 px-1 rounded">{"{{race}}"}</code>,
+                <code class="bg-gray-100 px-1 rounded">{"{{party}}"}</code>
+              </p>
+              <textarea 
+                id="emailBody" 
+                rows="10" 
+                placeholder="Dear {{first name}},&#10;&#10;Regarding the {{race}} race...&#10;&#10;Sincerely,&#10;Vote Rutherford"
+                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm"
+              ></textarea>
+            </div>
+
+            <!-- Preview Toggle -->
+            <div>
+                <button type="button" id="togglePreviewBtn" class="text-sm text-secondary hover:underline font-medium">Show Preview &rarr;</button>
+            </div>
+          </div>
+
+          <!-- Preview Pane -->
+          <div id="previewPane" class="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow hidden">
+             <h4 class="text-sm font-bold text-gray-700 mb-2 border-b pb-2">Preview (Based on first selected candidate)</h4>
+             <div class="text-sm mb-1"><span class="font-medium text-gray-500">To:</span> <span id="previewTo"></span></div>
+             <div class="text-sm mb-4"><span class="font-medium text-gray-500">Subject:</span> <span id="previewSubject"></span></div>
+             <div class="text-sm whitespace-pre-wrap font-mono bg-white p-3 rounded border border-gray-200" id="previewBody">
+             </div>
+          </div>
+
+          <!-- Scheduling -->
+          <div class="bg-white p-4 rounded-lg border border-gray-200 shadow space-y-3">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" id="sendLater" class="rounded border-gray-300 text-secondary focus:ring-secondary" />
+              <label for="sendLater" class="text-sm font-medium text-gray-700">Schedule for later</label>
+            </div>
+            <div id="scheduleContainer" class="hidden">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Send at</label>
+              <input type="datetime-local" id="scheduledAt" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm" />
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex justify-end pt-4">
+            <button 
+              type="button" 
+              id="sendBtn"
+              class="bg-secondary hover:bg-secondary/90 text-white px-6 py-2 rounded-md font-medium shadow transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+              disabled
+            >
+              Send <span id="btnCount">0</span> Emails
+            </button>
+          </div>
+        </div>
+
+      </div>
+    )}
+
+  </div>
+
+  <script>
+    import { actions } from "astro:actions";
+
+    // Filtering elements
+    const searchNameInput = document.getElementById("searchName") as HTMLInputElement;
+    const filterRaceTypeInput = document.getElementById("filterRaceType") as HTMLSelectElement;
+    const filterPartyInput = document.getElementById("filterParty") as HTMLSelectElement;
+    const tbody = document.getElementById("candidates-tbody");
+
+    // Selection elements
+    const selectAllCb = document.getElementById("selectAll") as HTMLInputElement;
+    const allCbs = document.querySelectorAll(".candidate-cb") as NodeListOf<HTMLInputElement>;
+    const selectedCountSpan = document.getElementById("selectedCount");
+    const sendBtn = document.getElementById("sendBtn") as HTMLButtonElement;
+    const btnCountSpan = document.getElementById("btnCount");
+
+    // Form elements
+    const emailSubject = document.getElementById("emailSubject") as HTMLInputElement;
+    const emailBody = document.getElementById("emailBody") as HTMLTextAreaElement;
+
+    // Preview elements
+    const togglePreviewBtn = document.getElementById("togglePreviewBtn") as HTMLButtonElement;
+    const previewPane = document.getElementById("previewPane") as HTMLDivElement;
+    const previewTo = document.getElementById("previewTo") as HTMLSpanElement;
+    const previewSubject = document.getElementById("previewSubject") as HTMLSpanElement;
+    const previewBody = document.getElementById("previewBody") as HTMLDivElement;
+
+    // Scheduling elements
+    const sendLaterCb = document.getElementById("sendLater") as HTMLInputElement;
+    const scheduleContainer = document.getElementById("scheduleContainer") as HTMLDivElement;
+    const scheduledAtInput = document.getElementById("scheduledAt") as HTMLInputElement;
+
+    sendLaterCb?.addEventListener("change", () => {
+      scheduleContainer.classList.toggle("hidden", !sendLaterCb.checked);
+      if (sendLaterCb.checked && !scheduledAtInput.value) {
+        // Default to 1 hour from now
+        const now = new Date();
+        now.setHours(now.getHours() + 1);
+        now.setMinutes(0);
+        // Format for datetime-local: YYYY-MM-DDTHH:mm (must be local time)
+        const tzOffset = now.getTimezoneOffset() * 60000;
+        const localISOTime = (new Date(now.getTime() - tzOffset)).toISOString().slice(0, 16);
+        scheduledAtInput.value = localISOTime;
+      }
+    });
+
+    function applyFilters() {
+      if (!tbody) return;
+      const search = searchNameInput?.value.toLowerCase() || "";
+      const raceType = filterRaceTypeInput?.value || "";
+      const party = filterPartyInput?.value || "";
+
+      Array.from(tbody.querySelectorAll("tr.candidate-row")).forEach((tr) => {
+        const row = tr as HTMLElement;
+        const namePart = (row.querySelector('.candidate-name') as HTMLElement).textContent?.toLowerCase() || "";
+        const partyPart = (row.querySelector('.candidate-party') as HTMLElement).textContent?.toLowerCase() || "";
+        const emailPart = (row.querySelector('.candidate-email-display') as HTMLElement).textContent?.toLowerCase() || "";
+        
+        const rowRaceType = row.dataset.racetype || "";
+        const matchSearch = search === "" || namePart.includes(search) || emailPart.includes(search);
+        const matchRaceType = raceType === "" || rowRaceType === raceType;
+        
+        let matchParty = true;
+        if (party !== "") {
+          matchParty = partyPart.includes(party.toLowerCase());
+        }
+
+        row.style.display = (matchSearch && matchRaceType && matchParty) ? "" : "none";
+      });
+      updateSelectionState();
+    }
+
+    function updateSelectionState() {
+      const visibleCbs = Array.from(allCbs).filter(cb => {
+        const row = cb.closest('tr');
+        return row && row.style.display !== "none" && !cb.disabled;
+      });
+
+      const checkedCount = visibleCbs.filter(cb => cb.checked).length;
+      
+      if (selectAllCb) {
+        selectAllCb.checked = visibleCbs.length > 0 && checkedCount === visibleCbs.length;
+        selectAllCb.indeterminate = checkedCount > 0 && checkedCount < visibleCbs.length;
+      }
+
+      const totalChecked = Array.from(allCbs).filter(cb => cb.checked).length;
+      if (selectedCountSpan) selectedCountSpan.textContent = totalChecked.toString();
+      if (btnCountSpan) btnCountSpan.textContent = totalChecked.toString();
+      
+      if (sendBtn) {
+        sendBtn.disabled = totalChecked === 0 || emailSubject.value.trim() === "" || emailBody.value.trim() === "";
+      }
+
+      refreshPreview();
+    }
+
+    // Event listeners
+    searchNameInput?.addEventListener("input", applyFilters);
+    filterRaceTypeInput?.addEventListener("change", applyFilters);
+    filterPartyInput?.addEventListener("change", applyFilters);
+
+    selectAllCb?.addEventListener("change", (e) => {
+      const checked = (e.target as HTMLInputElement).checked;
+      Array.from(allCbs).forEach(cb => {
+        const row = cb.closest('tr');
+        if (row && row.style.display !== "none" && !cb.disabled) {
+          cb.checked = checked;
+        }
+      });
+      updateSelectionState();
+    });
+
+    allCbs.forEach(cb => {
+      cb.addEventListener("change", updateSelectionState);
+    });
+
+    emailSubject?.addEventListener("input", updateSelectionState);
+    emailBody?.addEventListener("input", updateSelectionState);
+
+    // Preview Logic
+    function getSelectedTargets() {
+      return Array.from(allCbs)
+        .filter(cb => cb.checked && cb.dataset.email)
+        .map(cb => ({
+          id: cb.dataset.id,
+          email: cb.dataset.email as string,
+          variables: {
+            "candidate name": `${cb.dataset.first} ${cb.dataset.last}`,
+            "first name": cb.dataset.first as string,
+            "last name": cb.dataset.last as string,
+            "race": cb.dataset.race as string,
+            "party": cb.dataset.party as string
+          }
+        }));
+    }
+
+    function refreshPreview() {
+      if (!previewPane || previewPane.classList.contains("hidden")) return;
+      
+      const targets = getSelectedTargets();
+      if (targets.length === 0) {
+        previewTo.textContent = "Nobody selected";
+        previewSubject.textContent = emailSubject.value || "(No subject)";
+        previewBody.textContent = emailBody.value || "(No body)";
+        return;
+      }
+
+      const firstTarget = targets[0];
+      if (!firstTarget) return;
+      
+      previewTo.textContent = `${firstTarget.variables["candidate name"]} <${firstTarget.email}>`;
+      previewSubject.textContent = emailSubject.value;
+      
+      let personalizedBody = emailBody.value;
+      for (const [key, value] of Object.entries(firstTarget.variables)) {
+        const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'gi');
+        personalizedBody = personalizedBody.replace(regex, value as string);
+      }
+      
+      previewBody.textContent = personalizedBody;
+    }
+
+    togglePreviewBtn?.addEventListener("click", () => {
+      previewPane.classList.toggle("hidden");
+      if (!previewPane.classList.contains("hidden")) {
+        togglePreviewBtn.textContent = "Hide Preview";
+        refreshPreview();
+      } else {
+        togglePreviewBtn.textContent = "Show Preview \u2192";
+      }
+    });
+
+    // Send Logic
+    sendBtn?.addEventListener("click", async () => {
+      const targets = getSelectedTargets();
+      if (targets.length === 0) return;
+
+      const subject = emailSubject.value.trim();
+      const bodyTemplate = emailBody.value.trim();
+      
+      if (!subject || !bodyTemplate) {
+        window.toast.error("Subject and body are required");
+        return;
+      }
+
+      if (!confirm(`Are you sure you want to ${sendLaterCb.checked ? 'schedule' : 'queue'} emails to ${targets.length} candidates?`)) {
+        return;
+      }
+
+      const originalText = sendBtn.innerHTML;
+      sendBtn.innerHTML = sendLaterCb.checked ? 'Scheduling...' : 'Queueing...';
+      sendBtn.disabled = true;
+
+      try {
+        const { data, error } = await actions.sendMassEmail({
+          subject,
+          bodyTemplate,
+          targets,
+          scheduledAt: sendLaterCb.checked ? scheduledAtInput.value : undefined
+        });
+
+        if (error) {
+          console.error(error);
+          window.toast.error(error.message || `Failed to ${sendLaterCb.checked ? 'schedule' : 'queue'} emails`);
+        } else {
+          window.toast.success(`Successfully ${sendLaterCb.checked ? 'scheduled' : 'queued'} ${data?.count || 0} emails!`);
+          
+          // Reset form
+          emailSubject.value = "";
+          emailBody.value = "";
+          Array.from(allCbs).forEach(cb => cb.checked = false);
+          updateSelectionState();
+          refreshPreview();
+        }
+      } catch (err) {
+        console.error(err);
+        window.toast.error("Unexpected error occurred.");
+      } finally {
+        sendBtn.innerHTML = originalText;
+        updateSelectionState(); // restores correct disabled state
+      }
+    });
+
+  </script>
+</AdminLayout>

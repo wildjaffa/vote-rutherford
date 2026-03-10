@@ -7,6 +7,7 @@ export const upsertCandidateSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   middleName: z.string().optional().nullable(),
   lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Must be a valid email").optional().nullable(),
   partyAffiliation: z.string().min(1, "Party Affiliation is required"),
   birthYear: z.preprocess(
     (val) => (!val || val === "" ? undefined : Number(val)),
