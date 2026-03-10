@@ -1,4 +1,4 @@
-import { google } from 'googleapis';
+import { google } from "googleapis";
 import type { EmailProvider, SendEmailOptions } from "./EmailProvider";
 
 /**
@@ -26,17 +26,20 @@ export class GmailProvider implements EmailProvider {
       const oauth2Client = new google.auth.OAuth2(
         clientId,
         clientSecret,
-        "https://developers.google.com/oauthplayground" // Standard redirect for refresh token generation
+        "https://developers.google.com/oauthplayground", // Standard redirect for refresh token generation
       );
-      
+
       oauth2Client.setCredentials({ refresh_token: refreshToken });
 
       return {
-        gmail: google.gmail({ version: 'v1', auth: oauth2Client }),
-        fromEmail
+        gmail: google.gmail({ version: "v1", auth: oauth2Client }),
+        fromEmail,
       };
     } catch (e) {
-      console.error("[GmailProvider] Failed to initialize Gmail auth client:", e);
+      console.error(
+        "[GmailProvider] Failed to initialize Gmail auth client:",
+        e,
+      );
       return null;
     }
   }
@@ -47,9 +50,11 @@ export class GmailProvider implements EmailProvider {
    */
   async sendEmail(options: SendEmailOptions): Promise<boolean> {
     const context = await this.getGmailClient();
-    
+
     if (!context) {
-      console.error("[GmailProvider] Skipping send email: Client not configured or failed to initialize.");
+      console.error(
+        "[GmailProvider] Skipping send email: Client not configured or failed to initialize.",
+      );
       // In production, we might want to log this but return true if we're in dry-run,
       // but here we return false as it failed to send.
       return false;
@@ -64,22 +69,28 @@ export class GmailProvider implements EmailProvider {
       const encodedSubject = Buffer.from(options.subject).toString("base64");
       const utf8Subject = `=?utf-8?B?${encodedSubject}?=`;
 
+      // Step 2: Format the body for HTML if it's not already HTML-like.
+      // We convert newlines to <br> and wrap in a standard font/div.
+      const htmlBody = options.body.includes("<br") || options.body.includes("<p")
+        ? options.body // Keep as is if it already contains HTML tags
+        : options.body.split("\n").join("<br />");
+
       const str = [
         `From: ${fromEmail}`,
         `To: ${options.to}`,
         `Content-Type: text/html; charset=utf-8`,
         `MIME-Version: 1.0`,
         `Subject: ${utf8Subject}`,
-        '',
-        options.body,
-      ].join('\r\n'); // Use \r\n as per MIME specs
+        "",
+        `<div style="font-family: sans-serif; font-size: 16px; line-height: 1.5; color: #333;">${htmlBody}</div>`,
+      ].join("\r\n"); // Use \r\n as per MIME specs
 
       // Step 2: Base64url encode the entire MIME message.
-      const encodedMessage = Buffer.from(str).toString('base64url');
+      const encodedMessage = Buffer.from(str).toString("base64url");
 
       // Step 3: Call the Gmail API's send method.
       await gmail.users.messages.send({
-        userId: 'me',
+        userId: "me",
         requestBody: {
           raw: encodedMessage,
         },
@@ -88,7 +99,10 @@ export class GmailProvider implements EmailProvider {
       console.log(`[GmailProvider] Successfully sent email to ${options.to}`);
       return true;
     } catch (error) {
-      console.error(`[GmailProvider] Error sending email to ${options.to}:`, error);
+      console.error(
+        `[GmailProvider] Error sending email to ${options.to}:`,
+        error,
+      );
       return false;
     }
   }
