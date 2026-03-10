@@ -13,6 +13,7 @@ export const upsertRaceSchema = z.object({
   districtId: z.string().optional().nullable(),
   numSelections: z.number().int().min(1).default(1),
   partyCategory: z.string().optional().default("General Election"),
+  order: z.number().int().default(0),
   policyQuestionIds: z.array(z.string()).optional(),
 });
 

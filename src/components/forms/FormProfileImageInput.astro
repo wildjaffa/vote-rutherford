@@ -1,0 +1,138 @@
+---
+interface Props {
+  name?: string;
+  label?: string;
+  value?: string;
+  imageUrl?: string | null;
+}
+
+const {
+  name = "profileImageId",
+  label = "Profile Image",
+  value = "",
+  imageUrl = null,
+} = Astro.props;
+---
+
+<div class="space-y-2">
+  <label class="block text-sm font-medium text-gray-700">{label}</label>
+  
+  <div class="flex items-start gap-4">
+    <div id="imagePreviewContainer" class={imageUrl ? "block" : "hidden"}>
+      <img
+        id="profileImagePreview"
+        src={imageUrl || ""}
+        alt="Profile Preview"
+        class="h-24 w-24 rounded-md object-cover border border-gray-200"
+      />
+    </div>
+    
+    <div class="flex-1">
+      <input
+        type="file"
+        accept="image/*"
+        id="profileImageInput"
+        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+      />
+      <input type="hidden" name={name} id="profileImageId" value={value} />
+      <p id="profileImageStatus" class="mt-1 text-xs text-gray-500"></p>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  const input = document.getElementById("profileImageInput");
+  const hidden = document.getElementById("profileImageId");
+  const status = document.getElementById("profileImageStatus");
+  const preview = document.getElementById("profileImagePreview");
+  const previewContainer = document.getElementById("imagePreviewContainer");
+
+  input.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith("image/")) {
+      status.textContent = "Only images allowed";
+      status.className = "mt-1 text-xs text-red-500";
+      return;
+    }
+    
+    status.textContent = "Processing...";
+    status.className = "mt-1 text-xs text-blue-600";
+
+    try {
+      const croppedBlob = await cropToSquare(file);
+      
+      if (croppedBlob.size > 5 * 1024 * 1024) {
+        status.textContent = "File must be <= 5 MB after cropping";
+        status.className = "mt-1 text-xs text-red-500";
+        return;
+      }
+
+      status.textContent = "Uploading...";
+      const fd = new FormData();
+      fd.append("file", croppedBlob, "profile.jpg");
+
+      const res = await fetch("/api/admin/blobs/upload.json", {
+        method: "POST",
+        body: fd,
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        status.textContent = err.error || "Upload failed";
+        status.className = "mt-1 text-xs text-red-500";
+        return;
+      }
+
+      const data = await res.json();
+      hidden.value = data.id;
+      
+      // Update preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        preview.src = e.target.result;
+        previewContainer.classList.remove("hidden");
+        previewContainer.classList.add("block");
+      };
+      reader.readAsDataURL(croppedBlob);
+      
+      status.textContent = "Uploaded successfully";
+      status.className = "mt-1 text-xs text-green-600";
+    } catch (err) {
+      console.error(err);
+      status.textContent = "Failed to process image";
+      status.className = "mt-1 text-xs text-red-500";
+    }
+  });
+
+  async function cropToSquare(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const size = Math.min(img.width, img.height);
+        canvas.width = size;
+        canvas.height = size;
+        
+        const ctx = canvas.getContext("2d");
+        
+        // Center crop
+        const offsetX = (img.width - size) / 2;
+        const offsetY = (img.height - size) / 2;
+        
+        ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, size, size);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error("Canvas toBlob failed"));
+          }
+        }, "image/jpeg", 0.9);
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+</script>

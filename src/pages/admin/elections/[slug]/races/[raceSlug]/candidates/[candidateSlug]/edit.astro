@@ -9,6 +9,7 @@ import FormCandidatePolicyResponseInput from "../../../../../../../../components
 import prisma from "../../../../../../../../lib/prisma";
 import { convertKeyToPublicUrl } from "../../../../../../../../lib/blobStorage";
 import FormQualificationInput from "../../../../../../../../components/forms/FormQualificationInput.astro";
+import FormProfileImageInput from "../../../../../../../../components/forms/FormProfileImageInput.astro";
 
 export const prerender = false;
 
@@ -78,7 +79,6 @@ let success: string | null = null;
 if (Astro.request.method === "POST") {
   try {
     const formData = await Astro.request.formData();
-    console.log("Form Data:", Object.fromEntries(formData.entries())); // Debug log
     const externalLinksUrls = formData.getAll("link-url") as string[];
     const externalLinksTypes = formData.getAll("link-type") as string[];
     const externalLinksTexts = formData.getAll("link-displayText") as string[];
@@ -116,6 +116,7 @@ if (Astro.request.method === "POST") {
       "response-question-id",
     ) as string[];
     const responseTexts = formData.getAll("response-text") as string[];
+    const responseSources = formData.getAll("response-source") as string[];
 
     const policyResponses = responseQuestionIds
       .map((questionId, i) => {
@@ -137,6 +138,7 @@ if (Astro.request.method === "POST") {
           id: responseIds[i] || undefined,
           questionId,
           responseText: responseTexts[i] || "",
+          source: responseSources[i] || null,
           clarifications,
         };
       })
@@ -169,6 +171,7 @@ if (Astro.request.method === "POST") {
           profileImage: true,
           externalLinks: { include: { externalLinkType: true } },
           qualifications: { include: { qualificationType: true } },
+          policyResponses: { include: { clarifications: true } },
         },
       });
       if (updatedCandidate) {
@@ -293,6 +296,7 @@ const profileImageUrl = convertKeyToPublicUrl(
           id: r.id,
           policyQuestionId: r.policyQuestionId,
           response: r.response,
+          source: r.source,
           clarifications: r.clarifications.map((c) => ({
             id: c.id,
             clarification: c.clarification,
@@ -307,33 +311,10 @@ const profileImageUrl = convertKeyToPublicUrl(
         value={candidate.isIncumbent ? "on" : "off"}
       />
 
-      <div>
-        <label class="block text-sm font-medium text-gray-700"
-          >Profile Image</label
-        >
-        {
-          profileImageUrl && (
-            <img
-              src={profileImageUrl}
-              alt="Profile"
-              class="mb-2 h-24 w-24 rounded-md object-cover"
-            />
-          )
-        }
-        <input
-          type="file"
-          accept="image/*"
-          id="profileImageInput"
-          class="bg-primary mt-1 block rounded-md border border-gray-300"
-        />
-        <input
-          type="hidden"
-          name="profileImageId"
-          id="profileImageId"
-          value={candidate.profileImageId || ""}
-        />
-        <p id="profileImageStatus" class="mt-1 text-xs text-gray-500"></p>
-      </div>
+      <FormProfileImageInput
+        value={candidate.profileImageId || ""}
+        imageUrl={profileImageUrl}
+      />
 
       <div class="flex justify-end gap-3 border-t border-gray-200 pt-4">
         <Button
@@ -344,45 +325,6 @@ const profileImageUrl = convertKeyToPublicUrl(
         </Button>
         <Button type="submit">Save Changes</Button>
       </div>
-
-      <script type="module">
-        const input = document.getElementById("profileImageInput");
-        const hidden = document.getElementById("profileImageId");
-        const status = document.getElementById("profileImageStatus");
-
-        input.addEventListener("change", async (e) => {
-          const file = e.target.files[0];
-          if (!file) return;
-          if (!file.type.startsWith("image/")) {
-            status.textContent = "Only images allowed";
-            return;
-          }
-          if (file.size > 5 * 1024 * 1024) {
-            status.textContent = "File must be <= 5 MB";
-            return;
-          }
-          status.textContent = "Uploading...";
-          const fd = new FormData();
-          fd.append("file", file);
-          try {
-            const res = await fetch("/api/admin/blobs/upload.json", {
-              method: "POST",
-              body: fd,
-            });
-            if (!res.ok) {
-              const err = await res.json();
-              status.textContent = err.error || "Upload failed";
-              return;
-            }
-            const data = await res.json();
-            hidden.value = data.id;
-            status.textContent = "Uploaded";
-          } catch (err) {
-            console.error(err);
-            status.textContent = "Upload failed";
-          }
-        });
-      </script>
     </form>
 
     <!-- Danger Zone -->

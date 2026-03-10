@@ -61,6 +61,7 @@ model Race {
   updatedAt   DateTime  @default(now()) 
   deletedAt   DateTime? 
   partyCategory String  @default("General Election")
+  order         Int      @default(0)
 
   candidates             Candidate[]
   policyQuestionsToRaces PolicyQuestionToRace[]
@@ -177,6 +178,7 @@ model CandidatePolicyResponse {
   responseReceivedAt DateTime?      
   response           String
   responseRedacted   String?
+  source             String?
   createdAt          DateTime       @default(now()) 
   updatedAt          DateTime       @default(now()) 
   deletedAt          DateTime?      
