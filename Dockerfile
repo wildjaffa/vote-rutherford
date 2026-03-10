@@ -36,6 +36,9 @@ COPY --from=builder /app/package*.json ./
 # Copy Prisma schema for migrations
 COPY --from=builder /app/prisma ./prisma
 
+# Copy source code for the email worker
+COPY --from=builder /app/src ./src
+
 # Copy prisma config for migrations
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
