@@ -7,6 +7,7 @@ import { actions } from "astro:actions";
 import FormExternalLinkInput from "../../../../../../../components/forms/FormExternalLinkInput.astro";
 import FormCandidatePolicyResponseInput from "../../../../../../../components/forms/FormCandidatePolicyResponseInput.astro";
 import FormQualificationInput from "../../../../../../../components/forms/FormQualificationInput.astro";
+import FormProfileImageInput from "../../../../../../../components/forms/FormProfileImageInput.astro";
 
 export const prerender = false;
 
@@ -130,7 +131,7 @@ if (Astro.request.method === "POST") {
 
     if (result.data) {
       return Astro.redirect(
-        `/admin/elections/${electionSlug}/races/${raceSlug}/candidates/${result.data.data.slug}/edit`,
+        `/admin/elections/${electionSlug}/races/${raceSlug}/candidates/${result.data.slug}/edit`,
       );
     }
   } catch (err) {
@@ -225,19 +226,8 @@ if (Astro.request.method === "POST") {
 
     <FormInput label="Is Incumbent" name="isIncumbent" type="checkbox" />
 
-    <div>
-      <label class="block text-sm font-medium text-gray-700"
-        >Profile Image</label
-      >
-      <input
-        type="file"
-        accept="image/*"
-        id="profileImageInput"
-        class="mt-1 block w-full"
-      />
-      <input type="hidden" name="profileImageId" id="profileImageId" />
-      <p id="profileImageStatus" class="mt-1 text-xs text-gray-500"></p>
-    </div>
+    <FormProfileImageInput />
+
 
     <div class="flex justify-end gap-3 pt-4">
       <Button
@@ -248,44 +238,6 @@ if (Astro.request.method === "POST") {
       <Button type="submit">Create Candidate</Button>
     </div>
 
-    <script type="module">
-      const input = document.getElementById("profileImageInput");
-      const hidden = document.getElementById("profileImageId");
-      const status = document.getElementById("profileImageStatus");
-
-      input.addEventListener("change", async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        if (!file.type.startsWith("image/")) {
-          status.textContent = "Only images allowed";
-          return;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-          status.textContent = "File must be <= 5 MB";
-          return;
-        }
-        status.textContent = "Uploading...";
-        const fd = new FormData();
-        fd.append("file", file);
-        try {
-          const res = await fetch("/api/admin/blobs/upload.json", {
-            method: "POST",
-            body: fd,
-          });
-          if (!res.ok) {
-            const err = await res.json();
-            status.textContent = err.error || "Upload failed";
-            return;
-          }
-          const data = await res.json();
-          hidden.value = data.id;
-          status.textContent = "Uploaded";
-        } catch (err) {
-          console.error(err);
-          status.textContent = "Upload failed";
-        }
-      });
-    </script>
   </form>
 </AdminLayout>
 

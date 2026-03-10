@@ -100,6 +100,7 @@ export async function createCandidate(
             candidateId: newCandidate.id,
             policyQuestionId: response.questionId,
             response: response.responseText,
+            source: response.source ?? null,
             requestSentAt: new Date(),
           },
         });
@@ -347,6 +348,7 @@ export async function updateCandidate(
             where: { id: targetResponseId },
             data: {
               response: response.responseText,
+              source: response.source ?? null,
               updatedAt: new Date(),
             },
           });
@@ -358,6 +360,7 @@ export async function updateCandidate(
               candidateId: id,
               policyQuestionId: response.questionId,
               response: response.responseText,
+              source: response.source ?? null,
               requestSentAt: new Date(),
             },
           });
@@ -448,7 +451,7 @@ export async function partialUpdateCandidate(
 
   // We only run validation on provided keys using Zod's safeParse on the partial schema
   // We avoid validateCandidatePayload because it expects full data
-  const { UpsertCandidate, upsertCandidateSchema } = await import("../models/upsertCandidate");
+  const { upsertCandidateSchema } = await import("../models/upsertCandidate");
   const validation = upsertCandidateSchema.partial().safeParse(body);
   
   if (!validation.success) {

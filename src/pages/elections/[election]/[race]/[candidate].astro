@@ -2,7 +2,13 @@
 import Layout from "../../../../layouts/Layout.astro";
 import prisma from "../../../../lib/prisma";
 import CandidateProfilePicture from "../../../../components/CandidateProfilePicture.astro";
-import { linkTypeToIcon, Square, Check } from "../../../../lib/icons";
+import {
+  linkTypeToIcon,
+  Square,
+  Check,
+  ExternalLink,
+  CircleQuestionMark,
+} from "../../../../lib/icons";
 import { LinkTypes, QualificationTypes } from "../../../../constants";
 import type {
   CandidateExternalLink,
@@ -209,6 +215,30 @@ if (mobileFullName.length > 15) {
                 <p class="mt-4 w-full text-gray-700">
                   {response?.response ?? "No response provided"}
                 </p>
+                {response?.source && (
+                  <div class="mt-2 flex items-center gap-2">
+                    <div
+                      class="group relative inline-flex items-center gap-1 focus:outline-none"
+                      tabindex="0"
+                    >
+                      <a
+                        href={response.source}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-secondary flex items-center gap-1 text-sm font-medium underline"
+                      >
+                        <ExternalLink class="size-3" /> View Source
+                      </a>
+                      <CircleQuestionMark class="text-gray-400 size-3.5 cursor-help" />
+                      <div class="bg-primary pointer-events-none absolute bottom-full left-0 mb-2 w-64 rounded-lg px-3 py-2 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus:opacity-100 md:left-1/2 md:w-48 md:-translate-x-1/2 z-50">
+                        The candidate answered a similar question, but not this
+                        exact question. We provided the answer for
+                        transparency.
+                        <div class="border-t-primary absolute top-full left-10 -ml-1 border-4 border-transparent md:left-1/2" />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             );
           })

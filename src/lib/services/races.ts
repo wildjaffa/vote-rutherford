@@ -100,6 +100,26 @@ export async function updateRace(
   return updated;
 }
 
+export async function reorderRaces(
+  electionId: string,
+  updates: { id: string; order: number }[],
+  userId: string,
+): Promise<void> {
+  const hasPermission = await canManageRace(electionId);
+  if (!hasPermission) {
+    throw makeError("Unauthorized", 403);
+  }
+
+  await withUserContext(userId, async () => {
+    for (const update of updates) {
+      await prisma.race.update({
+        where: { id: update.id },
+        data: { order: update.order },
+      });
+    }
+  });
+}
+
 export async function deleteRace(id: string, userId: string): Promise<Race> {
   const hasPermission = await canManageRace(id);
   if (!hasPermission) {

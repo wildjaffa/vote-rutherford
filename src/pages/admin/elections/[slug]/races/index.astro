@@ -2,7 +2,7 @@
 import AdminLayout from "../../../../../layouts/AdminLayout.astro";
 import prisma from "../../../../../lib/prisma";
 import type { RaceWithCandidates } from "../../../../../lib/types";
-import { Plus } from "../../../../../lib/icons";
+import { Plus, GripVertical } from "../../../../../lib/icons";
 
 export const prerender = false;
 
@@ -26,9 +26,7 @@ const election = await prisma.election.findUnique({
           },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: [{ raceTypeId: "desc" }, { order: "asc" }],
     },
   },
 });
@@ -62,9 +60,10 @@ if (!election) {
     {
       election.races.length > 0 ? (
         <div class="overflow-x-auto">
-          <table class="w-full">
+          <table class="w-full" id="races-table">
             <thead>
               <tr class="border-b border-gray-200">
+                <th class="w-10 px-4 py-3" />
                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">
                   Name
                 </th>
@@ -74,14 +73,27 @@ if (!election) {
                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">
                   Candidates
                 </th>
+                <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700">
+                  Status
+                </th>
                 <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="races-tbody" data-election-id={election.id}>
               {election.races.map((race: RaceWithCandidates) => (
-                <tr class="border-b border-gray-100 transition-colors hover:bg-gray-50">
+                <tr
+                  class="race-row group border-b border-gray-100 transition-colors hover:bg-gray-50"
+                  draggable="true"
+                  data-id={race.id}
+                >
+                  <td class="cursor-move px-4 py-3 text-gray-400">
+                    <GripVertical
+                      size="18"
+                      class="transition-colors group-hover:text-gray-600"
+                    />
+                  </td>
                   <td class="px-4 py-3 text-sm font-medium text-gray-900">
                     {race.name}
                   </td>
@@ -91,6 +103,9 @@ if (!election) {
                   </td>
                   <td class="px-4 py-3 text-sm whitespace-nowrap text-gray-600">
                     {`${race.candidates.length} ${race.candidates.length !== 1 ? "candidates" : "candidate"}`}
+                  </td>
+                  <td class="status-cell px-4 py-3 text-center text-sm">
+                    <span class="text-gray-400">—</span>
                   </td>
                   <td class="space-x-2 px-4 py-3 text-right text-sm">
                     <a
@@ -118,4 +133,132 @@ if (!election) {
       )
     }
   </div>
+
+  <script>
+    import { actions } from "astro:actions";
+
+    const tbody = document.getElementById("races-tbody") as HTMLElement;
+    const electionId = tbody?.dataset.electionId;
+    let draggedRow: HTMLElement | null = null;
+
+    tbody?.addEventListener("dragstart", (e: DragEvent) => {
+      draggedRow = (e.target as HTMLElement).closest(".race-row");
+      if (draggedRow && e.dataTransfer) {
+        draggedRow.classList.add("opacity-50", "bg-gray-100");
+        e.dataTransfer.effectAllowed = "move";
+      }
+    });
+
+    tbody?.addEventListener("dragend", () => {
+      if (draggedRow) {
+        draggedRow.classList.remove("opacity-50", "bg-gray-100");
+        draggedRow = null;
+      }
+
+      // Clean up hover states
+      document.querySelectorAll(".race-row").forEach((row) => {
+        row.classList.remove("border-t-2", "border-secondary");
+      });
+    });
+
+    tbody?.addEventListener("dragover", (e: DragEvent) => {
+      e.preventDefault();
+      const target = (e.target as HTMLElement).closest(
+        ".race-row",
+      ) as HTMLElement;
+      if (target && draggedRow && target !== draggedRow) {
+        const rect = target.getBoundingClientRect();
+        const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+
+        // Remove border from all rows first
+        document.querySelectorAll(".race-row").forEach((row) => {
+          row.classList.remove("border-t-2", "border-b-2", "border-secondary");
+        });
+
+        if (next) {
+          target.classList.add("border-b-2", "border-secondary");
+        } else {
+          target.classList.add("border-t-2", "border-secondary");
+        }
+      }
+    });
+
+    tbody?.addEventListener("drop", async (e: DragEvent) => {
+      e.preventDefault();
+      const target = (e.target as HTMLElement).closest(
+        ".race-row",
+      ) as HTMLElement;
+
+      if (target && draggedRow && target !== draggedRow) {
+        const rect = target.getBoundingClientRect();
+        const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+
+        if (next) {
+          target.after(draggedRow);
+        } else {
+          target.before(draggedRow);
+        }
+
+        // Trigger save
+        await saveOrder();
+      }
+
+      // Clean up
+      document.querySelectorAll(".race-row").forEach((row) => {
+        row.classList.remove("border-t-2", "border-b-2", "border-secondary");
+      });
+    });
+
+    async function saveOrder() {
+      const rows = Array.from(
+        document.querySelectorAll(".race-row"),
+      ) as HTMLElement[];
+      const updates = rows.map((row, index) => ({
+        id: row.dataset.id || "",
+        order: index,
+      }));
+
+      // Find the row that was just moved (or just show status on all affected)
+      // For simplicity, we'll show a global indicator or status on the first row
+      const firstStatusCell = rows[0]?.querySelector(".status-cell");
+      if (firstStatusCell) {
+        firstStatusCell.innerHTML =
+          '<span class="text-blue-500 animate-pulse">Saving...</span>';
+      }
+
+      try {
+        if (!electionId) throw new Error("Missing electionId");
+
+        const { error } = await actions.reorderRaces({
+          electionId,
+          updates,
+        });
+
+        if (error) {
+          console.error("Reorder error:", error);
+          window.toast.error(error.message || "Failed to save order");
+          if (firstStatusCell) {
+            firstStatusCell.innerHTML =
+              '<span class="text-red-500 text-xs font-medium">Error</span>';
+          }
+        } else {
+          if (firstStatusCell) {
+            firstStatusCell.innerHTML =
+              '<span class="text-green-500 text-xs font-bold">Saved</span>';
+            setTimeout(() => {
+              firstStatusCell.innerHTML =
+                '<span class="text-gray-400">—</span>';
+            }, 2000);
+          }
+        }
+      } catch (err) {
+        console.error("Exception:", err);
+        window.toast.error("Network error while saving order.");
+        if (firstStatusCell) {
+          firstStatusCell.innerHTML =
+            '<span class="text-red-500 text-xs font-medium">Failed</span>';
+        }
+      }
+    }
+  </script>
 </AdminLayout>

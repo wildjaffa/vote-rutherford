@@ -85,6 +85,7 @@ if (Astro.request.method === "POST") {
     const slug = formData.get("slug") as string;
     const districtId = formData.get("districtId") as string | null;
     const partyCategory = formData.get("partyCategory") as string;
+    const order = parseInt(formData.get("order") as string) || 0;
 
     const policyQuestionIds = formData.getAll(
       "policy-question-ids",
@@ -99,6 +100,7 @@ if (Astro.request.method === "POST") {
       description: description || undefined,
       status: status,
       slug,
+      order,
       numSelections: parseInt(formData.get("numSelections") as string) || 1,
       ...(districtId && { districtId }),
       policyQuestionIds,
@@ -228,6 +230,14 @@ if (Astro.request.method === "POST") {
         name="numSelections"
         type="number"
         value={race.numSelections.toString()}
+        required
+      />
+
+      <FormInput
+        label="Order"
+        name="order"
+        type="number"
+        value={race.order.toString()}
         required
       />
 

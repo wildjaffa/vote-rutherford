@@ -26,7 +26,10 @@ if (!selectedGroupId) {
     },
     include: {
       races: {
-        orderBy: { election: { date: "asc" } },
+        orderBy: [
+          { raceType: { id: "desc" } },
+          { order: "asc" },
+        ],
         where: {
           deletedAt: null,
         },
@@ -50,7 +53,10 @@ if (!selectedGroupId) {
           district: {
             include: {
               races: {
-                orderBy: { election: { date: "asc" } },
+                orderBy: [
+                  { raceType: { id: "desc" } },
+                  { order: "asc" },
+                ],
                 where: {
                   deletedAt: null,
                 },
@@ -127,12 +133,16 @@ for (const race of districtRaces) {
 const election = closestFutureElection || mostRecentPastElection;
 
 // Filter races to the selected election (O(n) but small n)
-const races = election
+  const races = election
   ? validRaces
       .filter((r) => r.election && r.election.id === election.id)
       .sort((a, b) => {
         const typeDiff = b.raceType.id - a.raceType.id;
         if (typeDiff !== 0) return typeDiff;
+
+        const orderDiff = (a.order || 0) - (b.order || 0);
+        if (orderDiff !== 0) return orderDiff;
+
         return a.name.localeCompare(b.name, undefined, {
           numeric: true,
           sensitivity: "base",

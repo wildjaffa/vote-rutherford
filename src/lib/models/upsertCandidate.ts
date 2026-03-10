@@ -32,6 +32,7 @@ export const upsertCandidateSchema = z.object({
         id: z.string().optional(),
         questionId: z.string(),
         responseText: z.string(),
+        source: z.string().url("Must be a valid URL").optional().nullable(),
         clarifications: z
           .array(
             z.object({

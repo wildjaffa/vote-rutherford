@@ -55,3 +55,27 @@ export const deleteRace = defineAction({
     }
   },
 });
+
+export const reorderRaces = defineAction({
+  accept: "json",
+  input: z.object({
+    electionId: z.string(),
+    updates: z.array(
+      z.object({
+        id: z.string(),
+        order: z.number().int(),
+      }),
+    ),
+  }),
+  handler: async (input, context) => {
+    const userId = await getCurrentUserId(
+      context.cookies.get("__session")?.value,
+    );
+    try {
+      await raceService.reorderRaces(input.electionId, input.updates, userId);
+      return { success: true };
+    } catch (err) {
+      handleActionError(err, "Failed to reorder races");
+    }
+  },
+});

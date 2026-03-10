@@ -12,6 +12,7 @@ interface Props {
     id?: string;
     policyQuestionId: string;
     response: string;
+    source?: string | null;
     clarifications?: {
       id: string;
       clarification: string;
@@ -75,6 +76,18 @@ function getExistingResponse(questionId: string) {
               >
                 {er?.response || ""}
               </textarea>
+              <div class="flex items-center gap-2">
+                <label class="shrink-0 text-xs font-medium text-gray-500">
+                  Source URL:
+                </label>
+                <input
+                  type="url"
+                  name="response-source"
+                  value={er?.source || ""}
+                  class="focus:border-secondary focus:ring-secondary block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+                  placeholder="https://example.com/source"
+                />
+              </div>
             </div>
 
             <div class="space-y-3">
