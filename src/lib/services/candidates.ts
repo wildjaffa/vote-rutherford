@@ -453,7 +453,7 @@ export async function partialUpdateCandidate(
   // We avoid validateCandidatePayload because it expects full data
   const { upsertCandidateSchema } = await import("../models/upsertCandidate");
   const validation = upsertCandidateSchema.partial().safeParse(body);
-  
+
   if (!validation.success) {
     throw makeError("Validation failed", undefined, validation.error);
   }
@@ -470,14 +470,15 @@ export async function partialUpdateCandidate(
     partyAffiliation,
     birthYear,
     isIncumbent,
-    slug
+    slug,
   } = validation.data;
 
   if (firstName !== undefined) dataToUpdate.firstName = firstName;
   if (lastName !== undefined) dataToUpdate.lastName = lastName;
   if (middleName !== undefined) dataToUpdate.middleName = middleName || null;
   if (email !== undefined) dataToUpdate.email = email || null;
-  if (partyAffiliation !== undefined) dataToUpdate.partyAffiliation = partyAffiliation;
+  if (partyAffiliation !== undefined)
+    dataToUpdate.partyAffiliation = partyAffiliation;
   if (birthYear !== undefined) dataToUpdate.birthYear = birthYear || null;
   if (isIncumbent !== undefined) dataToUpdate.isIncumbent = isIncumbent;
   if (slug !== undefined) dataToUpdate.slug = slug;

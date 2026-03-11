@@ -9,6 +9,7 @@ import { DistrictType } from "../src/generated/prisma/enums";
 import { normalizeAddress } from "../src/lib/utils/addressNormalizer";
 import prisma from "../src/lib/prisma";
 import { Prisma } from "../src/generated/prisma/client";
+import { MeiliSearch } from "meilisearch";
 
 // {"OBJECTID":"40546","ESN":"261","CITY":"MURFREESBORO","GlobalID":"{4D96048E-F2E2-4DD6-9054-4430D03D5335}","Shape.STArea()":"1,869,993,867.68","Shape.STLength()":"1,237,601.61"}
 interface MunicipalMeta {
@@ -31,6 +32,11 @@ const CSV_FILE = path.join(
 const BATCH_SIZE = 500;
 const DRY_RUN = process.argv.includes("--dry-run");
 const VERBOSE = process.argv.includes("--verbose");
+
+const meilisearchClient = new MeiliSearch({
+  host: process.env.MEILISEARCH_HOST || "http://localhost:7700",
+  apiKey: process.env.MEILISEARCH_API_KEY || "masterKey",
+});
 
 // Map DistrictType to GeoJSON filenames
 const LAYER_FILES: Partial<Record<DistrictType, string>> = {
@@ -90,9 +96,19 @@ interface AddressData {
   longitude: number;
 }
 
+interface MeiliAddressDoc {
+  id: string;
+  address: string;
+  normalizedAddress: string;
+  city: string | null;
+  zip: string | null;
+  districtGroupId: string | null;
+}
+
 interface BatchItem {
   addressData: AddressData;
   districts: Prisma.DistrictToVoterAddressCreateWithoutVoterAddressInput[];
+  districtGroupId: string;
 }
 
 async function loadLayers(): Promise<LoadedLayer[]> {
@@ -232,6 +248,8 @@ async function processAddresses(
   let batch: BatchItem[] = [];
   let count = 0;
 
+  const districtGroupMap = new Map<string, string>();
+
   console.log("Starting address processing...");
 
   for await (const row of stream) {
@@ -312,6 +330,28 @@ async function processAddresses(
       }
     }
 
+    const districtIds = Array.from(addedDistrictIds).sort();
+    const groupHash = districtIds.join(",");
+
+    let districtGroupId = districtGroupMap.get(groupHash);
+    if (!districtGroupId && !DRY_RUN) {
+      const g = await prisma.districtGroup.upsert({
+        where: { hash: groupHash },
+        create: {
+          hash: groupHash,
+          districts: {
+            create: districtIds.map((dId) => ({ districtId: dId })),
+          },
+        },
+        update: {},
+      });
+      districtGroupId = g.id;
+      districtGroupMap.set(groupHash, districtGroupId);
+    } else if (!districtGroupId && DRY_RUN) {
+      districtGroupId = "dry-run-group-" + groupHash;
+      districtGroupMap.set(groupHash, districtGroupId);
+    }
+
     batch.push({
       addressData: {
         address: fullAddress,
@@ -322,6 +362,7 @@ async function processAddresses(
         longitude: lon,
       },
       districts: districtConnects,
+      districtGroupId: districtGroupId as string,
     });
 
     count++;
@@ -339,26 +380,80 @@ async function processAddresses(
   console.log(`\nProcessed ${count} addresses.`);
 }
 
-async function saveBatch(batch: BatchItem[]) {
-  if (DRY_RUN) {
-    return;
+async function setupMeilisearch() {
+  if (DRY_RUN) return;
+  console.log("Setting up Meilisearch index...");
+  const index = meilisearchClient.index("addresses");
+
+  console.log("  Clearing existing Meilisearch documents...");
+  try {
+    const deleteBatch = await index.deleteAllDocuments();
+    console.log(`  ✓ Meilisearch clear task enqueued: ${deleteBatch.taskUid}`);
+  } catch (e) {
+    console.error("  ❌ Failed to clear Meilisearch documents:", e);
   }
+
+  // Basic configuration
+  await index.updateSettings({
+    searchableAttributes: ["address", "city", "zip"],
+    filterableAttributes: ["city", "zip", "districtGroupId"],
+    rankingRules: [
+      "words",
+      "typo",
+      "proximity",
+      "attribute",
+      "sort",
+      "exactness",
+    ],
+  });
+  console.log("  ✓ Meilisearch settings updated");
+}
+
+async function saveBatchToMeilisearch(docs: MeiliAddressDoc[]) {
+  if (DRY_RUN || docs.length === 0) return;
+
+  try {
+    const task = await meilisearchClient
+      .index("addresses")
+      .addDocuments(docs, { primaryKey: "id" });
+    if (VERBOSE)
+      console.log(`  ✓ Meilisearch sync task enqueued: ${task.taskUid}`);
+  } catch (error) {
+    console.error("Failed to sync batch to Meilisearch:", error);
+  }
+}
+
+async function saveBatch(batch: BatchItem[]) {
+  if (DRY_RUN) return;
+  const meiliDocs: MeiliAddressDoc[] = [];
 
   for (const item of batch) {
     try {
-      await prisma.voterAddress.create({
+      const created = await prisma.voterAddress.create({
         data: {
           ...item.addressData,
+          districtGroupId: item.districtGroupId,
           districts: {
             create: item.districts,
           },
         },
+      });
+
+      meiliDocs.push({
+        id: created.id,
+        address: created.address,
+        normalizedAddress: created.normalizedAddress,
+        city: created.city,
+        zip: created.zip,
+        districtGroupId: created.districtGroupId,
       });
     } catch (e) {
       if (VERBOSE)
         console.error("Failed to save address:", item.addressData.address, e);
     }
   }
+
+  await saveBatchToMeilisearch(meiliDocs);
 }
 
 async function main() {
@@ -376,12 +471,22 @@ async function main() {
     const districtIdMap = await ensureDistricts(layers);
     const allDistrictId = await ensureAllDistrict();
 
+    await setupMeilisearch();
+
     if (!DRY_RUN) {
       console.log("Cleaning up existing voter addresses and associations...");
       const deletedAssoc = await prisma.districtToVoterAddress.deleteMany({});
       const deletedAddresses = await prisma.voterAddress.deleteMany({});
       console.log(
         `  ✓ Deleted ${deletedAssoc.count} associations and ${deletedAddresses.count} addresses.`,
+      );
+
+      console.log("Cleaning up existing district groups...");
+      const deletedGroupAssoc =
+        await prisma.districtGroupToDistrict.deleteMany({});
+      const deletedGroups = await prisma.districtGroup.deleteMany({});
+      console.log(
+        `  ✓ Deleted ${deletedGroupAssoc.count} group associations and ${deletedGroups.count} groups.`,
       );
     }
 

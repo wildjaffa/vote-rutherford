@@ -359,6 +359,7 @@ model District {
 
   voterAddresses DistrictToVoterAddress[]
   races          Race[]
+  districtGroups DistrictGroupToDistrict[]
   
   @@map("districts")
   @@unique([type, name, number])
@@ -373,6 +374,9 @@ model VoterAddress {
   latitude          Float
   longitude         Float
   
+  districtGroup     DistrictGroup? @relation(fields: [districtGroupId], references: [id])
+  districtGroupId   String?
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now())
   deletedAt DateTime?
@@ -381,6 +385,32 @@ model VoterAddress {
 
   @@map("voter_addresses")
   @@index([normalizedAddress])
+}
+
+model DistrictGroup {
+  id        String    @id @default(uuid())
+  hash      String    @unique
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now())
+
+  voterAddresses VoterAddress[]
+  districts      DistrictGroupToDistrict[]
+
+  @@map("district_groups")
+}
+
+model DistrictGroupToDistrict {
+  id              String        @id @default(uuid())
+  districtGroup   DistrictGroup @relation(fields: [districtGroupId], references: [id])
+  districtGroupId String
+  district        District      @relation(fields: [districtId], references: [id])
+  districtId      String
+
+  createdAt DateTime @default(now())
+
+  @@unique([districtGroupId, districtId])
+  @@map("district_groups_to_districts")
 }
 
 model DistrictToVoterAddress {

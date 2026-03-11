@@ -71,9 +71,10 @@ export class GmailProvider implements EmailProvider {
 
       // Step 2: Format the body for HTML if it's not already HTML-like.
       // We convert newlines to <br> and wrap in a standard font/div.
-      const htmlBody = options.body.includes("<br") || options.body.includes("<p")
-        ? options.body // Keep as is if it already contains HTML tags
-        : options.body.split("\n").join("<br />");
+      const htmlBody =
+        options.body.includes("<br") || options.body.includes("<p")
+          ? options.body // Keep as is if it already contains HTML tags
+          : options.body.split("\n").join("<br />");
 
       const str = [
         `From: ${fromEmail}`,
