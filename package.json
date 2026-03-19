@@ -16,7 +16,6 @@
     "esbuild": "0.27.3"
   },
   "dependencies": {
-    "@astrojs/check": "^0.9.6",
     "@astrojs/node": "^9.5.2",
     "@aws-sdk/client-s3": "^3.500.0",
     "@fontsource-variable/montserrat": "^5.2.8",
@@ -26,9 +25,7 @@
     "@lucide/astro": "^0.563.0",
     "@prisma/adapter-libsql": "^7.3.0",
     "@prisma/client": "^7.3.0",
-    "@tailwindcss/vite": "^4.1.18",
     "@turf/turf": "^7.3.3",
-    "@types/node": "^25.3.5",
     "astro": "^5.17.1",
     "bullmq": "^5.70.4",
     "csv-parser": "^3.2.0",
@@ -43,13 +40,13 @@
     "pg": "^8.17.2",
     "pm2": "^5.4.3",
     "simple-icons-astro": "^16.1.0",
-    "tailwindcss": "^4.1.18",
-    "ts-node": "^10.9.2",
-    "vite-plugin-entry-shaking": "^0.5.1",
     "tsx": "^4.21.0"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.6",
     "@playwright/test": "^1.58.2",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/node": "^25.3.5",
     "@types/pg": "^8.16.0",
     "@typescript-eslint/parser": "^8.54.0",
     "eslint": "^9.39.2",
@@ -59,7 +56,10 @@
     "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "prisma": "^7.3.0",
+    "tailwindcss": "^4.1.18",
+    "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.54.0"
+    "typescript-eslint": "^8.54.0",
+    "vite-plugin-entry-shaking": "^0.5.1"
   }
 }
