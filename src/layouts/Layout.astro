@@ -26,6 +26,7 @@ const { title, description, fullWidth = false, noIndex = false } = Astro.props;
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
     {noIndex && <meta name="robots" content="noindex, nofollow" />}
   </head>
   <body>

@@ -3,8 +3,8 @@ import prisma from "../lib/prisma";
 
 export const prerender = false;
 
-export const GET: APIRoute = async () => {
-  const baseUrl = "https://govoterutherford.com"; // Default placeholder, user can change
+export const GET: APIRoute = async (context) => {
+  const baseUrl = context.site?.toString().replace(/\/$/, "") ?? "https://govoterutherford.com";
 
   // Fetch everything needed for the sitemap
   const [elections, races, candidates] = await Promise.all([
