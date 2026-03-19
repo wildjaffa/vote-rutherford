@@ -21,7 +21,7 @@ const {
 ---
 
 <div class="mb-4">
-  <label for={name} class="block text-sm font-medium text-gray-700 mb-2">
+  <label for={name} class="mb-2 block text-sm font-medium text-gray-700">
     {label}
     {required && <span class="text-red-500">*</span>}
   </label>
@@ -32,7 +32,7 @@ const {
     placeholder={placeholder}
     rows={rows}
     class:list={[
-      "w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-secondary focus:border-transparent transition-colors resize-y",
+      "focus:ring-secondary w-full resize-y rounded-lg border px-4 py-2 transition-colors focus:border-transparent focus:ring-2",
       error ? "border-red-500" : "border-gray-300",
     ]}>{value}</textarea
   >

@@ -28,6 +28,9 @@ import {
   SquareCheckBig,
   Share,
   GripVertical,
+  Mail,
+  MessageSquare,
+  MapPin,
 } from "@lucide/astro";
 
 import {
@@ -70,6 +73,9 @@ export {
   SquareCheckBig,
   Share,
   GripVertical,
+  Mail,
+  MessageSquare,
+  MapPin,
 };
 
 export const qualificationTypeToIcon: Record<string, AstroComponent> = {
