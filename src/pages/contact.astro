@@ -1,8 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Button from "../components/Button.astro";
-import FormInput from "../components/forms/FormInput.astro";
-import FormTextarea from "../components/forms/FormTextarea.astro";
 import { env } from "../lib/utils/environment";
 import { Mail, MessageSquare, MapPin } from "../lib/icons";
 
@@ -10,9 +8,8 @@ const contactEmail = env("CONTACT_EMAIL") || "hello@govoterutherford.com";
 ---
 
 <Layout
-  description="Contact the Vote Rutherford team with questions, feedback, or data corrections"
+  description="Get in touch with the Vote Rutherford team for questions, feedback, or candidate inquiries."
   title="Contact - Vote Rutherford"
-  fullWidth={true}
 >
   <main class="flex-1">
     <!-- Hero Section -->
@@ -22,217 +19,83 @@ const contactEmail = env("CONTACT_EMAIL") || "hello@govoterutherford.com";
           Get in Touch
         </h1>
         <p class="mx-auto max-w-2xl text-xl opacity-90">
-          Have questions or feedback? We're here to help you navigate local
-          elections.
+          We're here to help you navigate local elections and ensure every voter in Rutherford County has the information they need.
         </p>
       </div>
     </section>
 
     <div class="container mx-auto max-w-4xl px-4 py-12 md:py-20">
-      <div class="grid gap-12 lg:grid-cols-3">
-        <!-- Contact Info -->
-        <div class="space-y-8 lg:col-span-1">
-          <div>
-            <h2 class="sorts-mill-goudy text-primary mb-6 text-3xl font-bold">
-              Contact Information
-            </h2>
-            <p class="mb-8 text-lg leading-relaxed text-gray-700">
-              Whether you're a voter with a question or a candidate looking to
-              update your profile, we'd love to hear from you.
-            </p>
+      <div class="text-center mb-16">
+        <h2 class="sorts-mill-goudy text-primary mb-6 text-3xl font-bold">
+          How to Reach Us
+        </h2>
+        <p class="mx-auto max-w-2xl text-lg text-gray-700 leading-relaxed">
+           Whether you're a voter with a question or a candidate looking to update your profile, we'd love to hear from you.
+        </p>
+      </div>
+
+      <div class="grid gap-8 md:grid-cols-3">
+        <!-- Email Card -->
+        <div class="bg-gray-50 border border-gray-100 rounded-4xl p-8 text-center flex flex-col items-center shadow-sm hover:shadow-md transition-shadow">
+          <div class="bg-secondary/10 text-secondary rounded-2xl p-4 mb-6">
+            <Mail class="h-8 w-8" />
           </div>
+          <h3 class="sorts-mill-goudy text-xl font-bold text-gray-900 mb-4">Email Us</h3>
+          <p class="text-gray-600 mb-6 flex-1 text-sm">
+            For detailed inquiries, data corrections, or media requests.
+          </p>
+          <a
+            href={`mailto:${contactEmail}`}
+            class="text-secondary font-bold hover:underline transition-colors break-all"
+          >
+            {contactEmail}
+          </a>
+        </div>
 
-          <div class="space-y-6">
-            <div class="flex items-start gap-4">
-              <div class="bg-secondary/10 text-secondary rounded-xl p-3">
-                <Mail class="h-6 w-6" />
-              </div>
-              <div>
-                <h3 class="font-bold text-gray-900">Email Us</h3>
-                <a
-                  href={`mailto:${contactEmail}`}
-                  class="text-secondary break-all transition-colors hover:underline"
-                >
-                  {contactEmail}
-                </a>
-              </div>
-            </div>
-
-            <div class="flex items-start gap-4">
-              <div class="bg-secondary/10 text-secondary rounded-xl p-3">
-                <MessageSquare class="h-6 w-6" />
-              </div>
-              <div>
-                <h3 class="font-bold text-gray-900">Social Media</h3>
-                <p class="text-gray-600">
-                  Follow us for updates and local election news.
-                </p>
-                <div class="mt-2 flex gap-4">
-                  <a
-                    href="https://instagram.com/govoterutherford"
-                    class="text-secondary hover:underline"
-                    target="_blank"
-                    rel="noopener noreferrer">Instagram</a
-                  >
-                  <a
-                    href="https://facebook.com/govoterutherford"
-                    class="text-secondary hover:underline"
-                    target="_blank"
-                    rel="noopener noreferrer">Facebook</a
-                  >
-                </div>
-              </div>
-            </div>
-
-            <div class="flex items-start gap-4">
-              <div class="bg-secondary/10 text-secondary rounded-xl p-3">
-                <MapPin class="h-6 w-6" />
-              </div>
-              <div>
-                <h3 class="font-bold text-gray-900">Location</h3>
-                <p class="text-gray-600">
-                  Murfreesboro, TN<br />Rutherford County
-                </p>
-              </div>
-            </div>
+        <!-- Social Card -->
+        <div class="bg-gray-50 border border-gray-100 rounded-4xl p-8 text-center flex flex-col items-center shadow-sm hover:shadow-md transition-shadow">
+          <div class="bg-secondary/10 text-secondary rounded-2xl p-4 mb-6">
+            <MessageSquare class="h-8 w-8" />
+          </div>
+          <h3 class="sorts-mill-goudy text-xl font-bold text-gray-900 mb-4">Social Media</h3>
+          <p class="text-gray-600 mb-6 flex-1 text-sm">
+            Follow us for the latest project updates and community election news.
+          </p>
+          <div class="flex flex-col gap-2">
+            <a href="https://instagram.com/govoterutherford" target="_blank" rel="noopener noreferrer" class="text-secondary font-bold hover:underline">Instagram</a>
+            <a href="https://facebook.com/govoterutherford" target="_blank" rel="noopener noreferrer" class="text-secondary font-bold hover:underline">Facebook</a>
           </div>
         </div>
 
-        <!-- Contact Form -->
-        <div class="lg:col-span-2">
-          <div
-            class="rounded-4xl border border-gray-100 bg-gray-50 p-8 shadow-sm md:p-12"
-          >
-            <h2 class="sorts-mill-goudy text-primary mb-8 text-3xl font-bold">
-              Send us a Message
-            </h2>
-
-            <form class="space-y-6">
-              <div class="grid gap-6 md:grid-cols-2">
-                <FormInput
-                  label="Name"
-                  name="name"
-                  placeholder="Your Name"
-                  required
-                />
-                <FormInput
-                  label="Email"
-                  name="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  required
-                />
-              </div>
-
-              <FormInput
-                label="Subject"
-                name="subject"
-                placeholder="What is this regarding?"
-                required
-              />
-
-              <FormTextarea
-                label="Message"
-                name="message"
-                placeholder="How can we help?"
-                required
-                rows={6}
-              />
-
-              <!-- Honeypot field (hidden from users) -->
-              <div class="sr-only" aria-hidden="true">
-                <input
-                  type="text"
-                  name="hp_field"
-                  tabindex="-1"
-                  autocomplete="off"
-                />
-              </div>
-
-              <div class="pt-2">
-                <Button
-                  size="lg"
-                  className="w-full md:w-auto"
-                  type="submit"
-                  id="submit-btn"
-                >
-                  Send Message
-                </Button>
-              </div>
-            </form>
+        <!-- Location Card -->
+        <div class="bg-gray-50 border border-gray-100 rounded-4xl p-8 text-center flex flex-col items-center shadow-sm hover:shadow-md transition-shadow">
+          <div class="bg-secondary/10 text-secondary rounded-2xl p-4 mb-6">
+            <MapPin class="h-8 w-8" />
           </div>
+          <h3 class="sorts-mill-goudy text-xl font-bold text-gray-900 mb-4">Location</h3>
+          <p class="text-gray-600 mb-6 flex-1 text-sm">
+            Based locally in Murfreesboro, TN.
+          </p>
+          <address class="not-italic font-bold text-gray-900 text-sm">
+            Rutherford County, TN
+          </address>
         </div>
       </div>
 
-      <!-- FAQ Teaser Section -->
-      <section
-        class="bg-accent/5 border-accent/20 mt-24 rounded-4xl border-2 p-8 md:p-12"
-      >
-        <div class="grid items-center gap-8 md:grid-cols-2">
-          <div>
-            <h2 class="sorts-mill-goudy text-primary mb-4 text-3xl font-bold">
-              Common Questions
-            </h2>
-            <p class="text-lg leading-relaxed text-gray-700">
-              Looking for quick answers? Check out our "How It Works" page to
-              learn about our address lookup tools, privacy policies, and data
-              sources.
-            </p>
-          </div>
-          <div class="flex justify-center md:justify-end">
+      <!-- FAQ Section Teaser -->
+      <section class="bg-accent/5 border-secondary/20 mt-24 rounded-4xl border-2 p-8 md:p-12 text-center">
+          <h2 class="sorts-mill-goudy text-primary mb-4 text-3xl font-bold">
+            Need Quick Information?
+          </h2>
+          <p class="mx-auto max-w-2xl text-lg leading-relaxed text-gray-700 mb-10">
+            Check out our "How It Works" page for detailed info on address lookups, privacy policies, and how we collect candidate data.
+          </p>
+          <div class="flex justify-center">
             <Button variant="secondary" size="lg" href="/how-it-works">
               View How It Works
             </Button>
           </div>
-        </div>
       </section>
     </div>
   </main>
 </Layout>
-
-<script>
-  import { actions } from "astro:actions";
-
-  const form = document.querySelector("form");
-  const submitBtn = document.getElementById("submit-btn");
-
-  form?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (!form || !submitBtn) return;
-
-    // Loading state
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML =
-      '<span class="flex items-center gap-2">Sending... <svg class="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></span>';
-    (submitBtn as HTMLButtonElement).disabled = true;
-
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries()) as unknown as {
-      name: string;
-      email: string;
-      subject: string;
-      message: string;
-      hp_field?: string;
-    };
-
-    try {
-      const { error } = await actions.submitContactForm(data);
-
-      if (error) {
-        window.toast.error(
-          error.message || "Failed to send message. Please try again.",
-        );
-      } else {
-        window.toast.success(
-          "Message sent! We'll get back to you as soon as possible.",
-        );
-        form.reset();
-      }
-    } catch {
-      window.toast.error("An unexpected error occurred.");
-    } finally {
-      submitBtn.innerHTML = originalText;
-      (submitBtn as HTMLButtonElement).disabled = false;
-    }
-  });
-</script>
