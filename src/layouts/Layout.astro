@@ -24,10 +24,19 @@ const { title, description, fullWidth = false, noIndex = false } = Astro.props;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" />
     <meta name="generator" content={Astro.generator} />
-    <title>{title}</title>
+    <title>{title} | Vote Rutherford</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
     {noIndex && <meta name="robots" content="noindex, nofollow" />}
+
+    <script type="application/ld+json" is:inline>
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Vote Rutherford",
+        "url": "https://govoterutherford.com/"
+      }
+    </script>
   </head>
   <body>
     <Header />
