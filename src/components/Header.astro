@@ -129,4 +129,18 @@ import { X } from "@lucide/astro";
       menuList?.classList.add("opacity-0");
     });
   });
+
+  // Sync "My Ballot" links with localStorage groupId to avoid redirects
+  const syncMyBallotLinks = () => {
+    const groupId = localStorage.getItem("voterGroupId");
+    if (groupId) {
+      document.querySelectorAll('a[href="/my-ballot"]').forEach((link) => {
+        (link as HTMLAnchorElement).href = `/my-ballot?groupId=${groupId}`;
+      });
+    }
+  };
+
+  syncMyBallotLinks();
+  // Also listen for potential storage changes or just re-run periodically if needed, 
+  // but usually it's set once per session.
 </script>

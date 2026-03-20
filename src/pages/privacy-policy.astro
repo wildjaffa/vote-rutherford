@@ -44,8 +44,7 @@ const contactEmail = env("CONTACT_EMAIL");
                 <li class="flex gap-3">
                   <span class="text-accent font-bold">✓</span>
                   <span
-                    ><strong>Cookie data:</strong> We store your address in a browser
-                    cookie so you don't need to re-enter it on future visits.</span
+                    ><strong>Local storage:</strong> We save your address preference in your browser's local storage so you don't need to re-enter it on future visits. This data stays on your device.</span
                   >
                 </li>
               </ul>
@@ -100,8 +99,7 @@ const contactEmail = env("CONTACT_EMAIL");
                 Remember for Convenience
               </h3>
               <p class="text-gray-600">
-                Remember your address for convenience on return visits so you
-                don't have to re-enter it.
+                Save your address preference in your browser's local storage for convenience on return visits.
               </p>
             </div>
           </div>
@@ -174,28 +172,29 @@ const contactEmail = env("CONTACT_EMAIL");
           </div>
           <div class="order-1 md:order-2">
             <h2 class="sorts-mill-goudy text-primary mb-6 text-3xl font-bold">
-              Cookies
+              Local Storage & Cookies
             </h2>
             <div class="space-y-4 text-lg leading-relaxed text-gray-700">
               <p>
-                We use a single cookie to remember your address. This cookie:
+                We use your browser's <strong>Local Storage</strong> to remember your address preference and your "Vote Plan" selections. This data:
               </p>
               <ul class="space-y-4">
                 <li class="flex gap-3">
                   <span class="text-secondary font-bold">•</span>
-                  <span
-                    >Stays on your device (we don't access it elsewhere)</span
-                  >
+                  <span>Is stored exclusively on your device</span>
                 </li>
                 <li class="flex gap-3">
                   <span class="text-secondary font-bold">•</span>
-                  <span>Can be deleted by clearing your browser cookies</span>
+                  <span>Is never sent to our servers</span>
                 </li>
                 <li class="flex gap-3">
                   <span class="text-secondary font-bold">•</span>
-                  <span>Is not used for tracking or analytics</span>
+                  <span>Can be cleared at any time by clearing your browser data or using the "Change Address" button</span>
                 </li>
               </ul>
+              <p class="mt-4 text-sm">
+                <strong>Note:</strong> We use a single session cookie (<code>__session</code>) solely for authorized administrator authentication. This cookie is not used for tracking public visitors.
+              </p>
             </div>
           </div>
         </section>
@@ -283,7 +282,7 @@ const contactEmail = env("CONTACT_EMAIL");
             >
               <h3 class="mb-3 font-bold">Clear Data</h3>
               <p class="text-sm text-gray-600">
-                Clear your address by deleting your browser cookies at any time.
+                Clear your stored address and vote plan by clearing your browser's local storage at any time.
               </p>
             </div>
             <!-- <div

@@ -21,9 +21,21 @@ const authentication = defineMiddleware(async (context, next) => {
   return next();
 });
 
-// TODO implement better caching strategy for static assets and non-admin pages
-const cacheControl = defineMiddleware(async (_, next) => {
+// Implement better caching strategy for static assets and non-admin pages
+const cacheControl = defineMiddleware(async (context, next) => {
   const response = await next();
+  const pathName = context.url.pathname;
+
+  // Cache for 4 hours (14400 seconds)
+  if (!pathName.startsWith("/admin") && !pathName.startsWith("/api/admin/")) {
+    response.headers.set(
+      "Cache-Control",
+      "public, s-maxage=14400, max-age=0, must-revalidate",
+    );
+    return response;
+  }
+
+  // Default to no-store for everything else, especially admin areas
   response.headers.set("Cache-Control", "no-store");
   return response;
 });

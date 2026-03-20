@@ -75,115 +75,107 @@ const { class: className, subTitle } = Astro.props as Props;
 <script>
   import type { AddressSearchResult } from "../lib/addressLookup";
 
-  const input = document.getElementById("address-search") as HTMLInputElement;
-  const resultsList = document.getElementById(
-    "search-results",
-  ) as HTMLUListElement;
-  const loadingIndicator = document.getElementById(
-    "loading-indicator",
-  ) as HTMLDivElement;
+  const initAddressSearch = () => {
+    const input = document.getElementById("address-search") as HTMLInputElement;
+    const resultsList = document.getElementById(
+      "search-results",
+    ) as HTMLUListElement;
+    const loadingIndicator = document.getElementById(
+      "loading-indicator",
+    ) as HTMLDivElement;
 
-  let debounceTimer: ReturnType<typeof setTimeout>;
+    if (!input || !resultsList || !loadingIndicator) return;
 
-  const handleSelect = (result: AddressSearchResult) => {
-    console.log("Selected address:", result);
-    input.value = result.address;
-    resultsList.classList.add("hidden");
-    resultsList.innerHTML = "";
+    let debounceTimer: ReturnType<typeof setTimeout>;
 
-    // Set voterGroupId in localStorage for Cloudflare cache sharing
-    if (result.districtGroupId) {
-      localStorage.setItem("voterGroupId", result.districtGroupId);
-    }
-
-    localStorage.setItem(
-      "voterAddressDisplay",
-      JSON.stringify({
-        normalizedAddress: result.address,
-        city: result.city,
-        zip: result.zip,
-      }),
-    );
-
-    // Redirect to my-ballot page
-    window.location.href = `/my-ballot?groupId=${result.districtGroupId || ""}`;
-  };
-
-  const updateResults = (results: AddressSearchResult[]) => {
-    resultsList.innerHTML = "";
-
-    if (results.length === 0) {
-      const li = document.createElement("li");
-      li.className = "px-4 py-2 text-gray-500 italic";
-      li.textContent = "No addresses found";
-      resultsList.appendChild(li);
-    } else {
-      results.forEach((result) => {
-        const li = document.createElement("li");
-        li.className =
-          "px-4 py-2 hover:bg-gray-100 cursor-pointer text-gray-900 border-b border-gray-100 last:border-0";
-
-        const mainText = document.createElement("div");
-        mainText.className = "font-medium";
-        mainText.textContent = result.address;
-
-        const subText = document.createElement("div");
-        subText.className = "text-sm text-gray-500";
-        subText.textContent = [result.city, result.zip]
-          .filter(Boolean)
-          .join(", ");
-
-        li.appendChild(mainText);
-        li.appendChild(subText);
-
-        li.addEventListener("click", () => handleSelect(result));
-        resultsList.appendChild(li);
-      });
-    }
-
-    resultsList.classList.remove("hidden");
-  };
-
-  const performSearch = async (query: string) => {
-    if (!query.trim()) {
+    const handleSelect = (result: AddressSearchResult) => {
+      input.value = result.address;
       resultsList.classList.add("hidden");
-      return;
-    }
+      resultsList.innerHTML = "";
 
-    loadingIndicator.classList.remove("hidden");
+      if (result.districtGroupId) {
+        localStorage.setItem("voterGroupId", result.districtGroupId);
+      }
 
-    try {
-      const response = await fetch(
-        `/api/addresses/lookup?q=${encodeURIComponent(query)}`,
+      localStorage.setItem(
+        "voterAddressDisplay",
+        JSON.stringify({
+          normalizedAddress: result.address,
+          city: result.city,
+          zip: result.zip,
+        }),
       );
-      if (!response.ok) throw new Error("Search failed");
 
-      const data: { results: AddressSearchResult[] } = await response.json();
-      updateResults(data.results);
-    } catch (error) {
-      console.error("Search error:", error);
-      // Optionally show error state in UI
-    } finally {
-      loadingIndicator.classList.add("hidden");
-    }
+      window.location.href = `/my-ballot?groupId=${result.districtGroupId || ""}`;
+    };
+
+    const updateResults = (results: AddressSearchResult[]) => {
+      resultsList.innerHTML = "";
+      if (results.length === 0) {
+        const li = document.createElement("li");
+        li.className = "px-4 py-2 text-gray-500 italic";
+        li.textContent = "No addresses found";
+        resultsList.appendChild(li);
+      } else {
+        results.forEach((result) => {
+          const li = document.createElement("li");
+          li.className =
+            "px-4 py-2 hover:bg-gray-100 cursor-pointer text-gray-900 border-b border-gray-100 last:border-0";
+          const mainText = document.createElement("div");
+          mainText.className = "font-medium";
+          mainText.textContent = result.address;
+          const subText = document.createElement("div");
+          subText.className = "text-sm text-gray-500";
+          subText.textContent = [result.city, result.zip]
+            .filter(Boolean)
+            .join(", ");
+          li.appendChild(mainText);
+          li.appendChild(subText);
+          li.addEventListener("click", () => handleSelect(result));
+          resultsList.appendChild(li);
+        });
+      }
+      resultsList.classList.remove("hidden");
+    };
+
+    const performSearch = async (query: string) => {
+      if (!query.trim()) {
+        resultsList.classList.add("hidden");
+        return;
+      }
+      loadingIndicator.classList.remove("hidden");
+      try {
+        const response = await fetch(
+          `/api/addresses/lookup?q=${encodeURIComponent(query)}`,
+        );
+        if (!response.ok) throw new Error("Search failed");
+        const data: { results: AddressSearchResult[] } = await response.json();
+        updateResults(data.results);
+      } catch (error) {
+        console.error("Search error:", error);
+      } finally {
+        loadingIndicator.classList.add("hidden");
+      }
+    };
+
+    input.addEventListener("input", (e) => {
+      const query = (e.target as HTMLInputElement).value;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        performSearch(query);
+      }, 300);
+    });
+
+    document.addEventListener("click", (e) => {
+      if (
+        !input.contains(e.target as Node) &&
+        !resultsList.contains(e.target as Node)
+      ) {
+        resultsList.classList.add("hidden");
+      }
+    });
   };
 
-  input?.addEventListener("input", (e) => {
-    const query = (e.target as HTMLInputElement).value;
-
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      performSearch(query);
-    }, 300); // 300ms debounce
-  });
-
-  // Close results when clicking outside
-  document.addEventListener("click", (e) => {
-    if (
-      !input.contains(e.target as Node) &&
-      !resultsList.contains(e.target as Node)
-    ) {
-      resultsList.classList.add("hidden");
-    }
-  });
+  initAddressSearch();
+  document.addEventListener("ballot-loaded", initAddressSearch);
 </script>

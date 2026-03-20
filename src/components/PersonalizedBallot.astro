@@ -391,350 +391,325 @@ const clientRaces = races.map((r) => ({
     candidates: ClientCandidate[];
   }
 
-  const summaryModal = document.getElementById("summary-modal");
-  const logoSrc = summaryModal?.dataset.logoSrc || "";
-  const clientRaces: ClientRace[] = JSON.parse(
-    summaryModal ? summaryModal.dataset.clientRaces || "[]" : "[]",
-  );
-
-  const clearAddressAndReload = (e: Event) => {
-    e.preventDefault();
-    // Clear voterGroupId from localStorage
-    localStorage.removeItem("voterGroupId");
-    localStorage.removeItem("voterAddressDisplay");
-    // Redirect to home page / ballot page to search again
-    window.location.href = "/my-ballot";
-  };
-
-  const addressContainer = document.getElementById("address-display-container");
-  const addressText = document.getElementById("address-display-text");
-  if (addressContainer && addressText) {
-    try {
-      const stored = localStorage.getItem("voterAddressDisplay");
-      if (stored) {
-        const data = JSON.parse(stored);
-        const parts = [data.normalizedAddress, data.city, data.zip].filter(
-          Boolean,
-        );
-        addressText.textContent = parts.join(", ");
-        addressContainer.style.display = "block";
-      }
-    } catch (e) {
-      console.error("Error loading address from localStorage:", e);
-      /* ignore */
+  const initBallot = () => {
+    const summaryModal = document.getElementById("summary-modal");
+    if (!summaryModal) {
+      // If we are in the skeleton state, wait for the actual content
+      return;
     }
-  }
+    const logoSrc = summaryModal?.dataset.logoSrc || "";
+    const clientRaces: ClientRace[] = JSON.parse(
+      summaryModal ? summaryModal.dataset.clientRaces || "[]" : "[]",
+    );
 
-  const changeAddressBtn = document.getElementById("change-address-btn");
-  if (changeAddressBtn) {
-    changeAddressBtn.addEventListener("click", clearAddressAndReload);
-  }
+    const clearAddressAndReload = (e: Event) => {
+      e.preventDefault();
+      // Clear voterGroupId from localStorage
+      localStorage.removeItem("voterGroupId");
+      localStorage.removeItem("voterAddressDisplay");
+      // Redirect to home page / ballot page to search again
+      window.location.href = "/my-ballot";
+    };
 
-  const errorChangeAddressBtn = document.getElementById(
-    "error-change-address-btn",
-  );
-  if (errorChangeAddressBtn) {
-    errorChangeAddressBtn.addEventListener("click", clearAddressAndReload);
-  }
-
-  // // Scroll visibility for summary button
-  const viewSummaryBtn = document.getElementById("view-summary-btn");
-
-  // Modal logic
-  const modal = document.getElementById(
-    "summary-modal",
-  ) as HTMLDialogElement | null;
-  const shareBtn = document.getElementById("share-modal-btn");
-  const closeModalBtns = [
-    document.getElementById("close-modal-btn"),
-    document.getElementById("close-modal-footer-btn"),
-  ];
-  const summaryContent = document.getElementById(
-    "summary-content",
-  ) as HTMLElement | null;
-
-  if (modal && typeof modal.showModal !== "function") {
-    // If showModal is not supported, we can fallback to a simple display: block
-    // though modern Safari supports it.
-    console.warn("Dialog showModal not supported");
-  }
-
-  // Check if sharing is supported (specifically for files)
-  const checkShareSupport = async () => {
-    if (!navigator.share || !navigator.canShare) return false;
-
-    try {
-      // Create a tiny dummy file to test if the browser supports sharing files
-      const testFile = new File([" "], "test.txt", { type: "text/plain" });
-      return navigator.canShare({ files: [testFile] });
-    } catch {
-      return false;
-    }
-  };
-
-  const handleShare = async () => {
-    const originalShareCard = document.getElementById("share-card");
-    if (!originalShareCard || !shareBtn) return;
-
-    // Ensure the ORIGINAL logo is warm and ready before cloning
-    const originalLogo = originalShareCard.querySelector(
-      'img[alt="Logo"]',
-    ) as HTMLImageElement | null;
-    if (originalLogo) {
-      if (!originalLogo.complete) {
-        await new Promise((r) => {
-          originalLogo.onload = r;
-          originalLogo.onerror = r;
-        });
-      }
+    const addressContainer = document.getElementById(
+      "address-display-container",
+    );
+    const addressText = document.getElementById("address-display-text");
+    if (addressContainer && addressText) {
       try {
-        await originalLogo.decode();
-      } catch {
+        const stored = localStorage.getItem("voterAddressDisplay");
+        if (stored) {
+          const data = JSON.parse(stored);
+          const parts = [data.normalizedAddress, data.city, data.zip].filter(
+            Boolean,
+          );
+          addressText.textContent = parts.join(", ");
+          addressContainer.style.display = "block";
+        }
+      } catch (e) {
+        console.error("Error loading address from localStorage:", e);
         /* ignore */
       }
     }
 
-    // Create a hidden container for the off-screen capture
-    const captureStage = document.createElement("div");
-    captureStage.style.position = "fixed";
-    captureStage.style.left = "-2000px"; // Less aggressive than -9999px for some older engines
-    captureStage.style.top = "0";
-    captureStage.style.width = "600px";
-    captureStage.style.zIndex = "-100";
-    captureStage.style.pointerEvents = "none"; // Ensure it doesn't block interactions
-    captureStage.style.backgroundColor = "white";
-    document.body.appendChild(captureStage);
+    const changeAddressBtn = document.getElementById("change-address-btn");
+    if (changeAddressBtn) {
+      changeAddressBtn.addEventListener("click", clearAddressAndReload);
+    }
 
-    // Clone the card and add it to our secret stage
-    const shareCard = originalShareCard.cloneNode(true) as HTMLElement;
-    captureStage.appendChild(shareCard);
+    const errorChangeAddressBtn = document.getElementById(
+      "error-change-address-btn",
+    );
+    if (errorChangeAddressBtn) {
+      errorChangeAddressBtn.addEventListener("click", clearAddressAndReload);
+    }
 
-    try {
-      // Prepare the secret clone for capture
-      shareCard.style.width = "600px";
-      shareCard.style.height = "auto";
-      shareCard.style.minHeight = "750px";
-      shareCard.style.overflow = "visible";
-      shareCard.style.display = "flex";
+    // Modal logic
+    const modal = document.getElementById(
+      "summary-modal",
+    ) as HTMLDialogElement | null;
 
-      // Show share-only elements on the clone ONLY
-      const shareOnlyElements = shareCard.querySelectorAll(".share-only");
-      shareOnlyElements.forEach((el) => el.classList.remove("hidden"));
+    const viewSummaryBtn = document.getElementById("view-summary-btn");
+    const shareBtn = document.getElementById("share-modal-btn");
+    const closeModalBtns = [
+      document.getElementById("close-modal-btn"),
+      document.getElementById("close-modal-footer-btn"),
+    ];
+    const summaryContent = document.getElementById(
+      "summary-content",
+    ) as HTMLElement | null;
 
-      // Explicitly wait for the logo to be ready on the clone
-      const logoImg = shareCard.querySelector(
-        'img[alt="Logo"]',
-      ) as HTMLImageElement | null;
-      if (logoImg) {
-        // Force a re-src to trigger a load/decoded state in the new context
-        const currentSrc = logoImg.src;
-        logoImg.src = "";
-        logoImg.src = currentSrc;
+    if (modal && typeof modal.showModal !== "function") {
+      console.warn("Dialog showModal not supported");
+    }
 
-        if (!logoImg.complete) {
-          await new Promise((r) => {
-            logoImg.onload = r;
-            logoImg.onerror = r;
+    // Modal render helper
+    const STORAGE_KEY = "vote_plan_selections";
+    const renderSummary = () => {
+      if (!summaryContent) return;
+
+      let selections: Record<string, string[]> = {};
+      try {
+        const selectionsData = localStorage.getItem(STORAGE_KEY);
+        selections = selectionsData ? JSON.parse(selectionsData) : {};
+      } catch (e) {
+        console.error("Error parsing selections from localStorage:", e);
+      }
+
+      const categories: Record<
+        string,
+        (ClientRace & { selectedCandidates: ClientCandidate[] })[]
+      > = {};
+      let hasActiveSelection = false;
+
+      for (const race of clientRaces) {
+        const id = String(race.id);
+        const selectedIds = selections[id] || [];
+        if (!selectedIds || selectedIds.length === 0) continue;
+
+        const selectedCandidates = race.candidates.filter((c) =>
+          selectedIds.includes(String(c.id)),
+        );
+
+        if (selectedCandidates.length > 0) {
+          hasActiveSelection = true;
+          const typeLabel = race.typeLabel;
+          if (!categories[typeLabel]) {
+            categories[typeLabel] = [];
+          }
+          categories[typeLabel]?.push({
+            ...race,
+            selectedCandidates,
           });
         }
-        if (typeof logoImg.decode === "function") {
-          try {
-            await logoImg.decode();
-          } catch {
-            /* Decode failed, proceed with capture */
+      }
+
+      if (!hasActiveSelection) {
+        summaryContent.innerHTML = `
+          <div class="py-12 text-center">
+            <p class="text-gray-500 text-lg">You haven't made any selections yet.</p>
+            <p class="text-gray-400">Close this and select your candidates to see a summary here.</p>
+          </div>
+        `;
+        return false;
+      }
+
+      let html = `
+        <div id="share-card" class="bg-white p-6 md:p-8 flex flex-col h-fit">
+          <div class="mb-8 flex flex-col items-center hidden share-only">
+            <img src="${logoSrc}" class="w-32 mb-3" alt="Logo" />
+            <div class="h-0.5 w-64 bg-primary rounded-full mb-4"></div>
+            <h3 class="text-xl font-black text-primary tracking-[0.1em] uppercase">My Ballot Plan</h3>
+          </div>
+          <div class="space-y-8 flex-1">
+      `;
+
+      const labelOrder = ["Federal", "State", "County", "City"];
+      const sortedCategories = Object.keys(categories).sort((a, b) => {
+        const idxA = labelOrder.indexOf(a);
+        const idxB = labelOrder.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+      });
+
+      sortedCategories.forEach((label) => {
+        const races = categories[label];
+        if (!races) return;
+        html += `
+          <div class="space-y-3">
+            <div class="flex items-center gap-3">
+              <span class="text-[12px] font-black uppercase tracking-[0.25em] text-primary/30 whitespace-nowrap">${label}</span>
+              <div class="h-px flex-1 bg-gray-100"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-x-8 gap-y-4">
+              ${races
+                .map(
+                  (race) => `
+                <div class="min-w-0">
+                  <div class="text-[11px] font-bold text-gray-400 uppercase tracking-tight mb-1 truncate" title="${race.name}">${race.shortName || race.name}</div>
+                  <div class="space-y-2">
+                    ${race.selectedCandidates
+                      .map(
+                        (c) => `
+                      <div class="text-[15px] font-bold text-gray-900 flex items-start gap-2.5 leading-snug">
+                         <div class="w-2 h-2 rounded-full bg-secondary mt-1.5 shrink-0"></div>
+                         <div class="flex flex-col">
+                           <span>${c.name}</span>
+                           ${c.party ? `<span class="text-[11px] font-medium text-gray-400 uppercase tracking-tighter">(${c.party})</span>` : ""}
+                         </div>
+                      </div>
+                    `,
+                      )
+                      .join("")}
+                  </div>
+                </div>
+              `,
+                )
+                .join("")}
+            </div>
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+          <div class="mt-10 pt-6 border-t border-gray-100 flex flex-col items-center hidden share-only">
+            <p class="text-primary/40 font-bold text-[9px] mt-0.5">GOVOTERUTHERFORD.COM</p>
+          </div>
+        </div>
+      `;
+      summaryContent.innerHTML = html;
+      return true;
+    };
+
+    // Sharing related
+    const checkShareSupport = async () => {
+      if (!navigator.share || !navigator.canShare) return false;
+      try {
+        const testFile = new File([" "], "test.txt", { type: "text/plain" });
+        return navigator.canShare({ files: [testFile] });
+      } catch {
+        return false;
+      }
+    };
+
+    const handleShare = async () => {
+      const originalShareCard = document.getElementById("share-card");
+      if (!originalShareCard || !shareBtn) return;
+      const originalLogo = originalShareCard.querySelector(
+        'img[alt="Logo"]',
+      ) as HTMLImageElement | null;
+      if (originalLogo) {
+        if (!originalLogo.complete) {
+          await new Promise((r) => {
+            originalLogo.onload = r;
+            originalLogo.onerror = r;
+          });
+        }
+        try {
+          await originalLogo.decode();
+        } catch {
+          /* ignore */
+        }
+      }
+      const captureStage = document.createElement("div");
+      captureStage.style.position = "fixed";
+      captureStage.style.left = "-2000px";
+      captureStage.style.top = "0";
+      captureStage.style.width = "600px";
+      captureStage.style.zIndex = "-100";
+      captureStage.style.pointerEvents = "none";
+      captureStage.style.backgroundColor = "white";
+      document.body.appendChild(captureStage);
+      const shareCard = originalShareCard.cloneNode(true) as HTMLElement;
+      captureStage.appendChild(shareCard);
+      try {
+        shareCard.style.width = "600px";
+        shareCard.style.height = "auto";
+        shareCard.style.minHeight = "750px";
+        shareCard.style.overflow = "visible";
+        shareCard.style.display = "flex";
+        const shareOnlyElements = shareCard.querySelectorAll(".share-only");
+        shareOnlyElements.forEach((el) => el.classList.remove("hidden"));
+        const logoImg = shareCard.querySelector(
+          'img[alt="Logo"]',
+        ) as HTMLImageElement | null;
+        if (logoImg) {
+          const currentSrc = logoImg.src;
+          logoImg.src = "";
+          logoImg.src = currentSrc;
+          if (!logoImg.complete) {
+            await new Promise((r) => {
+              logoImg.onload = r;
+              logoImg.onerror = r;
+            });
+          }
+          if (typeof logoImg.decode === "function") {
+            try {
+              await logoImg.decode();
+            } catch {
+              /* Decode failed */
+            }
           }
         }
-      }
-
-      // Small delay to ensure paint is complete on the secret stage
-      await new Promise((r) => setTimeout(r, 400));
-
-      const blob = await htmlToImage.toBlob(shareCard, {
-        backgroundColor: "white",
-        pixelRatio: 2,
-        cacheBust: true, // Force fresh assets in the capture engine
-      });
-
-      if (!blob) throw new Error("Could not generate image");
-
-      const file = new File([blob], "ballot-summary.png", {
-        type: "image/png",
-      });
-
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: "My Ballot Summary",
+        await new Promise((r) => setTimeout(r, 400));
+        const blob = await htmlToImage.toBlob(shareCard, {
+          backgroundColor: "white",
+          pixelRatio: 2,
+          cacheBust: true,
         });
-      } else {
-        alert("Sharing files is not supported on this browser.");
-      }
-    } catch (err) {
-      console.error("Error sharing:", err);
-      alert("Something went wrong while trying to share.");
-    } finally {
-      // Clean up the secret stage
-      document.body.removeChild(captureStage);
-    }
-  };
-
-  shareBtn?.addEventListener("click", handleShare);
-
-  const STORAGE_KEY = "vote_plan_selections";
-
-  const renderSummary = () => {
-    if (!summaryContent) return;
-
-    let selections: Record<string, string[]> = {};
-    try {
-      const selectionsData = localStorage.getItem(STORAGE_KEY);
-      selections = selectionsData ? JSON.parse(selectionsData) : {};
-    } catch (e) {
-      console.error("Error parsing selections from localStorage:", e);
-    }
-
-    const categories: Record<
-      string,
-      (ClientRace & { selectedCandidates: ClientCandidate[] })[]
-    > = {};
-    let hasActiveSelection = false;
-
-    for (const race of clientRaces) {
-      const id = String(race.id);
-      const selectedIds = selections[id] || [];
-      if (!selectedIds || selectedIds.length === 0) continue;
-
-      const selectedCandidates = race.candidates.filter((c) =>
-        selectedIds.includes(String(c.id)),
-      );
-
-      if (selectedCandidates.length > 0) {
-        hasActiveSelection = true;
-        const typeLabel = race.typeLabel;
-        if (!categories[typeLabel]) {
-          categories[typeLabel] = [];
+        if (!blob) throw new Error("Could not generate image");
+        const file = new File([blob], "ballot-summary.png", {
+          type: "image/png",
+        });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: "My Ballot Summary",
+          });
         }
-        categories[typeLabel]?.push({
-          ...race,
-          selectedCandidates,
-        });
+      } catch (err) {
+        console.error("Error sharing:", err);
+      } finally {
+        document.body.removeChild(captureStage);
       }
-    }
+    };
 
-    if (!hasActiveSelection) {
-      summaryContent.innerHTML = `
-        <div class="py-12 text-center">
-          <p class="text-gray-500 text-lg">You haven't made any selections yet.</p>
-          <p class="text-gray-400">Close this and select your candidates to see a summary here.</p>
-        </div>
-      `;
-      return false;
-    }
+    shareBtn?.addEventListener("click", handleShare);
 
-    let html = `
-      <div id="share-card" class="bg-white p-6 md:p-8 flex flex-col h-fit">
-        <!-- Social Share Header (hidden in modal) -->
-        <div class="mb-8 flex flex-col items-center hidden share-only">
-          <img src="${logoSrc}" class="w-32 mb-3" alt="Logo" />
-          <div class="h-0.5 w-64 bg-primary rounded-full mb-4"></div>
-          <h3 class="text-xl font-black text-primary tracking-[0.1em] uppercase">My Ballot Plan</h3>
-        </div>
-        
-        <div class="space-y-8 flex-1">
-    `;
-
-    // Order categories by the same priority as the main list
-    const labelOrder = ["Federal", "State", "County", "City"];
-    const sortedCategories = Object.keys(categories).sort((a, b) => {
-      const idxA = labelOrder.indexOf(a);
-      const idxB = labelOrder.indexOf(b);
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      if (idxA !== -1) return -1;
-      if (idxB !== -1) return 1;
-      return a.localeCompare(b);
+    viewSummaryBtn?.addEventListener("click", async () => {
+      const hasActiveSelection = renderSummary();
+      modal?.showModal();
+      document.body.style.overflow = "hidden";
+      if (hasActiveSelection && (await checkShareSupport())) {
+        shareBtn?.classList.remove("hidden");
+        shareBtn?.classList.add("flex");
+      } else {
+        shareBtn?.classList.add("hidden");
+        shareBtn?.classList.remove("flex");
+      }
     });
 
-    sortedCategories.forEach((label) => {
-      const races = categories[label];
-      if (!races) return;
-      html += `
-        <div class="space-y-3">
-          <div class="flex items-center gap-3">
-            <span class="text-[12px] font-black uppercase tracking-[0.25em] text-primary/30 whitespace-nowrap">${label}</span>
-            <div class="h-px flex-1 bg-gray-100"></div>
-          </div>
-          <div class="grid grid-cols-2 gap-x-8 gap-y-4">
-            ${races
-              .map(
-                (race) => `
-              <div class="min-w-0">
-                <div class="text-[11px] font-bold text-gray-400 uppercase tracking-tight mb-1 truncate" title="${race.name}">${race.shortName || race.name}</div>
-                <div class="space-y-2">
-                  ${race.selectedCandidates
-                    .map(
-                      (c) => `
-                    <div class="text-[15px] font-bold text-gray-900 flex items-start gap-2.5 leading-snug">
-                       <div class="w-2 h-2 rounded-full bg-secondary mt-1.5 shrink-0"></div>
-                       <div class="flex flex-col">
-                         <span>${c.name}</span>
-                         ${c.party ? `<span class="text-[11px] font-medium text-gray-400 uppercase tracking-tighter">(${c.party})</span>` : ""}
-                       </div>
-                    </div>
-                  `,
-                    )
-                    .join("")}
-                </div>
-              </div>
-            `,
-              )
-              .join("")}
-          </div>
-        </div>
-      `;
+    const closeModal = () => {
+      modal?.close();
+      document.body.style.overflow = "auto";
+    };
+    modal?.addEventListener("close", () => {
+      document.body.style.overflow = "auto";
     });
-
-    html += `
-        </div>
-        
-        <!-- Social Share Footer (hidden in modal) -->
-        <div class="mt-10 pt-6 border-t border-gray-100 flex flex-col items-center hidden share-only">
-          <p class="text-primary/40 font-bold text-[9px] mt-0.5">GOVOTERUTHERFORD.COM</p>
-        </div>
-      </div>
-    `;
-    summaryContent.innerHTML = html;
-    return true;
+    closeModalBtns.forEach((btn) => btn?.addEventListener("click", closeModal));
+    modal?.addEventListener("click", (e) => {
+      if (e.target === modal) closeModal();
+    });
   };
 
-  viewSummaryBtn?.addEventListener("click", async () => {
-    const hasActiveSelection = renderSummary();
-    modal?.showModal();
-    document.body.style.overflow = "hidden"; // Prevent background scroll
+  // Initial call
+  initBallot();
 
-    // Toggle share button visibility based on support and content
-    if (hasActiveSelection && (await checkShareSupport())) {
-      shareBtn?.classList.remove("hidden");
-      shareBtn?.classList.add("flex");
-    } else {
-      shareBtn?.classList.add("hidden");
-      shareBtn?.classList.remove("flex");
-    }
-  });
-
-  const closeModal = () => {
-    modal?.close();
-    document.body.style.overflow = "auto";
-  };
-
-  modal?.addEventListener("close", () => {
-    document.body.style.overflow = "auto";
-  });
-
-  closeModalBtns.forEach((btn) => btn?.addEventListener("click", closeModal));
-
-  modal?.addEventListener("click", (e) => {
-    if (e.target === modal) closeModal();
-  });
+  // Listen for the custom event from the loader
+  document.addEventListener("ballot-loaded", initBallot);
 </script>
 
 <style>

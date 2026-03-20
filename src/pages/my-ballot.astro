@@ -1,9 +1,10 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import PersonalizedBallot from "../components/PersonalizedBallot.astro";
-import BallotLoadingSkeleton from "../components/BallotLoadingSkeleton.astro";
 
-export const prerender = true;
+export const prerender = false;
+
+const urlGroupId = Astro.url.searchParams.get("groupId");
 ---
 
 <Layout
@@ -11,10 +12,20 @@ export const prerender = true;
   title="My Ballot"
 >
   <main class="mx-auto flex-1 px-4 py-8">
-    <PersonalizedBallot server:defer>
-      <BallotLoadingSkeleton slot="fallback" />
-    </PersonalizedBallot>
+    <PersonalizedBallot groupId={urlGroupId} />
   </main>
 </Layout>
 
-<style></style>
+<script>
+  // Simplified logic: If we have a groupId in localStorage but NOT in the URL,
+  // we perform a one-time redirect to the canonical URL for that address group.
+  // This ensures the server-side rendering (SSR) is utilized and the result is
+  // cached at the edge for 4 hours by the middleware.
+  const localId = localStorage.getItem("voterGroupId");
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlGroupId = urlParams.get("groupId");
+
+  if (localId && urlGroupId !== localId) {
+    window.location.href = `/my-ballot?groupId=${localId}`;
+  }
+</script>
