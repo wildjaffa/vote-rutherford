@@ -244,6 +244,7 @@ model User {
   deletedAt      DateTime?             
 
   usersToElections UserToElection[]
+  googleAccounts   UserGoogleAccount[]
 
   @@map("users")
 }
@@ -271,6 +272,19 @@ model UserToElection {
   deletedAt  DateTime? 
 
   @@map("users_to_elections")
+}
+
+model UserGoogleAccount {
+  id           String   @id @default(uuid())
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String
+  email        String
+  refreshToken String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now())
+
+  @@unique([userId, email])
+  @@map("user_google_accounts")
 }
 
 model BlobStorageReference {

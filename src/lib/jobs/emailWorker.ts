@@ -16,9 +16,9 @@ export const spawnEmailWorker = () => {
   const worker = new Worker<SendEmailJobData>(
     "email-outreach",
     async (job: Job<SendEmailJobData>) => {
-      const { candidateId, emailAddress, subject, body } = job.data;
+      const { candidateId, emailAddress, subject, body, userGoogleAccountId } = job.data;
 
-      const provider = getEmailProvider();
+      const provider = await getEmailProvider(userGoogleAccountId);
       const success = await provider.sendEmail({
         to: emailAddress,
         subject,

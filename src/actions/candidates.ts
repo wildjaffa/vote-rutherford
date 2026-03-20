@@ -65,6 +65,7 @@ export const sendMassEmail = defineAction({
   input: z.object({
     subject: z.string().min(1, "Subject is required"),
     bodyTemplate: z.string().min(1, "Body template is required"),
+    userGoogleAccountId: z.string().min(1, "Google account ID is required"),
     targets: z.array(z.object({
       id: z.string().optional(),
       email: z.string().email(),
@@ -102,7 +103,8 @@ export const sendMassEmail = defineAction({
           candidateId: target.id ?? null,
           emailAddress: target.email,
           subject: input.subject,
-          body: personalizedBody
+          body: personalizedBody,
+          userGoogleAccountId: input.userGoogleAccountId
         },
         ...(delay > 0 && { opts: { delay } })
       };

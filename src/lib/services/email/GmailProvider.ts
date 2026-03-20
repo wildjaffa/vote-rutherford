@@ -1,21 +1,30 @@
 import { google } from "googleapis";
 import type { EmailProvider, SendEmailOptions } from "./EmailProvider";
+import { env } from "../../utils/environment";
 
 /**
  * GmailProvider uses the Google Gmail API to send emails.
  * It requires OAuth2 credentials (Client ID, Client Secret, Refresh Token).
  */
 export class GmailProvider implements EmailProvider {
+  private customRefreshToken: string;
+  private customFromEmail: string;
+
+  constructor(refreshToken: string, fromEmail: string) {
+    this.customRefreshToken = refreshToken;
+    this.customFromEmail = fromEmail;
+  }
+
   /**
    * Initializes and returns an authenticated Gmail client.
    * This uses OAuth2 for authentication. We use 'me' as the userId
-   * because the refresh token belongs to the authorized user (CONTACT_EMAIL).
+   * because the refresh token belongs to the authorized user (CONTACT_EMAIL or individual user).
    */
   private async getGmailClient() {
-    const clientId = process.env.GMAIL_CLIENT_ID;
-    const clientSecret = process.env.GMAIL_CLIENT_SECRET;
-    const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
-    const fromEmail = process.env.CONTACT_EMAIL || "govoterutherford@gmail.com";
+    const clientId = env("GMAIL_CLIENT_ID");
+    const clientSecret = env("GMAIL_CLIENT_SECRET");
+    const refreshToken = this.customRefreshToken;
+    const fromEmail = this.customFromEmail;
 
     if (!clientId || !clientSecret || !refreshToken) {
       console.error("[GmailProvider] Missing Gmail API environment variables.");

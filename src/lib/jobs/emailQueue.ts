@@ -12,6 +12,7 @@ export interface SendEmailJobData {
   emailAddress: string;
   subject: string;
   body: string;
+  userGoogleAccountId?: string;
 }
 
 // Global queue instance

@@ -91,9 +91,9 @@ const { class: className, subTitle } = Astro.props as Props;
     resultsList.classList.add("hidden");
     resultsList.innerHTML = "";
 
-    // Set voterDistrictGroupId cookie (max-age 1 year = 31536000 seconds)
+    // Set voterGroupId in localStorage for Cloudflare cache sharing
     if (result.districtGroupId) {
-      document.cookie = `voterDistrictGroupId=${result.districtGroupId}; max-age=31536000; path=/`;
+      localStorage.setItem("voterGroupId", result.districtGroupId);
     }
 
     localStorage.setItem(

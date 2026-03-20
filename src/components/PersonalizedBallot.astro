@@ -7,18 +7,18 @@ import AddressSearch from "./AddressSearch.astro";
 import { SquareCheckBig, Share } from "../lib/icons";
 import LogoImg from "../assets/Logo.png";
 
-// Inside a server island we can access Astro.url and Astro.cookies.
-const queryGroupId = Astro.url.searchParams.get("groupId");
-const cookieGroupId = Astro.cookies.get("voterDistrictGroupId")?.value;
+interface Props {
+  groupId?: string | null;
+}
 
-const selectedGroupId = queryGroupId || cookieGroupId;
+const { groupId } = Astro.props;
 
 let error: string | null = null;
 
 const districtRaces = [];
 
 // Fetch everything we need in one query to avoid N+1 issues.
-if (!selectedGroupId) {
+if (!groupId) {
   const globalDistrictData = await prisma.district.findMany({
     where: {
       deletedAt: null,
@@ -26,10 +26,7 @@ if (!selectedGroupId) {
     },
     include: {
       races: {
-        orderBy: [
-          { raceType: { id: "desc" } },
-          { order: "asc" },
-        ],
+        orderBy: [{ raceType: { id: "desc" } }, { order: "asc" }],
         where: {
           deletedAt: null,
         },
@@ -46,17 +43,14 @@ if (!selectedGroupId) {
   districtRaces.push(...globalDistrictData.flatMap((d) => d.races ?? []));
 } else {
   const districtGroupData = await prisma.districtGroup.findUnique({
-    where: { id: selectedGroupId },
+    where: { id: groupId },
     include: {
       districts: {
         include: {
           district: {
             include: {
               races: {
-                orderBy: [
-                  { raceType: { id: "desc" } },
-                  { order: "asc" },
-                ],
+                orderBy: [{ raceType: { id: "desc" } }, { order: "asc" }],
                 where: {
                   deletedAt: null,
                 },
@@ -133,7 +127,7 @@ for (const race of districtRaces) {
 const election = closestFutureElection || mostRecentPastElection;
 
 // Filter races to the selected election (O(n) but small n)
-  const races = election
+const races = election
   ? validRaces
       .filter((r) => r.election && r.election.id === election.id)
       .sort((a, b) => {
@@ -206,7 +200,7 @@ const clientRaces = races.map((r) => ({
 ---
 
 {
-  !selectedGroupId && (
+  !groupId && (
     <div class="mb-12">
       <AddressSearch class="col-span-12 md:col-span-8" />
     </div>
@@ -221,7 +215,7 @@ const clientRaces = races.map((r) => ({
     }
   </h1>
   {
-    selectedGroupId && (
+    groupId && (
       <p
         class="text-lg text-gray-600"
         id="address-display-container"
@@ -238,7 +232,7 @@ const clientRaces = races.map((r) => ({
     )
   }
   {
-    !selectedGroupId && (
+    !groupId && (
       <p class="text-lg text-gray-600">
         Elections applicable to all residents of Rutherford County
       </p>
@@ -405,8 +399,8 @@ const clientRaces = races.map((r) => ({
 
   const clearAddressAndReload = (e: Event) => {
     e.preventDefault();
-    // Clear voterDistrictGroupId cookie
-    document.cookie = "voterDistrictGroupId=; max-age=0; path=/";
+    // Clear voterGroupId from localStorage
+    localStorage.removeItem("voterGroupId");
     localStorage.removeItem("voterAddressDisplay");
     // Redirect to home page / ballot page to search again
     window.location.href = "/my-ballot";
