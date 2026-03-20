@@ -4,6 +4,7 @@ import type { UpsertElectionType } from "../models/upsertElection";
 import { UpsertElection } from "../models/upsertElection";
 import { canManageElections, canManageElection } from "../permissions";
 import { makeError } from "./utils";
+import { purgeCloudflareCache } from "./cloudflare";
 
 export async function validateElectionPayload(
   body: unknown,
@@ -42,6 +43,9 @@ export async function createElection(
       },
     }),
   );
+
+  void purgeCloudflareCache([`/elections`, `/elections/${election.slug}`]);
+
   return election;
 }
 
@@ -65,12 +69,11 @@ export async function updateElection(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { policyQuestions, id: electionId, ...electionData } = validated;
 
-  let updated: Election | null = null;
-
-  await withUserContext(userId, async () => {
+  const updated = await withUserContext(userId, async () => {
+    let updatedElection: Election | null = null;
     // 1. Update basic election data
     try {
-      updated = await prisma.election.update({
+      updatedElection = await prisma.election.update({
         where: { id: id },
         data: {
           ...electionData,
@@ -123,7 +126,17 @@ export async function updateElection(
         }
       }
     }
+    return updatedElection;
   });
+
+  if (updated) {
+    const endpointsToPurge = [`/elections`, `/elections/${existing.slug}`];
+    if (updated.slug !== existing.slug) {
+      endpointsToPurge.push(`/elections/${updated.slug}`);
+    }
+    void purgeCloudflareCache(endpointsToPurge);
+  }
+
   return updated;
 }
 
@@ -136,12 +149,19 @@ export async function deleteElection(
     throw makeError("Unauthorized", 403);
   }
 
+  const existing = await prisma.election.findUnique({ where: { id } });
+
   const deleted = await withUserContext(userId, () =>
     prisma.election.update({
       where: { id },
       data: { deletedAt: new Date() },
     }),
   );
+
+  if (existing) {
+    void purgeCloudflareCache([`/elections`, `/elections/${existing.slug}`]);
+  }
+
   return deleted;
 }
 

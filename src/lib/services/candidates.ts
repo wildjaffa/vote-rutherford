@@ -4,6 +4,7 @@ import { UpsertCandidate } from "../models/upsertCandidate";
 import type { UpsertCandidateType } from "../models/upsertCandidate";
 import { canManageCandidate, canManageRace } from "../permissions";
 import { makeError } from "./utils";
+import { purgeCloudflareCache } from "./cloudflare";
 
 export async function validateCandidatePayload(
   body: unknown,
@@ -140,6 +141,20 @@ export async function createCandidate(
 
     return newCandidate;
   });
+
+  const election = await prisma.election.findUnique({
+    where: { id: race.electionId },
+  });
+  if (!election) {
+    throw makeError("Election not found", 404);
+  }
+  const electionSlug = election.slug;
+
+  void purgeCloudflareCache([
+    `/elections/${electionSlug}/${race.slug}`,
+    `/elections/${electionSlug}/${race.slug}/${candidate.slug}`,
+  ]);
+
   return candidate;
 }
 
@@ -155,6 +170,7 @@ export async function updateCandidate(
 
   const existingCandidate = await prisma.candidate.findUnique({
     where: { id },
+    include: { race: { include: { election: true } } },
   });
   if (!existingCandidate) {
     throw makeError("Candidate not found", 404);
@@ -429,6 +445,14 @@ export async function updateCandidate(
     return updatedCandidate;
   });
 
+  const electionSlug = existingCandidate.race.election.slug;
+  const raceSlug = existingCandidate.race.slug;
+
+  void purgeCloudflareCache([
+    `/elections/${electionSlug}/${raceSlug}`,
+    `/elections/${electionSlug}/${raceSlug}/${updated.slug}`,
+  ]);
+
   return updated;
 }
 
@@ -444,6 +468,7 @@ export async function partialUpdateCandidate(
 
   const existingCandidate = await prisma.candidate.findUnique({
     where: { id },
+    include: { race: { include: { election: true } } },
   });
   if (!existingCandidate) {
     throw makeError("Candidate not found", 404);
@@ -491,6 +516,20 @@ export async function partialUpdateCandidate(
     return updatedCandidate;
   });
 
+  const electionSlug = existingCandidate.race.election.slug;
+  const raceSlug = existingCandidate.race.slug;
+
+  const endpointsToPurge = [
+    `/elections/${electionSlug}/${raceSlug}`,
+    `/elections/${electionSlug}/${raceSlug}/${existingCandidate.slug}`,
+  ];
+  if (updated.slug !== existingCandidate.slug) {
+    endpointsToPurge.push(
+      `/elections/${electionSlug}/${raceSlug}/${updated.slug}`,
+    );
+  }
+  void purgeCloudflareCache(endpointsToPurge);
+
   return updated;
 }
 
@@ -503,12 +542,29 @@ export async function deleteCandidate(
     throw makeError("Unauthorized", 403);
   }
 
+  const existingCandidate = await prisma.candidate.findUnique({
+    where: { id },
+    include: { race: { include: { election: true } } },
+  });
+  if (!existingCandidate) {
+    throw makeError("Candidate not found", 404);
+  }
+
   // perform soft-delete or archive logic
-  const candidate = await withUserContext(userId, () =>
+  const deletedCandidate = await withUserContext(userId, () =>
     prisma.candidate.update({
       where: { id },
       data: { deletedAt: new Date() },
     }),
   );
-  return candidate;
+
+  const electionSlug = existingCandidate.race.election.slug;
+  const raceSlug = existingCandidate.race.slug;
+
+  void purgeCloudflareCache([
+    `/elections/${electionSlug}/${raceSlug}`,
+    `/elections/${electionSlug}/${raceSlug}/${existingCandidate.slug}`,
+  ]);
+
+  return deletedCandidate;
 }

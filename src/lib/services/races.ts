@@ -4,6 +4,7 @@ import type { UpsertRaceType } from "../models/upsertRace";
 import { UpsertRace } from "../models/upsertRace";
 import { canManageRace } from "../permissions";
 import { makeError } from "./utils";
+import { purgeCloudflareCache } from "./cloudflare";
 
 export async function validateRacePayload(
   body: unknown,
@@ -52,6 +53,12 @@ export async function createRace(
       },
     }),
   );
+
+  void purgeCloudflareCache([
+    `/elections/${election.slug}`,
+    `/elections/${election.slug}/${created.slug}`,
+  ]);
+
   return created;
 }
 
@@ -65,7 +72,10 @@ export async function updateRace(
     throw makeError("Unauthorized", 403);
   }
 
-  const existing = await prisma.race.findUnique({ where: { id } });
+  const existing = await prisma.race.findUnique({
+    where: { id },
+    include: { election: true },
+  });
   if (!existing) {
     throw makeError("Race not found", 404);
   }
@@ -97,6 +107,16 @@ export async function updateRace(
 
     return race;
   });
+
+  const endpointsToPurge = [
+    `/elections/${existing.election.slug}`,
+    `/elections/${existing.election.slug}/${existing.slug}`,
+  ];
+  if (updated.slug !== existing.slug) {
+    endpointsToPurge.push(`/elections/${existing.election.slug}/${updated.slug}`);
+  }
+  void purgeCloudflareCache(endpointsToPurge);
+
   return updated;
 }
 
@@ -118,6 +138,13 @@ export async function reorderRaces(
       });
     }
   });
+
+  const election = await prisma.election.findUnique({ where: { id: electionId } });
+  if (election) {
+    void purgeCloudflareCache([
+      `/elections/${election.slug}`,
+    ]);
+  }
 }
 
 export async function deleteRace(id: string, userId: string): Promise<Race> {
@@ -126,11 +153,24 @@ export async function deleteRace(id: string, userId: string): Promise<Race> {
     throw makeError("Unauthorized", 403);
   }
 
+  const existing = await prisma.race.findUnique({
+    where: { id },
+    include: { election: true },
+  });
+
   const deleted = await withUserContext(userId, () =>
     prisma.race.update({
       where: { id },
       data: { deletedAt: new Date() },
     }),
   );
+
+  if (existing) {
+    void purgeCloudflareCache([
+      `/elections/${existing.election.slug}`,
+      `/elections/${existing.election.slug}/${existing.slug}`,
+    ]);
+  }
+
   return deleted;
 }
