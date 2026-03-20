@@ -9,6 +9,7 @@ const connection = new IORedis(process.env.REDIS_URL || "redis://localhost:6379"
 
 export interface SendEmailJobData {
   candidateId?: string | null;
+  contactId?: string | null;
   emailAddress: string;
   subject: string;
   body: string;

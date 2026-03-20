@@ -1,0 +1,96 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { Plus } from "../../../lib/icons";
+import prisma from "../../../lib/prisma";
+
+export const prerender = false;
+
+const contacts = await prisma.contact.findMany({
+  where: {
+    deletedAt: null,
+  },
+  orderBy: [
+    { lastName: "asc" },
+    { firstName: "asc" }
+  ],
+});
+---
+
+<AdminLayout title="Contacts">
+  <div class="space-y-6">
+    <!-- Create Button -->
+    <div class="flex justify-between items-center">
+      <p class="text-sm text-gray-500">Manage global contacts that can be targeted in mass emails.</p>
+      <a
+        href="/admin/contacts/create"
+        class="bg-secondary hover:bg-secondary/90 focus:ring-secondary inline-flex items-center rounded-lg px-4 py-2 text-white transition-colors focus:ring-2 focus:ring-offset-2"
+      >
+        <Plus size="18" stroke-width={2} class="mr-2" />
+        New Contact
+      </a>
+    </div>
+
+    <!-- Contacts Table -->
+    {
+      contacts.length > 0 ? (
+        <div class="overflow-x-auto rounded-lg border border-gray-200 shadow bg-white">
+          <table class="w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  Name
+                </th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  Email
+                </th>
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  Description
+                </th>
+                <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white">
+              {contacts.map((contact) => (
+                <tr class="transition-colors hover:bg-gray-50">
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">
+                    {contact.firstName} {contact.lastName}
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-600">
+                    {contact.email}
+                  </td>
+                  <td class="px-4 py-3 text-sm text-gray-600">
+                    {contact.description?.substring(0, 50) || <span class="text-gray-400 italic">None</span>}
+                    {(contact.description?.length || 0) > 50 && "..."}
+                  </td>
+                  <td class="space-x-2 px-4 py-3 text-right text-sm">
+                    <a
+                      href={`/admin/contacts/${contact.id}/edit`}
+                      class="inline-flex items-center rounded-md bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-200"
+                    >
+                      Edit
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div class="py-12 text-center rounded-lg border border-dashed border-gray-300 bg-gray-50">
+          <p class="text-gray-500 mb-4">
+            No contacts yet. Create one to get started!
+          </p>
+          <a
+            href="/admin/contacts/create"
+            class="bg-white border border-gray-300 hover:bg-gray-50 inline-flex items-center rounded-lg px-4 py-2 text-gray-700 transition-colors shadow-sm"
+          >
+            <Plus size="18" stroke-width={2} class="mr-2" />
+            Create First Contact
+          </a>
+        </div>
+      )
+    }
+  </div>
+</AdminLayout>

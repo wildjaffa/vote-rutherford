@@ -1,0 +1,72 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import FormInput from "../../../components/forms/FormInput.astro";
+import FormTextarea from "../../../components/forms/FormTextarea.astro";
+import { actions } from "astro:actions";
+import Button from "../../../components/Button.astro";
+
+export const prerender = false;
+
+let error: string | null = null;
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const firstName = formData.get("firstName") as string;
+    const lastName = formData.get("lastName") as string;
+    const email = formData.get("email") as string;
+    const description = formData.get("description") as string;
+
+    const result = await Astro.callAction(actions.createContact, {
+      firstName,
+      lastName,
+      email,
+      description,
+    });
+
+    if (result.error) {
+      error = "Failed to create contact: " + result.error.message;
+    } else if (result.data) {
+      return Astro.redirect(`/admin/contacts`);
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to create contact";
+  }
+}
+---
+
+<AdminLayout
+  title="Create Contact"
+  breadcrumbs={[
+    { label: "Contacts", href: "/admin/contacts" },
+    { label: "Create", href: "/admin/contacts/create" },
+  ]}
+>
+  <form method="POST" class="max-w-xl">
+    {
+      error && (
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+          <p class="text-sm font-medium text-red-800">{error}</p>
+        </div>
+      )
+    }
+
+    <div class="grid grid-cols-2 gap-4">
+      <FormInput label="First Name" name="firstName" type="text" required />
+      <FormInput label="Last Name" name="lastName" type="text" required />
+    </div>
+
+    <FormInput label="Email" name="email" type="email" required />
+
+    <FormTextarea
+      label="Description (Optional)"
+      name="description"
+      placeholder="Brief notes about this contact..."
+    />
+
+    <div class="flex justify-end gap-3 pt-4">
+      <Button variant="secondary" href="/admin/contacts">Cancel</Button>
+      <Button type="submit">Create Contact</Button>
+    </div>
+  </form>
+</AdminLayout>

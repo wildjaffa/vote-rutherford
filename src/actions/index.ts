@@ -7,6 +7,7 @@ import {
 } from "./candidates";
 import { createElection, updateElection, deleteElection } from "./elections";
 import { createRace, updateRace, deleteRace, reorderRaces } from "./races";
+import { createContact, updateContact, deleteContact } from "./contacts";
 
 export const server = {
   createCandidate,
@@ -21,4 +22,7 @@ export const server = {
   updateRace,
   deleteRace,
   reorderRaces,
+  createContact,
+  updateContact,
+  deleteContact,
 };

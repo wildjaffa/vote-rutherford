@@ -71,6 +71,7 @@ export const sendMassEmail = defineAction({
       email: z.string().email(),
       variables: z.record(z.string()).optional()
     })).min(1, "At least one target is required"),
+    targetType: z.enum(["candidate", "contact"]).default("candidate"),
     scheduledAt: z.string().optional()
   }),
   handler: async (input, context) => {
@@ -100,7 +101,8 @@ export const sendMassEmail = defineAction({
       return {
         name: 'send-email',
         data: {
-          candidateId: target.id ?? null,
+          candidateId: input.targetType === 'candidate' ? (target.id ?? null) : null,
+          contactId: input.targetType === 'contact' ? (target.id ?? null) : null,
           emailAddress: target.email,
           subject: input.subject,
           body: personalizedBody,

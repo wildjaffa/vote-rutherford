@@ -16,7 +16,7 @@ export const spawnEmailWorker = () => {
   const worker = new Worker<SendEmailJobData>(
     "email-outreach",
     async (job: Job<SendEmailJobData>) => {
-      const { candidateId, emailAddress, subject, body, userGoogleAccountId } = job.data;
+      const { candidateId, contactId, emailAddress, subject, body, userGoogleAccountId } = job.data;
 
       const provider = await getEmailProvider(userGoogleAccountId);
       const success = await provider.sendEmail({
@@ -34,6 +34,7 @@ export const spawnEmailWorker = () => {
       await prisma.emailOutreach.create({
         data: {
           candidateId: candidateId || null,
+          contactId: contactId || null,
           emailAddress,
           subject,
           body,

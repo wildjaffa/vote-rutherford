@@ -339,12 +339,29 @@ model EmailOutreach {
   id           String     @id @default(uuid())
   candidateId  String?    
   candidate    Candidate? @relation(fields: [candidateId], references: [id])
+  contactId    String?
+  contact      Contact?   @relation(fields: [contactId], references: [id])
   emailAddress String
   subject      String
   body         String
   sentAt       DateTime   @default(now())
 
   @@map("email_outreach")
+}
+
+model Contact {
+  id          String    @id @default(uuid())
+  firstName   String
+  lastName    String
+  email       String
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now())
+  deletedAt   DateTime?
+
+  emailOutreach EmailOutreach[]
+
+  @@map("contacts")
 }
 
 enum DistrictType {

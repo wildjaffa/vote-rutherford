@@ -1,0 +1,138 @@
+---
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import FormInput from "../../../../components/forms/FormInput.astro";
+import FormTextarea from "../../../../components/forms/FormTextarea.astro";
+import { actions } from "astro:actions";
+import Button from "../../../../components/Button.astro";
+import prisma from "../../../../lib/prisma";
+
+export const prerender = false;
+
+const id = Astro.params.id as string;
+const contact = await prisma.contact.findUnique({
+  where: { id },
+});
+
+if (!contact || contact.deletedAt) {
+  return new Response("Contact not found", { status: 404 });
+}
+
+let error: string | null = null;
+let successMessage: string | null = null;
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+
+    if (formData.has("_method") && formData.get("_method") === "DELETE") {
+      const result = await Astro.callAction(actions.deleteContact, { id });
+      if (result.error) {
+        error = "Failed to delete contact: " + result.error.message;
+      } else {
+        return Astro.redirect(`/admin/contacts`);
+      }
+    } else {
+      const firstName = formData.get("firstName") as string;
+      const lastName = formData.get("lastName") as string;
+      const email = formData.get("email") as string;
+      const description = formData.get("description") as string;
+
+      const result = await Astro.callAction(actions.updateContact, {
+        id,
+        firstName,
+        lastName,
+        email,
+        description,
+      });
+
+      if (result.error) {
+        error = "Failed to update contact: " + result.error.message;
+      } else if (result.data) {
+        successMessage = "Contact updated successfully.";
+        contact.firstName = firstName;
+        contact.lastName = lastName;
+        contact.email = email;
+        contact.description = description;
+      }
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to process request";
+  }
+}
+---
+
+<AdminLayout
+  title={`Edit ${contact.firstName} ${contact.lastName}`}
+  breadcrumbs={[
+    { label: "Contacts", href: "/admin/contacts" },
+    { label: "Edit", href: `/admin/contacts/${id}/edit` },
+  ]}
+>
+  <div class="mb-4 flex justify-end">
+    <form
+      method="POST"
+      onsubmit="return confirm('Are you sure you want to delete this contact?');"
+    >
+      <input type="hidden" name="_method" value="DELETE" />
+      <Button
+        type="submit"
+        class="rounded-md border border-red-600 bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700"
+        >Delete Contact</Button
+      >
+    </form>
+  </div>
+
+  <form method="POST" class="max-w-xl">
+    {
+      error && (
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+          <p class="text-sm font-medium text-red-800">{error}</p>
+        </div>
+      )
+    }
+    {
+      successMessage && (
+        <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4">
+          <p class="text-sm font-medium text-green-800">{successMessage}</p>
+        </div>
+      )
+    }
+
+    <div class="grid grid-cols-2 gap-4">
+      <FormInput
+        label="First Name"
+        name="firstName"
+        type="text"
+        value={contact.firstName}
+        required
+      />
+      <FormInput
+        label="Last Name"
+        name="lastName"
+        type="text"
+        value={contact.lastName}
+        required
+      />
+    </div>
+
+    <FormInput
+      label="Email"
+      name="email"
+      type="email"
+      value={contact.email}
+      required
+    />
+
+    <FormTextarea
+      label="Description (Optional)"
+      name="description"
+      value={contact.description || ""}
+      placeholder="Brief notes about this contact..."
+    />
+
+    <div class="flex justify-end gap-3 pt-4">
+      <Button variant="secondary" href="/admin/contacts">Cancel</Button>
+      <Button type="submit">Save Changes</Button>
+    </div>
+  </form>
+</AdminLayout>

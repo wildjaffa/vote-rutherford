@@ -49,12 +49,13 @@ if (firebaseUser?.email) {
 
 // Determine selected election
 const url = new URL(Astro.request.url);
+const targetType = url.searchParams.get("targetType") || "candidate";
 const selectedElectionId = url.searchParams.get("electionId") || (elections.length > 0 ? elections[0]?.id : null);
 
 let candidates: CandidateEmail[] = [];
 let error: string | null = null;
 
-if (selectedElectionId) {
+if (targetType === "candidate" && selectedElectionId) {
   try {
     const rawCandidates = (await prisma.candidate.findMany({
       where: {
@@ -89,6 +90,25 @@ if (selectedElectionId) {
     error = "Failed to load candidates";
     console.error(err);
   }
+} else if (targetType === "contact") {
+  try {
+    const rawContacts = await prisma.contact.findMany({
+      where: { deletedAt: null },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }]
+    });
+    candidates = rawContacts.map(c => ({
+      id: c.id,
+      firstName: c.firstName,
+      lastName: c.lastName,
+      email: c.email,
+      partyAffiliation: "",
+      raceName: c.description || "N/A",
+      raceType: "Contact",
+    }));
+  } catch (err) {
+    error = "Failed to load contacts";
+    console.error(err);
+  }
 }
 
 // Extract unique filters
@@ -99,25 +119,35 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
 <AdminLayout title="Mass Email Candidates">
   <div class="space-y-6">
     <!-- Header & Election Selector -->
+    <!-- Header & Target Selector -->
     <div class="flex items-center justify-between border-b pb-4">
       <div>
-        <h2 class="text-xl font-bold text-gray-900">Select Election</h2>
-        <p class="text-sm text-gray-500">Choose an election to target candidates.</p>
+        <h2 class="text-xl font-bold text-gray-900">Select Target</h2>
+        <p class="text-sm text-gray-500">Choose who should receive this email.</p>
       </div>
-      <div>
-        <form method="GET" class="flex items-center gap-3">
-          <select 
-            name="electionId"
-            class="rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-secondary focus:outline-none focus:ring-secondary sm:text-sm"
-            onchange="this.form.submit()"
-          >
-            {elections.map((election: Election) => (
-              <option value={election.id} selected={election.id === selectedElectionId}>
-                {election.name} ({new Date(election.date).toLocaleDateString()})
-              </option>
-            ))}
-          </select>
-        </form>
+      
+      <div class="flex items-center gap-6">
+        <div class="flex gap-2 items-center bg-gray-100 p-1 rounded-lg">
+          <a href={`?targetType=candidate&electionId=${selectedElectionId || ''}`} class={`px-3 py-1 text-sm font-medium rounded ${targetType === 'candidate' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Candidates</a>
+          <a href={`?targetType=contact`} class={`px-3 py-1 text-sm font-medium rounded ${targetType === 'contact' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Contacts</a>
+        </div>
+        
+        {targetType === "candidate" && (
+          <form method="GET" class="flex items-center gap-3">
+            <input type="hidden" name="targetType" value="candidate" />
+            <select 
+              name="electionId"
+              class="rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-secondary focus:outline-none focus:ring-secondary sm:text-sm"
+              onchange="this.form.submit()"
+            >
+              {elections.map((election: Election) => (
+                <option value={election.id} selected={election.id === selectedElectionId}>
+                  {election.name} ({new Date(election.date).toLocaleDateString()})
+                </option>
+              ))}
+            </select>
+          </form>
+        )}
       </div>
     </div>
 
@@ -127,7 +157,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
       </div>
     )}
 
-    {selectedElectionId && candidates.length > 0 && (
+    {((targetType === "candidate" && selectedElectionId) || targetType === "contact") && candidates.length > 0 && (
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         <!-- Left Column: Selection Table -->
@@ -164,7 +194,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
                   <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <input type="checkbox" id="selectAll" class="rounded border-gray-300 text-secondary focus:ring-secondary" />
                   </th>
-                  <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Candidate / Race</th>
+                  <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{targetType === 'candidate' ? 'Candidate / Race' : 'Contact / Description'}</th>
                   <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                 </tr>
               </thead>
@@ -197,7 +227,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
             </table>
           </div>
           <div class="text-sm text-gray-500 text-right">
-            <span id="selectedCount">0</span> candidates selected
+            <span id="selectedCount">0</span> selected
           </div>
         </div>
 
@@ -518,7 +548,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
         return;
       }
 
-      if (!confirm(`Are you sure you want to ${sendLaterCb.checked ? 'schedule' : 'queue'} emails to ${targets.length} candidates?`)) {
+      if (!confirm(`Are you sure you want to ${sendLaterCb.checked ? 'schedule' : 'queue'} emails to ${targets.length} targets?`)) {
         return;
       }
 
@@ -526,12 +556,16 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
       sendBtn.innerHTML = sendLaterCb.checked ? 'Scheduling...' : 'Queueing...';
       sendBtn.disabled = true;
 
+      const urlParams = new URLSearchParams(window.location.search);
+      const tt = urlParams.get('targetType') || 'candidate';
+
       try {
         const { data, error } = await actions.sendMassEmail({
           subject,
           bodyTemplate,
           userGoogleAccountId,
           targets,
+          targetType: tt,
           scheduledAt: sendLaterCb.checked ? scheduledAtInput.value : undefined
         });
 
