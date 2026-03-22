@@ -208,11 +208,11 @@ if (mobileFullName.length > 15) {
               return;
             return (
               <>
-                <h2 class="w-full content-end justify-end pt-4 text-end text-xl font-semibold md:w-[90%]">
+                <h2 class="w-full content-end justify-end pt-4 text-end text-xl font-semibold whitespace-pre-wrap md:w-[90%]">
                   {question.questionText}
                 </h2>
                 <div class="bg-primary h-1 w-full md:w-[90%]" />
-                <p class="mt-4 w-full text-gray-700">
+                <p class="mt-4 w-full text-gray-700 whitespace-pre-wrap">
                   {response?.response ?? "No response provided"}
                 </p>
                 {response?.source && (

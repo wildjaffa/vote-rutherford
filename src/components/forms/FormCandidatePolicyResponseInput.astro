@@ -71,11 +71,9 @@ function getExistingResponse(questionId: string) {
               <textarea
                 name="response-text"
                 rows="4"
-                class="focus:border-secondary focus:ring-secondary block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+                class="block w-full rounded-md border-gray-300 px-4 py-3 shadow-sm transition-shadow focus:border-secondary focus:ring-secondary sm:text-sm"
                 placeholder="Enter candidate's response..."
-              >
-                {er?.response || ""}
-              </textarea>
+              >{er?.response || ""}</textarea>
               <div class="flex items-center gap-2">
                 <label class="shrink-0 text-xs font-medium text-gray-500">
                   Source URL:
@@ -114,11 +112,9 @@ function getExistingResponse(questionId: string) {
                     <textarea
                       name={`clarification-text-${q.id}`}
                       rows="2"
-                      class="focus:border-secondary focus:ring-secondary block flex-1 rounded-md border-gray-300 bg-gray-50/50 shadow-sm sm:text-sm"
+                      class="block flex-1 rounded-md border-gray-300 bg-gray-50/50 px-4 py-2 shadow-sm transition-shadow focus:border-secondary focus:ring-secondary sm:text-sm"
                       placeholder="Clarification..."
-                    >
-                      {c.clarification}
-                    </textarea>
+                    >{c.clarification}</textarea>
                     <button
                       type="button"
                       class="remove-clarification-btn mt-2 self-start text-gray-400 transition-colors hover:text-red-500"
@@ -194,7 +190,7 @@ function getExistingResponse(questionId: string) {
     <textarea
       name="text-placeholder"
       rows="2"
-      class="focus:border-secondary focus:ring-secondary block flex-1 rounded-md border-gray-300 bg-gray-50/50 shadow-sm sm:text-sm"
+      class="block flex-1 rounded-md border-gray-300 bg-gray-50/50 px-4 py-2 shadow-sm transition-shadow focus:border-secondary focus:ring-secondary sm:text-sm"
       placeholder="Clarification..."></textarea>
     <button
       type="button"

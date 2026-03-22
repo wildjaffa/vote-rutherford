@@ -205,7 +205,7 @@ const noIncumbent = candidates.filter((c) => c.isIncumbent).length === 0;
         ${clarifications
           .map(
             (cl) => `
-          <div class="rounded-md bg-blue-50 p-3 text-sm leading-relaxed text-blue-900">
+          <div class="rounded-md bg-blue-50 p-3 text-sm leading-relaxed text-blue-900 whitespace-pre-wrap">
             ${cl.clarification}
           </div>`,
           )
@@ -235,7 +235,7 @@ const noIncumbent = candidates.filter((c) => c.isIncumbent).length === 0;
             </div>
             ${
               resp
-                ? `<p class="text-sm leading-relaxed text-gray-800">${resp.response}</p>
+                ? `<p class="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">${resp.response}</p>
                    ${clarificationsHtml(resp.clarifications)}`
                 : `<p class="text-sm text-gray-500 italic">No response provided.</p>`
             }
@@ -257,8 +257,8 @@ const noIncumbent = candidates.filter((c) => c.isIncumbent).length === 0;
         "overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm";
       card.innerHTML = `
         <div class="border-b border-gray-200 bg-gray-50 p-6">
-          <h3 class="text-xl font-bold text-gray-900">${q.questionText}</h3>
-          ${q.descriptionText ? `<p class="mt-2 text-gray-600">${q.descriptionText}</p>` : ""}
+          <h3 class="text-xl font-bold text-gray-900 whitespace-pre-wrap">${q.questionText}</h3>
+          ${q.descriptionText ? `<p class="mt-2 text-gray-600 whitespace-pre-wrap">${q.descriptionText}</p>` : ""}
         </div>
         <div class="grid gap-4 p-6 ${colClass}">
           ${responseCols}
