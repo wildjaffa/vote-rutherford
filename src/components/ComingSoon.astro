@@ -9,11 +9,15 @@ import prisma from "../lib/prisma";
 export const prerender = false;
 
 const elections = await prisma.election.findMany({
+  where: { deletedAt: null },
   orderBy: { date: "desc" },
   include: {
     races: {
+      where: { deletedAt: null },
       include: {
-        candidates: true,
+        candidates: {
+          where: { deletedAt: null },
+        },
       },
     },
   },

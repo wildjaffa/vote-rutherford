@@ -34,6 +34,7 @@ if (!election || !race || !candidate) {
 const candidateData = await prisma.candidate.findFirst({
   where: {
     slug: candidate,
+    deletedAt: null,
     race: {
       slug: race,
       election: {
@@ -47,7 +48,10 @@ const candidateData = await prisma.candidate.findFirst({
     race: {
       include: {
         election: { include: { policyQuestions: true } },
-        candidates: { include: { profileImage: true } },
+        candidates: {
+          where: { deletedAt: null },
+          include: { profileImage: true },
+        },
         policyQuestionsToRaces: true,
       },
     },

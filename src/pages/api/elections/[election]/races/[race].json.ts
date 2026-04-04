@@ -15,7 +15,11 @@ export const GET: APIRoute = async ({ params }) => {
       slug: raceSlug,
       election: { slug: electionSlug },
     },
-    include: { candidates: true },
+    include: {
+      candidates: {
+        where: { deletedAt: null },
+      },
+    },
   });
 
   if (!race) {

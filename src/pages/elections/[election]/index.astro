@@ -16,7 +16,11 @@ const electionData = await prisma.election.findUnique({
   include: {
     races: {
       include: {
-        candidates: true,
+        candidates: {
+          where: {
+            deletedAt: null,
+          },
+        },
       },
     },
   },

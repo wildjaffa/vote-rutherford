@@ -21,6 +21,9 @@ const raceData = await prisma.race.findFirst({
   include: {
     election: { include: { policyQuestions: true } },
     candidates: {
+      where: {
+        deletedAt: null,
+      },
       include: {
         profileImage: true,
         policyResponses: {
