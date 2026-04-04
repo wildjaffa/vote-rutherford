@@ -66,6 +66,9 @@ model Race {
   candidates             Candidate[]
   policyQuestionsToRaces PolicyQuestionToRace[]
 
+  sourceRaces Race[] @relation("RaceToSourceRaces")
+  targetRaces Race[] @relation("RaceToSourceRaces")
+
   @@unique([electionId, slug])
   @@map("races")
 }
@@ -93,6 +96,7 @@ model Candidate {
   partyAffiliation  String?
   email             String?
   isIncumbent       Boolean               @default(false)
+  isWinner          Boolean               @default(false)
   profileImage      BlobStorageReference? @relation("CandidateProfileImage", fields: [profileImageId], references: [id])
   profileImageId    String?               
   historicalLink    Candidate?            @relation("HistoricalLink", fields: [historicalLinkId], references: [id])

@@ -15,6 +15,7 @@ export const upsertRaceSchema = z.object({
   partyCategory: z.string().optional().default("General Election"),
   order: z.number().int().default(0),
   policyQuestionIds: z.array(z.string()).optional(),
+  sourceRaceIds: z.array(z.string()).optional(),
 });
 
 export type UpsertRaceType = z.infer<typeof upsertRaceSchema>;

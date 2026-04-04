@@ -14,6 +14,7 @@ export const upsertCandidateSchema = z.object({
     z.number().min(1900).optional().nullable(),
   ),
   isIncumbent: z.boolean().default(false),
+  isWinner: z.boolean().default(false).optional(),
   profileImageId: z.string().optional().nullable(),
   slug: z.string().min(1, "Slug is required"),
   externalLinks: z

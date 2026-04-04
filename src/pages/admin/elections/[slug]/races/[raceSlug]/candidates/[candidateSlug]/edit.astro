@@ -33,6 +33,9 @@ const candidate = await prisma.candidate.findFirst({
           },
         },
         policyQuestionsToRaces: true,
+        targetRaces: {
+          include: { election: true }
+        },
       },
     },
     profileImage: true,
@@ -79,7 +82,45 @@ let success: string | null = null;
 if (Astro.request.method === "POST") {
   try {
     const formData = await Astro.request.formData();
-    const externalLinksUrls = formData.getAll("link-url") as string[];
+    const action = formData.get("action");
+    
+    if (action === "promote") {
+      const candidateId = formData.get("candidateId") as string;
+      const targetRaceId = formData.get("targetRaceId") as string;
+      
+      const { actions } = await import("astro:actions");
+      const result = await Astro.callAction(actions.promoteCandidate, {
+        candidateId,
+        targetRaceId
+      });
+      
+      if (result.error) {
+        error = result.error.message || "Failed to promote candidate.";
+      } else {
+        success = "Candidate successfully promoted to the target race.";
+      }
+      // Re-fetch to see the current state
+      const updatedCandidate = await prisma.candidate.findUnique({
+        where: { id: candidate.id },
+        include: {
+          race: {
+            include: {
+              targetRaces: { include: { election: true } },
+              election: { include: { policyQuestions: true } },
+              policyQuestionsToRaces: true,
+            }
+          },
+          profileImage: true,
+          externalLinks: { include: { externalLinkType: true } },
+          qualifications: { include: { qualificationType: true } },
+          policyResponses: { include: { clarifications: true } },
+        },
+      });
+      if (updatedCandidate) {
+        Object.assign(candidate, updatedCandidate);
+      }
+    } else {
+      const externalLinksUrls = formData.getAll("link-url") as string[];
     const externalLinksTypes = formData.getAll("link-type") as string[];
     const externalLinksTexts = formData.getAll("link-displayText") as string[];
     const externalLinksIds = formData.getAll("link-id") as string[];
@@ -153,6 +194,7 @@ if (Astro.request.method === "POST") {
       birthYear: (formData.get("birthYear") as string) || undefined, // Schema handles string -> number coercion
       profileImageId: (formData.get("profileImageId") as string) || undefined,
       isIncumbent: formData.get("isIncumbent") === "on",
+      isWinner: formData.get("isWinner") === "on",
       slug: candidateSlug,
       externalLinks,
       policyResponses,
@@ -174,7 +216,6 @@ if (Astro.request.method === "POST") {
           policyResponses: { include: { clarifications: true } },
         },
       });
-      if (updatedCandidate) {
         Object.assign(candidate, updatedCandidate);
       }
     }
@@ -222,6 +263,38 @@ const profileImageUrl = convertKeyToPublicUrl(
         </div>
       )
     }
+
+    {candidate.isWinner && race.targetRaces.length > 0 && (
+      <div class="rounded-lg border border-yellow-200 bg-yellow-50 p-4 flex items-center justify-between">
+        <div>
+          <h4 class="font-medium text-yellow-800">Promote to Next Race</h4>
+          <p class="text-sm text-yellow-700">This candidate is a winner. You can copy them to a target race.</p>
+        </div>
+        <form method="POST" class="inline-flex m-0">
+          <input type="hidden" name="action" value="promote" />
+          <input type="hidden" name="candidateId" value={candidate.id} />
+          {race.targetRaces.length === 1 ? (
+            <Fragment>
+              <input type="hidden" name="targetRaceId" value={race.targetRaces[0].id} />
+              <Button type="submit" variant="secondary" class="bg-white hover:bg-yellow-100 text-yellow-800 border-yellow-300">
+                Promote to {race.targetRaces[0].name}
+              </Button>
+            </Fragment>
+          ) : (
+            <div class="flex items-center gap-2">
+              <select name="targetRaceId" class="text-sm rounded border-yellow-300 bg-white py-1.5 pl-3 pr-8 text-yellow-800 focus:border-yellow-500 focus:ring-yellow-500">
+                {race.targetRaces.map((tr: any) => (
+                  <option value={tr.id}>{tr.name} ({tr.election?.name})</option>
+                ))}
+              </select>
+              <Button type="submit" variant="secondary" class="bg-white hover:bg-yellow-100 text-yellow-800 border-yellow-300">
+                Promote
+              </Button>
+            </div>
+          )}
+        </form>
+      </div>
+    )}
 
     <form method="POST" class="max-w-2xl space-y-6">
       <div class="grid grid-cols-2 gap-4">
@@ -304,12 +377,20 @@ const profileImageUrl = convertKeyToPublicUrl(
         }))}
       />
 
-      <FormInput
-        label="Is Incumbent"
-        name="isIncumbent"
-        type="checkbox"
-        value={candidate.isIncumbent ? "on" : "off"}
-      />
+      <div class="grid grid-cols-2 gap-4 border-b border-gray-200 pb-4 mb-4">
+        <FormInput
+          label="Is Incumbent"
+          name="isIncumbent"
+          type="checkbox"
+          checked={candidate.isIncumbent}
+        />
+        <FormInput
+          label="Is Winner"
+          name="isWinner"
+          type="checkbox"
+          checked={candidate.isWinner}
+        />
+      </div>
 
       <FormProfileImageInput
         value={candidate.profileImageId || ""}
