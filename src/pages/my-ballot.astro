@@ -8,8 +8,8 @@ const urlGroupId = Astro.url.searchParams.get("groupId");
 ---
 
 <Layout
-  description="For residents of Rutherford County Tennessee, view your personalized ballot for the upcoming election based on your address"
-  title="My Ballot"
+  description="View your personalized election ballot in Rutherford County, Tennessee. Use our address lookup tool to find exact races and candidates for your specific district."
+  title="Your Personalized Rutherford County Ballot"
 >
   <main class="mx-auto flex-1 px-4 py-8">
     <PersonalizedBallot groupId={urlGroupId} />
