@@ -1,0 +1,148 @@
+---
+import FormInput from "../components/forms/FormInput.astro";
+import Button from "../components/Button.astro";
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout
+  description="Support Vote Rutherford's mission to bridge the gap between voters and local government in Tennessee."
+  title="Donate - Support Our Mission"
+>
+  <main class="flex-1">
+    <!-- Hero Section -->
+    <section class="bg-primary py-16 text-white md:py-24">
+      <div class="container mx-auto px-4 text-center">
+        <h1 class="sorts-mill-goudy mb-4 text-4xl font-bold md:text-6xl">
+          Support Our Mission
+        </h1>
+        <p class="mx-auto max-w-2xl text-xl opacity-90">
+          Help us continue to research local issues, investigate candidate
+          positions, and educate the voters of Rutherford County.
+        </p>
+      </div>
+    </section>
+
+    <div class="container mx-auto max-w-5xl px-4 py-12 md:py-20 lg:px-8">
+      <div class="grid items-center gap-12 md:grid-cols-2 lg:gap-16">
+        <div class="space-y-6">
+          <h2 class="sorts-mill-goudy text-primary text-3xl font-bold">
+            Why Donate?
+          </h2>
+          <div class="space-y-4 text-lg leading-relaxed text-gray-700">
+            <p>
+              Local elections frequently suffer from low voter turnout and
+              limited public awareness of candidates’ backgrounds and policy
+              positions.
+            </p>
+            <p>
+              <strong class="text-primary">Vote Rutherford</strong> is a centralized,
+              user-friendly platform aiming to empower voters with the knowledge they
+              need before they head to the ballot box.
+            </p>
+            <p>Your contribution, no matter what size, helps us:</p>
+            <ul class="list-inside list-disc space-y-2 pl-2">
+              <li>Conduct scientific, impartial polling and research</li>
+              <li>Keep our platform free and open for the community</li>
+              <li>Maintain and expand our outreach efforts</li>
+            </ul>
+            <p class="font-medium">
+              Thank you for trusting us to be your non-partisan resource for
+              local elections.
+            </p>
+          </div>
+        </div>
+
+        <div class="rounded-4xl bg-gray-50 p-8 shadow-sm md:p-10 lg:p-12">
+          <div
+            class="mx-auto flex flex-col items-center justify-center text-center"
+          >
+            <h3 class="mb-4 text-xl font-bold text-gray-900">
+              Make a Contribution
+            </h3>
+            <p class="mb-8 text-gray-600">
+              Use our secure Stripe checkout to support Vote Rutherford today.
+            </p>
+
+            <form id="donation-form" class="w-full max-w-sm space-y-4">
+              <FormInput
+                name="amount"
+                label="Donation Amount ($)"
+                type="number"
+                min="1"
+                step="0.01"
+                required
+              />
+              <!-- <div>
+                <label
+                  for="amount"
+                  class="block text-sm font-medium text-gray-700"
+                  >Donation Amount ($)</label
+                >
+                <input
+                  type="number"
+                  id="amount"
+                  name="amount"
+                  min="1"
+                  step="0.01"
+                  required
+                  class="focus:border-primary focus:ring-primary mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                />
+              </div> -->
+              <Button type="submit" id="donate-btn">Donate Now</Button>
+            </form>
+
+            <p class="mt-6 text-sm text-gray-500">
+              Payments are securely processed by Stripe.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  (() => {
+    const donationForm = document.getElementById(
+      "donation-form",
+    ) as HTMLFormElement;
+    if (!donationForm) {
+      console.error("Donation form not found");
+      return;
+    }
+
+    donationForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const amountInput = document.getElementById("amount");
+      if (!amountInput) {
+        console.error("Amount input not found");
+        alert("An error occurred. Please try again.");
+        return;
+      }
+
+      const amount = parseFloat((amountInput as HTMLInputElement).value);
+      if (isNaN(amount) || amount < 1) {
+        alert("Please enter a valid amount of at least $1.");
+        return;
+      }
+      const payload = JSON.stringify({ amount: Math.round(amount * 100) });
+      console.log("Submitting donation:", payload);
+      try {
+        const response = await fetch("/api/create-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          alert(data.error || "An error occurred");
+          return;
+        }
+        window.location.href = data.url;
+      } catch (error) {
+        console.error("Error:", error);
+        alert("An error occurred while processing your request.");
+      }
+    });
+  })();
+</script>
