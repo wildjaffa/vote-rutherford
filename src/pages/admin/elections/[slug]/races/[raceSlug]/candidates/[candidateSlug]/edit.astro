@@ -34,7 +34,7 @@ const candidate = await prisma.candidate.findFirst({
         },
         policyQuestionsToRaces: true,
         targetRaces: {
-          include: { election: true }
+          include: { election: true },
         },
       },
     },
@@ -83,17 +83,17 @@ if (Astro.request.method === "POST") {
   try {
     const formData = await Astro.request.formData();
     const action = formData.get("action");
-    
+
     if (action === "promote") {
       const candidateId = formData.get("candidateId") as string;
       const targetRaceId = formData.get("targetRaceId") as string;
-      
+
       const { actions } = await import("astro:actions");
       const result = await Astro.callAction(actions.promoteCandidate, {
         candidateId,
-        targetRaceId
+        targetRaceId,
       });
-      
+
       if (result.error) {
         error = result.error.message || "Failed to promote candidate.";
       } else {
@@ -108,7 +108,7 @@ if (Astro.request.method === "POST") {
               targetRaces: { include: { election: true } },
               election: { include: { policyQuestions: true } },
               policyQuestionsToRaces: true,
-            }
+            },
           },
           profileImage: true,
           externalLinks: { include: { externalLinkType: true } },
@@ -121,101 +121,105 @@ if (Astro.request.method === "POST") {
       }
     } else {
       const externalLinksUrls = formData.getAll("link-url") as string[];
-    const externalLinksTypes = formData.getAll("link-type") as string[];
-    const externalLinksTexts = formData.getAll("link-displayText") as string[];
-    const externalLinksIds = formData.getAll("link-id") as string[];
+      const externalLinksTypes = formData.getAll("link-type") as string[];
+      const externalLinksTexts = formData.getAll(
+        "link-displayText",
+      ) as string[];
+      const externalLinksIds = formData.getAll("link-id") as string[];
 
-    const externalLinks = externalLinksUrls
-      .map((url, i) => ({
-        url,
-        type: externalLinksTypes[i] as string,
-        displayText: externalLinksTexts[i] || null,
-        id: externalLinksIds[i] || undefined,
-      }))
-      .filter((l) => l.url);
+      const externalLinks = externalLinksUrls
+        .map((url, i) => ({
+          url,
+          type: externalLinksTypes[i] as string,
+          displayText: externalLinksTexts[i] || null,
+          id: externalLinksIds[i] || undefined,
+        }))
+        .filter((l) => l.url);
 
-    const qualificationTypes = formData.getAll(
-      "qualification-type",
-    ) as string[];
-    const qualificationUrls = formData.getAll("qualification-url") as string[];
-    const qualificationDisplayTexts = formData.getAll(
-      "qualification-displayText",
-    ) as string[];
-    const qualificationIds = formData.getAll("qualification-id") as string[];
+      const qualificationTypes = formData.getAll(
+        "qualification-type",
+      ) as string[];
+      const qualificationUrls = formData.getAll(
+        "qualification-url",
+      ) as string[];
+      const qualificationDisplayTexts = formData.getAll(
+        "qualification-displayText",
+      ) as string[];
+      const qualificationIds = formData.getAll("qualification-id") as string[];
 
-    const qualifications = qualificationTypes
-      .map((type, i) => ({
-        type,
-        url: qualificationUrls[i] || null,
-        displayText: qualificationDisplayTexts[i] as string,
-        id: qualificationIds[i] || undefined,
-      }))
-      .filter((q) => q.type);
+      const qualifications = qualificationTypes
+        .map((type, i) => ({
+          type,
+          url: qualificationUrls[i] || null,
+          displayText: qualificationDisplayTexts[i] as string,
+          id: qualificationIds[i] || undefined,
+        }))
+        .filter((q) => q.type);
 
-    const responseIds = formData.getAll("response-id") as string[];
-    const responseQuestionIds = formData.getAll(
-      "response-question-id",
-    ) as string[];
-    const responseTexts = formData.getAll("response-text") as string[];
-    const responseSources = formData.getAll("response-source") as string[];
+      const responseIds = formData.getAll("response-id") as string[];
+      const responseQuestionIds = formData.getAll(
+        "response-question-id",
+      ) as string[];
+      const responseTexts = formData.getAll("response-text") as string[];
+      const responseSources = formData.getAll("response-source") as string[];
 
-    const policyResponses = responseQuestionIds
-      .map((questionId, i) => {
-        const clarificationIds = formData.getAll(
-          `clarification-id-${questionId}`,
-        ) as string[];
-        const clarificationTexts = formData.getAll(
-          `clarification-text-${questionId}`,
-        ) as string[];
+      const policyResponses = responseQuestionIds
+        .map((questionId, i) => {
+          const clarificationIds = formData.getAll(
+            `clarification-id-${questionId}`,
+          ) as string[];
+          const clarificationTexts = formData.getAll(
+            `clarification-text-${questionId}`,
+          ) as string[];
 
-        const clarifications = clarificationTexts
-          .map((text, j) => ({
-            id: clarificationIds[j] || undefined,
-            clarificationText: text,
-          }))
-          .filter((c) => c.clarificationText.trim());
+          const clarifications = clarificationTexts
+            .map((text, j) => ({
+              id: clarificationIds[j] || undefined,
+              clarificationText: text,
+            }))
+            .filter((c) => c.clarificationText.trim());
 
-        return {
-          id: responseIds[i] || undefined,
-          questionId,
-          responseText: responseTexts[i] || "",
-          source: responseSources[i] || null,
-          clarifications,
-        };
-      })
-      .filter((r) => r.responseText.trim() || r.clarifications?.length);
+          return {
+            id: responseIds[i] || undefined,
+            questionId,
+            responseText: responseTexts[i] || "",
+            source: responseSources[i] || null,
+            clarifications,
+          };
+        })
+        .filter((r) => r.responseText.trim() || r.clarifications?.length);
 
-    const result = await Astro.callAction(actions.updateCandidate, {
-      id: candidate.id,
-      firstName: formData.get("firstName") as string,
-      lastName: formData.get("lastName") as string,
-      email: (formData.get("email") as string) || undefined,
-      partyAffiliation: formData.get("partyAffiliation") as string,
-      birthYear: (formData.get("birthYear") as string) || undefined, // Schema handles string -> number coercion
-      profileImageId: (formData.get("profileImageId") as string) || undefined,
-      isIncumbent: formData.get("isIncumbent") === "on",
-      isWinner: formData.get("isWinner") === "on",
-      slug: candidateSlug,
-      externalLinks,
-      policyResponses,
-      qualifications,
-    });
-
-    if (result.error) {
-      error = result.error.message || "Failed to update candidate";
-    } else if (result.data) {
-      success = "Candidate updated successfully";
-      // Refetch the candidate to show updated data
-      const updatedCandidate = await prisma.candidate.findUnique({
-        where: { id: candidate.id },
-        include: {
-          race: true,
-          profileImage: true,
-          externalLinks: { include: { externalLinkType: true } },
-          qualifications: { include: { qualificationType: true } },
-          policyResponses: { include: { clarifications: true } },
-        },
+      const result = await Astro.callAction(actions.updateCandidate, {
+        id: candidate.id,
+        firstName: formData.get("firstName") as string,
+        lastName: formData.get("lastName") as string,
+        email: (formData.get("email") as string) || undefined,
+        partyAffiliation: formData.get("partyAffiliation") as string,
+        birthYear: (formData.get("birthYear") as string) || undefined, // Schema handles string -> number coercion
+        profileImageId: (formData.get("profileImageId") as string) || undefined,
+        isIncumbent: formData.get("isIncumbent") === "on",
+        isWinner: formData.get("isWinner") === "on",
+        slug: candidateSlug,
+        externalLinks,
+        policyResponses,
+        qualifications,
       });
+
+      if (result.error) {
+        error = result.error.message || "Failed to update candidate";
+      } else if (result.data) {
+        success = "Candidate updated successfully";
+        // Refetch the candidate to show updated data
+        const updatedCandidate = await prisma.candidate.findUnique({
+          where: { id: candidate.id },
+          include: {
+            race: true,
+            profileImage: true,
+            externalLinks: { include: { externalLinkType: true } },
+            qualifications: { include: { qualificationType: true } },
+            policyResponses: { include: { clarifications: true } },
+          },
+        });
         Object.assign(candidate, updatedCandidate);
       }
     }
@@ -264,37 +268,48 @@ const profileImageUrl = convertKeyToPublicUrl(
       )
     }
 
-    {candidate.isWinner && race.targetRaces.length > 0 && (
-      <div class="rounded-lg border border-yellow-200 bg-yellow-50 p-4 flex items-center justify-between">
-        <div>
-          <h4 class="font-medium text-yellow-800">Promote to Next Race</h4>
-          <p class="text-sm text-yellow-700">This candidate is a winner. You can copy them to a target race.</p>
+    {
+      candidate.isWinner && race.targetRaces.length > 0 && (
+        <div class="">
+          <form method="POST" class="m-0 inline-flex">
+            <input type="hidden" name="action" value="promote" />
+            <input type="hidden" name="candidateId" value={candidate.id} />
+            {race.targetRaces.length === 1 ? (
+              <Fragment>
+                <input
+                  type="hidden"
+                  name="targetRaceId"
+                  value={race.targetRaces[0]?.id}
+                />
+                <Button type="submit">
+                  Promote to {race.targetRaces[0]?.name}
+                </Button>
+              </Fragment>
+            ) : (
+              <div class="flex items-center gap-2">
+                <select
+                  name="targetRaceId"
+                  class="rounded border-yellow-300 bg-white py-1.5 pr-8 pl-3 text-sm text-yellow-800 focus:border-yellow-500 focus:ring-yellow-500"
+                >
+                  {race.targetRaces.map((tr: any) => (
+                    <option value={tr.id}>
+                      {tr.name} ({tr.election?.name})
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  class="border-yellow-300 bg-white text-yellow-800 hover:bg-yellow-100"
+                >
+                  Promote
+                </Button>
+              </div>
+            )}
+          </form>
         </div>
-        <form method="POST" class="inline-flex m-0">
-          <input type="hidden" name="action" value="promote" />
-          <input type="hidden" name="candidateId" value={candidate.id} />
-          {race.targetRaces.length === 1 ? (
-            <Fragment>
-              <input type="hidden" name="targetRaceId" value={race.targetRaces[0].id} />
-              <Button type="submit" variant="secondary" class="bg-white hover:bg-yellow-100 text-yellow-800 border-yellow-300">
-                Promote to {race.targetRaces[0].name}
-              </Button>
-            </Fragment>
-          ) : (
-            <div class="flex items-center gap-2">
-              <select name="targetRaceId" class="text-sm rounded border-yellow-300 bg-white py-1.5 pl-3 pr-8 text-yellow-800 focus:border-yellow-500 focus:ring-yellow-500">
-                {race.targetRaces.map((tr: any) => (
-                  <option value={tr.id}>{tr.name} ({tr.election?.name})</option>
-                ))}
-              </select>
-              <Button type="submit" variant="secondary" class="bg-white hover:bg-yellow-100 text-yellow-800 border-yellow-300">
-                Promote
-              </Button>
-            </div>
-          )}
-        </form>
-      </div>
-    )}
+      )
+    }
 
     <form method="POST" class="max-w-2xl space-y-6">
       <div class="grid grid-cols-2 gap-4">
@@ -377,7 +392,7 @@ const profileImageUrl = convertKeyToPublicUrl(
         }))}
       />
 
-      <div class="grid grid-cols-2 gap-4 border-b border-gray-200 pb-4 mb-4">
+      <div class="mb-4 grid grid-cols-2 gap-4 border-b border-gray-200 pb-4">
         <FormInput
           label="Is Incumbent"
           name="isIncumbent"
