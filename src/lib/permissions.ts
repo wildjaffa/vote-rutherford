@@ -45,6 +45,17 @@ export async function canManageRace(_raceId: string): Promise<boolean> {
 }
 
 /**
+ * Check if the current user can manage districts
+ * Future: Check if user is admin
+ */
+export async function canManageDistricts(): Promise<boolean> {
+  // TODO: Implement authentication check
+  // const session = await getSession();
+  // return session?.user?.userType === 'admin';
+  return true;
+}
+
+/**
  * Check if the current user can manage a specific candidate
  * Future: Check if user can manage the candidate's parent race/election
  */

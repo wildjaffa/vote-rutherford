@@ -1,0 +1,322 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import FormFileInput from "../../../components/forms/FormFileInput.astro";
+import FormGeoJsonFilesInput from "../../../components/forms/FormGeoJsonFilesInput.astro";
+import Button from "../../../components/Button.astro";
+import { actions } from "astro:actions";
+
+export const prerender = false;
+
+let error: string | null = null;
+let jobId: string | null = null;
+let importStatus: any = null;
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const csvContent = formData.get("csvContent") as string;
+    const geoJsonFiles: Record<string, string> = {};
+
+    // Collect GeoJSON files
+    for (const [key, value] of formData.entries()) {
+      if (key.startsWith("geoJsonFiles[") && key.endsWith("]")) {
+        const type = key.match(/geoJsonFiles\[(.+)\]/)?.[1];
+        if (type && typeof value === "string") {
+          geoJsonFiles[type] = value;
+        }
+      }
+    }
+
+    if (!csvContent) {
+      throw new Error("CSV file is required");
+    }
+
+    if (Object.keys(geoJsonFiles).length === 0) {
+      throw new Error("At least one GeoJSON file is required");
+    }
+
+    const result = await Astro.callAction(actions.startDistrictImport, {
+      csvContent,
+      geoJsonFiles,
+    });
+
+    if (result.data?.success) {
+      jobId = result.data.jobId;
+      importStatus = result.data;
+    } else {
+      error = result.data?.error || "Import failed";
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to start import";
+  }
+}
+
+// Check for job ID in query params (for resuming after page refresh)
+const url = new URL(Astro.request.url);
+const queryJobId = url.searchParams.get("jobId");
+if (queryJobId && !jobId) {
+  jobId = queryJobId;
+  try {
+    const statusResult = await Astro.callAction(
+      actions.getDistrictImportStatus,
+      {
+        jobId: queryJobId,
+      },
+    );
+    if (statusResult.data) {
+      importStatus = statusResult.data;
+    }
+  } catch (err) {
+    error = "Failed to load import status";
+  }
+}
+---
+
+<AdminLayout
+  title="Import District Data"
+  breadcrumbs={[
+    { label: "Admin", href: "/admin" },
+    { label: "Districting", href: "/admin/districting" },
+    { label: "Import", href: "/admin/districting/import" },
+  ]}
+>
+  <div class="max-w-4xl">
+    {
+      error && (
+        <div class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
+          <p class="text-sm font-medium text-red-800">{error}</p>
+        </div>
+      )
+    }
+
+    {
+      jobId && importStatus && (
+        <div class="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <h3 class="mb-2 text-lg font-medium text-blue-800">Import Status</h3>
+          <div id="statusContainer">
+            <p class="text-sm text-blue-700" id="statusText">
+              Status: {importStatus.status}
+            </p>
+            {importStatus.progress && (
+              <div class="mt-2">
+                <div class="h-2 w-full rounded-full bg-blue-200">
+                  <div
+                    class="h-2 rounded-full bg-blue-600 transition-all duration-300"
+                    id="progressBar"
+                    style={`width: ${calculateProgress(importStatus.progress)}%`}
+                  />
+                </div>
+                <p class="mt-1 text-xs text-blue-600" id="progressText">
+                  {getProgressText(importStatus.progress)}
+                </p>
+              </div>
+            )}
+            {importStatus.status === "COMPLETED" && (
+              <div class="mt-4 rounded bg-green-100 p-3">
+                <p class="text-sm text-green-800">
+                  Import completed successfully!
+                </p>
+                {importStatus.districtMapping && (
+                  <p class="mt-1 text-xs text-green-700">
+                    {importStatus.districtMapping.length} districts mapped
+                  </p>
+                )}
+              </div>
+            )}
+            {importStatus.status === "FAILED" && (
+              <div class="mt-4 rounded bg-red-100 p-3">
+                <p class="text-sm text-red-800">
+                  Import failed: {importStatus.errorMessage}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    }
+
+    {
+      !jobId && (
+        <form method="POST" enctype="multipart/form-data" class="space-y-6">
+          <div class="rounded-lg border border-gray-200 bg-white p-6">
+            <h3 class="mb-4 text-lg font-medium text-gray-900">Upload Files</h3>
+
+            <FormFileInput
+              name="csvContent"
+              label="Voter Address CSV File"
+              accept=".csv,text/csv"
+              required={true}
+              validateContent={validateCsv}
+            />
+
+            <div class="mt-6">
+              <FormGeoJsonFilesInput />
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+            <h4 class="mb-2 text-sm font-medium text-yellow-800">⚠️ Warning</h4>
+            <p class="text-sm text-yellow-700">
+              This process will replace all existing voter addresses and
+              district groupings. Existing districts will be updated, and
+              candidates' race districts will be remapped. This action cannot be
+              undone.
+            </p>
+          </div>
+
+          <div class="flex justify-end gap-3">
+            <Button variant="secondary" href="/admin">
+              Cancel
+            </Button>
+            <Button type="submit">Start Import</Button>
+          </div>
+        </form>
+      )
+    }
+  </div>
+</AdminLayout>
+
+<script>
+  function validateCsv(content: string, fileName: string): string | null {
+    const lines = content.split("\n").filter((line) => line.trim());
+    if (lines.length < 2) {
+      return "CSV must contain at least a header row and one data row";
+    }
+
+    const headers = lines[0].split(",").map((h) => h.trim());
+    const requiredHeaders = [
+      "Latitude",
+      "Longitude",
+      "Add_Number",
+      "StNam_Full",
+      "Post_City",
+      "State",
+      "Zip_Code",
+    ];
+
+    for (const required of requiredHeaders) {
+      if (!headers.includes(required)) {
+        return `CSV must contain '${required}' column`;
+      }
+    }
+
+    return null; // Valid
+  }
+
+  function calculateProgress(progress: any): number {
+    if (!progress) return 0;
+
+    const stages = [
+      "initializing",
+      "districts",
+      "cleanup",
+      "meilisearch",
+      "addresses",
+      "candidates",
+    ];
+    const currentStage = progress.stage || "initializing";
+    const stageIndex = stages.indexOf(currentStage);
+
+    if (stageIndex === -1) return 0;
+
+    const baseProgress = (stageIndex / stages.length) * 100;
+
+    // Add sub-progress within stage
+    if (progress.processed && progress.total) {
+      const stageProgress =
+        (progress.processed / progress.total) * (100 / stages.length);
+      return Math.min(
+        baseProgress + stageProgress,
+        ((stageIndex + 1) / stages.length) * 100,
+      );
+    }
+
+    return baseProgress;
+  }
+
+  function getProgressText(progress: any): string {
+    if (!progress) return "";
+
+    if (progress.message) {
+      return progress.message;
+    }
+
+    const stage = progress.stage || "initializing";
+    switch (stage) {
+      case "initializing":
+        return "Initializing import...";
+      case "districts":
+        return "Processing districts...";
+      case "cleanup":
+        return "Cleaning up old data...";
+      case "meilisearch":
+        return "Setting up search index...";
+      case "addresses":
+        return "Processing addresses...";
+      case "candidates":
+        return "Updating candidates...";
+      default:
+        return "Processing...";
+    }
+  }
+
+  // Polling for status updates
+  let pollInterval: number | null = null;
+
+  function startPolling(jobId: string) {
+    if (pollInterval) clearInterval(pollInterval);
+
+    pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(
+          `/api/admin/district-import/status/${jobId}`,
+        );
+        if (!response.ok) throw new Error("Failed to fetch status");
+
+        const data = await response.json();
+
+        updateStatus(data);
+
+        if (data.status === "COMPLETED" || data.status === "FAILED") {
+          stopPolling();
+        }
+      } catch (error) {
+        console.error("Polling error:", error);
+        stopPolling();
+      }
+    }, 5000); // Poll every 5 seconds
+  }
+
+  function stopPolling() {
+    if (pollInterval) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+    }
+  }
+
+  function updateStatus(data: any) {
+    const statusText = document.getElementById("statusText");
+    const progressBar = document.getElementById("progressBar");
+    const progressText = document.getElementById("progressText");
+
+    if (statusText) statusText.textContent = `Status: ${data.status}`;
+
+    if (progressBar && data.progress) {
+      const progressPercent = calculateProgress(data.progress);
+      progressBar.style.width = `${progressPercent}%`;
+    }
+
+    if (progressText && data.progress) {
+      progressText.textContent = getProgressText(data.progress);
+    }
+  }
+
+  // Start polling if we have an active job
+  const currentJobId = "{jobId}";
+  if (currentJobId && currentJobId !== "null") {
+    startPolling(currentJobId);
+  }
+
+  // Cleanup on page unload
+  window.addEventListener("beforeunload", stopPolling);
+</script>

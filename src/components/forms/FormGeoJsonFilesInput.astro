@@ -1,0 +1,80 @@
+---
+import FormFileInput from "./FormFileInput.astro";
+
+interface Props {
+  name?: string;
+  label?: string;
+}
+
+const { name = "geoJsonFiles", label = "District GeoJSON Files" } = Astro.props;
+
+// District types that need GeoJSON files
+const districtTypes = [
+  "COMMISSIONER",
+  "PRECINCT",
+  "US_HOUSE",
+  "STATE_SENATE",
+  "STATE_HOUSE",
+  "JUDICIAL",
+  "COUNTY",
+  "MUNICIPAL",
+  "SCHOOL",
+  "ROAD",
+];
+---
+
+<div class="space-y-4">
+  <label class="block text-sm font-medium text-gray-700">{label}</label>
+
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+    {
+      districtTypes.map((type) => (
+        <FormFileInput
+          name={`${name}[${type}]`}
+          label={`${type.replace("_", " ")} Districts`}
+          accept=".geojson,application/geo+json"
+          validateContent={validateGeoJson}
+        />
+      ))
+    }
+  </div>
+
+  <p class="text-xs text-gray-500">
+    Upload GeoJSON files for each district type. Files are processed in memory
+    and not stored permanently.
+  </p>
+</div>
+
+<script type="module">
+  function validateGeoJson(content, fileName) {
+    try {
+      const data = JSON.parse(content);
+
+      if (!data.type || data.type !== "FeatureCollection") {
+        return "File must be a GeoJSON FeatureCollection";
+      }
+
+      if (!Array.isArray(data.features)) {
+        return "GeoJSON must contain a features array";
+      }
+
+      if (data.features.length === 0) {
+        return "GeoJSON must contain at least one feature";
+      }
+
+      // Validate each feature has geometry
+      for (const feature of data.features) {
+        if (!feature.geometry || !feature.geometry.type) {
+          return "All features must have valid geometry";
+        }
+        if (!["Polygon", "MultiPolygon"].includes(feature.geometry.type)) {
+          return "Geometries must be Polygon or MultiPolygon";
+        }
+      }
+
+      return null; // Valid
+    } catch (e) {
+      return "Invalid JSON format";
+    }
+  }
+</script>

@@ -378,12 +378,20 @@ enum DistrictType {
   ALL
 }
 
+enum ImportJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
 model District {
   id        String       @id @default(uuid())
   name      String
   number    Int?
   type      DistrictType
   meta      Json?
+  oldDistrictId String?
   createdAt DateTime     @default(now())
   updatedAt DateTime     @default(now())
   deletedAt DateTime?
@@ -455,6 +463,21 @@ model DistrictToVoterAddress {
 
   @@unique([districtId, voterAddressId])
   @@map("districts_to_voter_addresses")
+}
+
+model DistrictImportJob {
+  id            String          @id @default(uuid())
+  status        ImportJobStatus @default(PENDING)
+  progress      Json?
+  districtMapping Json?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  errorMessage  String?
+  createdBy     String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @default(now())
+
+  @@map("district_import_jobs")
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.

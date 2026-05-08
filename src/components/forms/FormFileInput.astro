@@ -1,0 +1,105 @@
+---
+interface Props {
+  name: string;
+  label: string;
+  accept: string;
+  required?: boolean;
+  validateContent?: (content: string, fileName: string) => string | null;
+}
+
+const { name, label, accept, required = false } = Astro.props;
+---
+
+<div class="space-y-2">
+  <label class="block text-sm font-medium text-gray-700">
+    {label}
+    {required && <span class="text-red-500">*</span>}
+  </label>
+
+  <div>
+    <input
+      type="file"
+      accept={accept}
+      id={`${name}Input`}
+      class="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
+      required={required}
+    />
+    <input type="hidden" name={name} id={`${name}Content`} />
+    <p id={`${name}Status`} class="mt-1 text-xs text-gray-500"></p>
+  </div>
+</div>
+
+<script type="module">
+  const input = document.getElementById(`${Astro.props.name}Input`);
+  const hidden = document.getElementById(`${Astro.props.name}Content`);
+  const status = document.getElementById(`${Astro.props.name}Status`);
+
+  input.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) {
+      hidden.value = "";
+      status.textContent = "";
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = Astro.props.accept.split(",").map((t) => t.trim());
+    const isValidType = allowedTypes.some((type) => {
+      if (type.startsWith(".")) {
+        return file.name.toLowerCase().endsWith(type);
+      }
+      return file.type === type;
+    });
+
+    if (!isValidType) {
+      status.textContent = `Invalid file type. Allowed: ${Astro.props.accept}`;
+      status.className = "mt-1 text-xs text-red-500";
+      hidden.value = "";
+      return;
+    }
+
+    // Check file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      status.textContent = "File must be <= 10 MB";
+      status.className = "mt-1 text-xs text-red-500";
+      hidden.value = "";
+      return;
+    }
+
+    status.textContent = "Reading file...";
+    status.className = "mt-1 text-xs text-blue-600";
+
+    try {
+      const content = await readFileAsText(file);
+
+      // Validate content if validator provided
+      if (validateContent) {
+        const validationError = Astro.props.validateContent(content, file.name);
+        if (validationError) {
+          status.textContent = validationError;
+          status.className = "mt-1 text-xs text-red-500";
+          hidden.value = "";
+          return;
+        }
+      }
+
+      hidden.value = content;
+      status.textContent = `Loaded ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      status.className = "mt-1 text-xs text-green-600";
+    } catch (error) {
+      console.error("Error sharing:", error);
+      status.textContent = "Failed to read file";
+      status.className = "mt-1 text-xs text-red-500";
+      hidden.value = "";
+    }
+  });
+
+  function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsText(file);
+    });
+  }
+</script>
