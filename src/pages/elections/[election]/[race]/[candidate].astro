@@ -199,7 +199,17 @@ if (mobileFullName.length > 15) {
             <div class="ml-16">
               <h2 class="hidden text-2xl md:block">{fullName}</h2>
               <h2 class="text-2xl md:hidden">{mobileFullName}</h2>
-              <p class="text-md md:text-lg">{candidateData.partyAffiliation}</p>
+              <div class="flex items-center gap-2">
+                <p class="text-md md:text-lg">{candidateData.partyAffiliation}</p>
+                {candidateData.isWinner && (
+                  <span class="inline-flex items-center gap-1 rounded-full bg-yellow-400 px-2 py-0.5 text-xs font-bold text-yellow-900 shadow-sm" title="Winner of this race">
+                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 2l2.4 7.4h7.6l-6 4.6 2.3 7.5L10 16.5l-6.3 5 2.3-7.5-6-4.6h7.6L10 2z" clip-rule="evenodd" />
+                    </svg>
+                    Winner
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
