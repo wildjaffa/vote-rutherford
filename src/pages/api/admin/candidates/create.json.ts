@@ -1,24 +1,36 @@
 import type { APIRoute } from "astro";
+import { parse } from "cookie";
+import { createCandidate } from "../../../../lib/services/candidates";
+import { getSessionUser } from "../../../../firebase/server";
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
+  const cookies = parse(request.headers.get("cookie") || "");
+  const sessionCookie = cookies["__session"];
+  const user = await getSessionUser(sessionCookie);
+  if (!user) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const body = await request.json();
   try {
-    const candidate = await import("../../../../lib/services/candidates").then(
-      (m) => m.createCandidate(body),
-    );
+    const candidate = await createCandidate(body, user.uid);
     return new Response(JSON.stringify(candidate), {
       status: 201,
       headers: { "Content-Type": "application/json" },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error creating candidate:", error);
-    const status = error.code === 403 ? 403 : 500;
+    const err = error as { code?: number; message?: string; details?: unknown };
+    const status = err.code === 403 ? 403 : 500;
     return new Response(
       JSON.stringify({
-        error: error.message || "Failed to create candidate",
-        details: error.details,
+        error: err.message || "Failed to create candidate",
+        details: err.details,
       }),
       {
         status,

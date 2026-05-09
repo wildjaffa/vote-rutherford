@@ -38,10 +38,10 @@ const raceData = await prisma.race.findFirst({
       include: {
         election: true,
         candidates: {
-          where: { isWinner: true, deletedAt: null }
-        }
-      }
-    }
+          where: { isWinner: true, deletedAt: null },
+        },
+      },
+    },
   },
 });
 
@@ -53,7 +53,9 @@ const questions = raceData.election.policyQuestions;
 const { candidates, sourceRaces } = raceData;
 
 // A source race is pending if it has no winners marked
-const pendingSourceRaces = sourceRaces.filter(sr => sr.candidates.length === 0);
+const pendingSourceRaces = sourceRaces.filter(
+  (sr) => sr.candidates.length === 0,
+);
 
 // Serialize to JSON for client-side script
 const candidatesJson = JSON.stringify(
@@ -122,7 +124,7 @@ const noIncumbent = candidates.filter((c) => c.isIncumbent).length === 0;
                 }
               />
             ))}
-            
+
             {/* Show pending placeholders for source races without winners */}
             {pendingSourceRaces.map((sr) => (
               <PlaceholderCandidateCard
@@ -194,7 +196,7 @@ const noIncumbent = candidates.filter((c) => c.isIncumbent).length === 0;
   </main>
 </Layout>
 
-<script define:vars={{ candidatesJson, questionsJson }} type="module">
+<script is:inline define:vars={{ candidatesJson, questionsJson }} type="module">
   /** @type {Array} */
   const candidates = JSON.parse(candidatesJson);
   /** @type {Array} */

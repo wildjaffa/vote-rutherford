@@ -47,6 +47,18 @@ This application provides comprehensive information about elections, races, and 
    # Update .env with your local Redis and database paths
    ```
 
+   If you don't already have Redis running locally, start it with Docker:
+
+   ```bash
+   docker run -d --name vote-rutherford-redis -p 6379:6379 redis:7-alpine
+   ```
+
+   Or, if using Docker Compose:
+
+   ```bash
+   docker-compose up -d redis
+   ```
+
 3. **Database Preparation**
 
    ```bash
@@ -80,15 +92,18 @@ docker-compose up
 
 ## Available Commands
 
-| Command                               | Action                                     |
-| :------------------------------------ | :----------------------------------------- |
-| `npm run dev`                         | Start Astro dev server at `localhost:4321` |
-| `npm run build`                       | Build production site to `./dist/`         |
-| `npm run preview`                     | Preview production build locally           |
-| `npx prisma studio`                   | Open Prisma Studio GUI                     |
-| `npx prisma migrate dev`              | Create and apply new migrations            |
-| `npx tsx src/lib/jobs/emailWorker.ts` | Start the background email worker locally  |
-| `npm run import:addresses`            | Parse and import voter address data        |
+| Command                               | Action                                                              |
+| :------------------------------------ | :------------------------------------------------------------------ |
+| `npm run dev`                         | Start Astro dev server at `localhost:4321`                          |
+| `npm run build`                       | Build production site to `./dist/`                                  |
+| `npm run preview`                     | Preview production build locally                                    |
+| `npx prisma studio`                   | Open Prisma Studio GUI                                              |
+| `npx prisma migrate dev`              | Create and apply new migrations                                     |
+| `npx tsx src/lib/jobs/emailWorker.ts` | Start the background email worker locally                           |
+| `npm run worker:email`                | Start the background email worker locally                           |
+| `npm run worker:district-import`      | Start the background district import worker locally                 |
+| `npm run dev:all`                     | Start Astro + email worker + district import worker in one terminal |
+| `npm run import:addresses`            | Parse and import voter address data                                 |
 
 ## Project Structure
 

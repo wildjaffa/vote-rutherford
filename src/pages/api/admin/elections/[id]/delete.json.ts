@@ -1,9 +1,11 @@
 import type { APIRoute } from "astro";
+import { parse } from "cookie";
 import { deleteElection } from "../../../../../lib/services/elections";
+import { getSessionUser } from "../../../../../firebase/server";
 
 export const prerender = false;
 
-export const DELETE: APIRoute = async ({ params }) => {
+export const DELETE: APIRoute = async ({ params, request }) => {
   try {
     const { id } = params;
 
@@ -14,8 +16,18 @@ export const DELETE: APIRoute = async ({ params }) => {
       });
     }
 
+    const cookies = parse(request.headers.get("cookie") || "");
+    const sessionCookie = cookies["__session"];
+    const user = await getSessionUser(sessionCookie);
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     try {
-      await deleteElection(id);
+      await deleteElection(id, user.uid);
       return new Response(
         JSON.stringify({ success: true, message: "Election deleted" }),
         {
@@ -23,13 +35,18 @@ export const DELETE: APIRoute = async ({ params }) => {
           headers: { "Content-Type": "application/json" },
         },
       );
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting election:", error);
-      const status = error.code === 403 ? 403 : error.code === 404 ? 404 : 500;
+      const err = error as {
+        code?: number;
+        message?: string;
+        details?: unknown;
+      };
+      const status = err.code === 403 ? 403 : err.code === 404 ? 404 : 500;
       return new Response(
         JSON.stringify({
-          error: error.message || "Failed to delete election",
-          details: error.details,
+          error: err.message || "Failed to delete election",
+          details: err.details,
         }),
         { status, headers: { "Content-Type": "application/json" } },
       );

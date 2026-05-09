@@ -29,24 +29,43 @@ const districtTypes = [
   <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
     {
       districtTypes.map((type) => (
-        <FormFileInput
-          name={`${name}[${type}]`}
-          label={`${type.replace("_", " ")} Districts`}
-          accept=".geojson,application/geo+json"
-          validateContent={validateGeoJson}
-        />
+        <div
+          class="space-y-3 rounded border border-gray-200 p-4"
+          data-district-group={type}
+        >
+          <div class="space-y-2">
+            <FormFileInput
+              name={`${name}[${type}]`}
+              label={`${type.replace("_", " ")} Districts`}
+              accept=".geojson,application/geo+json"
+              validateContentName="validateGeoJson"
+            />
+          </div>
+          <label class="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              name={`entireCounty[${type}]`}
+              class="h-4 w-4 rounded border-gray-300 text-blue-600"
+              data-entire-county-checkbox={type}
+            />
+            <span class="text-xs text-gray-600">
+              Entire County (no file needed)
+            </span>
+          </label>
+        </div>
       ))
     }
   </div>
 
   <p class="text-xs text-gray-500">
-    Upload GeoJSON files for each district type. Files are processed in memory
-    and not stored permanently.
+    Upload GeoJSON files for each district type, or check "Entire County" if all
+    addresses should be assigned to a single district. Files are processed in
+    memory and not stored permanently.
   </p>
 </div>
 
-<script type="module">
-  function validateGeoJson(content, fileName) {
+<script is:inline>
+  window.validateGeoJson = function (content) {
     try {
       const data = JSON.parse(content);
 
@@ -73,8 +92,52 @@ const districtTypes = [
       }
 
       return null; // Valid
-    } catch (e) {
+    } catch {
       return "Invalid JSON format";
     }
+  };
+
+  // Handle entire county checkbox toggles
+  function setupEntireCountyCheckboxes() {
+    const checkboxes = document.querySelectorAll(
+      "[data-entire-county-checkbox]",
+    );
+
+    checkboxes.forEach((checkbox) => {
+      checkbox.addEventListener("change", () => {
+        const districtType = checkbox.getAttribute(
+          "data-entire-county-checkbox",
+        );
+        const groupDiv = document.querySelector(
+          `[data-district-group="${districtType}"]`,
+        );
+
+        if (!groupDiv) return;
+
+        // Find all file inputs in this group
+        const fileInputs = groupDiv.querySelectorAll('input[type="file"]');
+
+        fileInputs.forEach((input) => {
+          if (checkbox.checked) {
+            input.disabled = true;
+            input
+              .closest("label")
+              ?.classList.add("opacity-50", "pointer-events-none");
+          } else {
+            input.disabled = false;
+            input
+              .closest("label")
+              ?.classList.remove("opacity-50", "pointer-events-none");
+          }
+        });
+      });
+    });
+  }
+
+  // Wait for DOM to be ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupEntireCountyCheckboxes);
+  } else {
+    setupEntireCountyCheckboxes();
   }
 </script>

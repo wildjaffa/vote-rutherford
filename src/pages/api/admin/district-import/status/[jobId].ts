@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { parse } from "cookie";
 import prisma from "../../../../../lib/prisma";
 import { canManageDistricts } from "../../../../../lib/permissions";
 import { getSessionUser } from "../../../../../firebase/server";
@@ -17,7 +18,9 @@ export const GET: APIRoute = async ({ params, request }) => {
 
   try {
     // Check authentication (simplified for now)
-    const user = await getSessionUser(request);
+    const cookies = parse(request.headers.get("cookie") || "");
+    const sessionCookie = cookies["__session"];
+    const user = await getSessionUser(sessionCookie);
     if (!user || !canManageDistricts()) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 403,
@@ -36,7 +39,7 @@ export const GET: APIRoute = async ({ params, request }) => {
       });
     }
 
-    if (job.createdBy !== user.id) {
+    if (job.createdBy !== user.uid) {
       return new Response(JSON.stringify({ error: "Access denied" }), {
         status: 403,
         headers: { "Content-Type": "application/json" },

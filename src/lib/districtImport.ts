@@ -1,4 +1,4 @@
-import { createReadStream } from "stream";
+import { Readable } from "stream";
 import csv from "csv-parser";
 import * as turf from "@turf/turf";
 import type { Feature, Polygon, MultiPolygon } from "geojson";
@@ -7,13 +7,22 @@ import { normalizeAddress } from "./utils/addressNormalizer";
 import prisma from "./prisma";
 import { Prisma } from "../generated/prisma/client";
 import { MeiliSearch } from "meilisearch";
+import { env } from "./utils/environment";
+
+interface DistrictProperties {
+  NAME?: string;
+  DISTRICT?: string | number;
+  Precinct?: string;
+  ID?: string | number;
+  [key: string]: Prisma.InputJsonValue | undefined;
+}
 
 // Configuration
 const BATCH_SIZE = 500;
 
 const meilisearchClient = new MeiliSearch({
-  host: process.env.MEILISEARCH_HOST || "http://localhost:7700",
-  apiKey: process.env.MEILISEARCH_API_KEY || "masterKey",
+  host: env("MEILISEARCH_HOST") || "http://192.168.1.61:7700",
+  apiKey: env("MEILISEARCH_API_KEY") || "'Entitle-Threefold-Bluish4'\\",
 });
 
 interface MunicipalMeta {
@@ -102,6 +111,7 @@ function districtKey(type: DistrictType, name: string, number: number | null) {
 
 export async function loadGeoJsonLayers(
   geoJsonFiles: Record<string, string>,
+  entireCountyTypes: string[] = [],
 ): Promise<LoadedLayer[]> {
   const layers: LoadedLayer[] = [];
 
@@ -120,13 +130,35 @@ export async function loadGeoJsonLayers(
       throw new Error(`Failed to parse GeoJSON for ${type}: ${err}`);
     }
   }
+
+  // For entire county types, create synthetic layers with a single feature
+  for (const type of entireCountyTypes) {
+    // Only create if not already provided in geoJsonFiles
+    if (!geoJsonFiles[type]) {
+      layers.push({
+        type: type as DistrictType,
+        features: [
+          {
+            type: "Feature",
+            properties: {
+              NAME: "All",
+            },
+            geometry: {
+              type: "Polygon",
+              coordinates: [],
+            },
+          },
+        ],
+      });
+    }
+  }
+
   return layers;
 }
 
 export async function upsertDistricts(
   layers: LoadedLayer[],
-  jobId: string,
-  onProgress?: (progress: ImportProgress) => void,
+  onProgress?: (progress: ImportProgress) => Promise<void> | void,
 ): Promise<{
   districtIdMap: Map<string, string>;
   mappings: DistrictMapping[];
@@ -134,14 +166,14 @@ export async function upsertDistricts(
   const map = new Map<string, string>();
   const mappings: DistrictMapping[] = [];
 
-  onProgress?.({
+  await onProgress?.({
     stage: "districts",
     processed: 0,
     message: "Starting district upsert...",
   });
 
   for (const layer of layers) {
-    onProgress?.({
+    await onProgress?.({
       stage: "districts",
       processed: 0,
       message: `Processing ${layer.type} districts...`,
@@ -181,7 +213,7 @@ export async function upsertDistricts(
             name: info.name,
             number: info.number,
             meta: feature.properties,
-            oldDistrictId: existingDistrict?.id,
+            oldDistrictId: existingDistrict?.id ?? null,
           },
         });
 
@@ -267,11 +299,12 @@ export async function processAddressCsv(
   districtIdMap: Map<string, string>,
   allDistrictId: string,
   jobId: string,
-  onProgress?: (progress: ImportProgress) => void,
+  entireCountyTypes: string[] = [],
+  onProgress?: (progress: ImportProgress) => Promise<void> | void,
 ): Promise<void> {
-  const stream = createReadStream(Buffer.from(csvContent), {
-    encoding: "utf8",
-  }).pipe(csv()) as unknown as AsyncIterable<CsvRow>;
+  const stream = Readable.from([csvContent]).pipe(
+    csv(),
+  ) as unknown as AsyncIterable<CsvRow>;
 
   let batch: BatchItem[] = [];
   let count = 0;
@@ -281,7 +314,7 @@ export async function processAddressCsv(
   const lines = csvContent.split("\n").filter((line) => line.trim());
   totalRows = lines.length - 1; // Subtract header
 
-  onProgress?.({
+  await onProgress?.({
     stage: "addresses",
     processed: 0,
     total: totalRows,
@@ -333,35 +366,54 @@ export async function processAddressCsv(
     });
 
     for (const layer of layers) {
-      for (const feature of layer.features) {
-        try {
-          let poly: Feature<Polygon | MultiPolygon>;
-          if (feature.geometry.type === "Polygon") {
-            poly = turf.polygon(feature.geometry.coordinates as number[][][]);
-          } else if (feature.geometry.type === "MultiPolygon") {
-            poly = turf.multiPolygon(
-              feature.geometry.coordinates as number[][][][],
-            );
-          } else {
-            continue;
-          }
-
-          if (turf.booleanPointInPolygon(point, poly)) {
-            const info = extractDistrictInfo(feature.properties, layer.type);
-            const key = districtKey(layer.type, info.name, info.number);
-            const id = districtIdMap.get(key);
-            if (id && !addedDistrictIds.has(id)) {
-              addedDistrictIds.add(id);
-              districtConnects.push({
-                district: {
-                  connect: { id },
-                },
-              });
+      // For entire county types, assign all addresses to the single district
+      if (entireCountyTypes.includes(layer.type)) {
+        const info = extractDistrictInfo(
+          layer.features[0].properties,
+          layer.type,
+        );
+        const key = districtKey(layer.type, info.name, info.number);
+        const id = districtIdMap.get(key);
+        if (id && !addedDistrictIds.has(id)) {
+          addedDistrictIds.add(id);
+          districtConnects.push({
+            district: {
+              connect: { id },
+            },
+          });
+        }
+      } else {
+        // For regular district types, check geometry
+        for (const feature of layer.features) {
+          try {
+            let poly: Feature<Polygon | MultiPolygon>;
+            if (feature.geometry.type === "Polygon") {
+              poly = turf.polygon(feature.geometry.coordinates as number[][][]);
+            } else if (feature.geometry.type === "MultiPolygon") {
+              poly = turf.multiPolygon(
+                feature.geometry.coordinates as number[][][][],
+              );
+            } else {
+              continue;
             }
-            break;
+
+            if (turf.booleanPointInPolygon(point, poly)) {
+              const info = extractDistrictInfo(feature.properties, layer.type);
+              const key = districtKey(layer.type, info.name, info.number);
+              const id = districtIdMap.get(key);
+              if (id && !addedDistrictIds.has(id)) {
+                addedDistrictIds.add(id);
+                districtConnects.push({
+                  district: {
+                    connect: { id },
+                  },
+                });
+              }
+              break;
+            }
+          } catch {
+            // Ignore topology errors
           }
-        } catch {
-          // Ignore topology errors
         }
       }
     }
@@ -409,13 +461,13 @@ export async function processAddressCsv(
     }
 
     if (batch.length >= BATCH_SIZE) {
-      await saveBatch(batch, jobId, onProgress);
+      await saveBatch(batch, jobId);
       batch = [];
     }
   }
 
   if (batch.length > 0) {
-    await saveBatch(batch, jobId, onProgress);
+    await saveBatch(batch, jobId);
   }
 
   onProgress?.({
@@ -461,11 +513,7 @@ async function saveBatchToMeilisearch(docs: MeiliAddressDoc[]): Promise<void> {
   }
 }
 
-async function saveBatch(
-  batch: BatchItem[],
-  jobId: string,
-  onProgress?: (progress: ImportProgress) => void,
-): Promise<void> {
+async function saveBatch(batch: BatchItem[], jobId: string): Promise<void> {
   const meiliDocs: MeiliAddressDoc[] = [];
 
   for (const item of batch) {
@@ -488,25 +536,29 @@ async function saveBatch(
         zip: created.zip,
         districtGroupId: created.districtGroupId,
       });
-    } catch (e) {
+    } catch {
       console.error("Failed to save address:", item.addressData.address);
     }
   }
 
   await saveBatchToMeilisearch(meiliDocs);
 
-  // Update job progress
+  const jobRecord = await prisma.districtImportJob.findUnique({
+    where: { id: jobId },
+    select: { progress: true },
+  });
+
+  const previousProcessedAddresses =
+    jobRecord && jobRecord.progress && typeof jobRecord.progress === "object"
+      ? ((jobRecord.progress as { processedAddresses?: number })
+          .processedAddresses ?? 0)
+      : 0;
+
   await prisma.districtImportJob.update({
     where: { id: jobId },
     data: {
       progress: {
-        processedAddresses:
-          ((
-            await prisma.districtImportJob.findUnique({
-              where: { id: jobId },
-              select: { progress: true },
-            })
-          )?.progress as any) || 0 + batch.length,
+        processedAddresses: previousProcessedAddresses + batch.length,
       },
     },
   });
@@ -538,31 +590,59 @@ export async function updateCandidateDistricts(
   }
 }
 
-export async function runDistrictImport(
+export async function createDistrictImportJob(
+  userId: string,
+  status: ImportJobStatus = ImportJobStatus.PENDING,
+): Promise<string> {
+  const job = await prisma.districtImportJob.create({
+    data: {
+      status,
+      startedAt: status === ImportJobStatus.RUNNING ? new Date() : null,
+      createdBy: userId,
+      progress: {
+        stage: status === ImportJobStatus.PENDING ? "pending" : "initializing",
+        processed: 0,
+        message:
+          status === ImportJobStatus.PENDING
+            ? "Waiting for import worker"
+            : "Starting import",
+      },
+    },
+  });
+
+  return job.id;
+}
+
+export async function executeDistrictImport(
+  jobId: string,
   csvContent: string,
   geoJsonFiles: Record<string, string>,
-  userId: string,
-  onProgress?: (progress: ImportProgress) => void,
+  entireCountyTypes: string[] = [],
+  onProgress?: (progress: ImportProgress) => Promise<void> | void,
 ): Promise<ImportResult> {
-  const job = await prisma.districtImportJob.create({
+  await prisma.districtImportJob.update({
+    where: { id: jobId },
     data: {
       status: ImportJobStatus.RUNNING,
       startedAt: new Date(),
-      createdBy: userId,
-      progress: { stage: "initializing" },
+      progress: {
+        stage: "initializing",
+        processed: 0,
+        message: "Loading GeoJSON layers...",
+      },
     },
   });
 
   try {
-    onProgress?.({
+    await onProgress?.({
       stage: "initializing",
       processed: 0,
       message: "Loading GeoJSON layers...",
     });
 
-    const layers = await loadGeoJsonLayers(geoJsonFiles);
+    const layers = await loadGeoJsonLayers(geoJsonFiles, entireCountyTypes);
 
-    onProgress?.({
+    await onProgress?.({
       stage: "districts",
       processed: 0,
       message: "Upserting districts...",
@@ -570,17 +650,16 @@ export async function runDistrictImport(
 
     const { districtIdMap, mappings } = await upsertDistricts(
       layers,
-      job.id,
       onProgress,
     );
     const allDistrictId = await ensureAllDistrict();
 
     await prisma.districtImportJob.update({
-      where: { id: job.id },
-      data: { districtMapping: mappings },
+      where: { id: jobId },
+      data: { districtMapping: mappings as unknown as Prisma.InputJsonValue },
     });
 
-    onProgress?.({
+    await onProgress?.({
       stage: "cleanup",
       processed: 0,
       message: "Cleaning up old data...",
@@ -588,7 +667,7 @@ export async function runDistrictImport(
 
     await cleanupOldData();
 
-    onProgress?.({
+    await onProgress?.({
       stage: "meilisearch",
       processed: 0,
       message: "Setting up Meilisearch...",
@@ -596,7 +675,7 @@ export async function runDistrictImport(
 
     await setupMeilisearch();
 
-    onProgress?.({
+    await onProgress?.({
       stage: "addresses",
       processed: 0,
       message: "Processing addresses...",
@@ -607,11 +686,12 @@ export async function runDistrictImport(
       layers,
       districtIdMap,
       allDistrictId,
-      job.id,
+      jobId,
+      entireCountyTypes,
       onProgress,
     );
 
-    onProgress?.({
+    await onProgress?.({
       stage: "candidates",
       processed: 0,
       message: "Updating candidate districts...",
@@ -620,18 +700,22 @@ export async function runDistrictImport(
     await updateCandidateDistricts(mappings);
 
     await prisma.districtImportJob.update({
-      where: { id: job.id },
+      where: { id: jobId },
       data: {
         status: ImportJobStatus.COMPLETED,
         completedAt: new Date(),
-        progress: { stage: "completed" },
+        progress: {
+          stage: "completed",
+          processed: 100,
+          message: "Import completed successfully",
+        },
       },
     });
 
-    return { success: true, districtMappings: mappings, jobId: job.id };
+    return { success: true, districtMappings: mappings, jobId };
   } catch (error) {
     await prisma.districtImportJob.update({
-      where: { id: job.id },
+      where: { id: jobId },
       data: {
         status: ImportJobStatus.FAILED,
         completedAt: new Date(),
@@ -642,8 +726,25 @@ export async function runDistrictImport(
     return {
       success: false,
       districtMappings: [],
-      jobId: job.id,
+      jobId,
       error: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+export async function runDistrictImport(
+  csvContent: string,
+  geoJsonFiles: Record<string, string>,
+  userId: string,
+  entireCountyTypes: string[] = [],
+  onProgress?: (progress: ImportProgress) => Promise<void> | void,
+): Promise<ImportResult> {
+  const jobId = await createDistrictImportJob(userId, ImportJobStatus.RUNNING);
+  return executeDistrictImport(
+    jobId,
+    csvContent,
+    geoJsonFiles,
+    entireCountyTypes,
+    onProgress,
+  );
 }

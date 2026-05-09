@@ -11,18 +11,85 @@ let error: string | null = null;
 let jobId: string | null = null;
 let importStatus: any = null;
 
+function calculateProgress(progress: any) {
+  if (!progress) return 0;
+
+  const stages = [
+    "initializing",
+    "districts",
+    "cleanup",
+    "meilisearch",
+    "addresses",
+    "candidates",
+  ];
+  const currentStage = progress.stage || "initializing";
+  const stageIndex = stages.indexOf(currentStage);
+
+  if (stageIndex === -1) return 0;
+
+  const baseProgress = (stageIndex / stages.length) * 100;
+
+  if (progress.processed && progress.total) {
+    const stageProgress =
+      (progress.processed / progress.total) * (100 / stages.length);
+    return Math.min(
+      baseProgress + stageProgress,
+      ((stageIndex + 1) / stages.length) * 100,
+    );
+  }
+
+  return baseProgress;
+}
+
+function getProgressText(progress: any) {
+  if (!progress) return "";
+
+  if (progress.message) {
+    return progress.message;
+  }
+
+  const stage = progress.stage || "initializing";
+  switch (stage) {
+    case "initializing":
+      return "Initializing import...";
+    case "districts":
+      return "Processing districts...";
+    case "cleanup":
+      return "Cleaning up old data...";
+    case "meilisearch":
+      return "Setting up search index...";
+    case "addresses":
+      return "Processing addresses...";
+    case "candidates":
+      return "Updating candidates...";
+    default:
+      return "Processing...";
+  }
+}
+
 if (Astro.request.method === "POST") {
   try {
     const formData = await Astro.request.formData();
     const csvContent = formData.get("csvContent") as string;
     const geoJsonFiles: Record<string, string> = {};
+    const entireCountyTypes: string[] = [];
 
     // Collect GeoJSON files
     for (const [key, value] of formData.entries()) {
       if (key.startsWith("geoJsonFiles[") && key.endsWith("]")) {
         const type = key.match(/geoJsonFiles\[(.+)\]/)?.[1];
-        if (type && typeof value === "string") {
+        if (type && typeof value === "string" && value.trim()) {
           geoJsonFiles[type] = value;
+        }
+      }
+    }
+
+    // Collect entire county selections
+    for (const [key] of formData.entries()) {
+      if (key.startsWith("entireCounty[") && key.endsWith("]")) {
+        const type = key.match(/entireCounty\[(.+)\]/)?.[1];
+        if (type) {
+          entireCountyTypes.push(type);
         }
       }
     }
@@ -31,20 +98,48 @@ if (Astro.request.method === "POST") {
       throw new Error("CSV file is required");
     }
 
-    if (Object.keys(geoJsonFiles).length === 0) {
-      throw new Error("At least one GeoJSON file is required");
+    // Validate that we have either a GeoJSON file or entire county selection for each type
+    const allDistrictTypes = [
+      "COMMISSIONER",
+      "PRECINCT",
+      "US_HOUSE",
+      "STATE_SENATE",
+      "STATE_HOUSE",
+      "JUDICIAL",
+      "COUNTY",
+      "MUNICIPAL",
+      "SCHOOL",
+      "ROAD",
+    ];
+
+    const hasData = allDistrictTypes.some(
+      (type) => geoJsonFiles[type] || entireCountyTypes.includes(type),
+    );
+
+    if (!hasData) {
+      throw new Error(
+        "At least one GeoJSON file or 'Entire County' selection is required",
+      );
     }
 
     const result = await Astro.callAction(actions.startDistrictImport, {
       csvContent,
       geoJsonFiles,
+      entireCountyTypes,
     });
 
     if (result.data?.success) {
       jobId = result.data.jobId;
-      importStatus = result.data;
+      importStatus = {
+        status: "PENDING",
+        progress: {
+          stage: "pending",
+          processed: 0,
+          message: "Queued for processing",
+        },
+      };
     } else {
-      error = result.data?.error || "Import failed";
+      error = "Import failed";
     }
   } catch (err) {
     error = err instanceof Error ? err.message : "Failed to start import";
@@ -146,7 +241,7 @@ if (queryJobId && !jobId) {
               label="Voter Address CSV File"
               accept=".csv,text/csv"
               required={true}
-              validateContent={validateCsv}
+              validateContentName="validateCsv"
             />
 
             <div class="mt-6">
@@ -176,8 +271,8 @@ if (queryJobId && !jobId) {
   </div>
 </AdminLayout>
 
-<script>
-  function validateCsv(content: string, fileName: string): string | null {
+<script is:inline>
+  window.validateCsv = function (content) {
     const lines = content.split("\n").filter((line) => line.trim());
     if (lines.length < 2) {
       return "CSV must contain at least a header row and one data row";
@@ -201,9 +296,11 @@ if (queryJobId && !jobId) {
     }
 
     return null; // Valid
-  }
+  };
+</script>
 
-  function calculateProgress(progress: any): number {
+<script is:inline define:vars={{ jobId }}>
+  function calculateProgress(progress) {
     if (!progress) return 0;
 
     const stages = [
@@ -234,7 +331,7 @@ if (queryJobId && !jobId) {
     return baseProgress;
   }
 
-  function getProgressText(progress: any): string {
+  function getProgressText(progress) {
     if (!progress) return "";
 
     if (progress.message) {
@@ -261,16 +358,14 @@ if (queryJobId && !jobId) {
   }
 
   // Polling for status updates
-  let pollInterval: number | null = null;
+  let pollInterval = null;
 
-  function startPolling(jobId: string) {
+  function startPolling(id) {
     if (pollInterval) clearInterval(pollInterval);
 
     pollInterval = setInterval(async () => {
       try {
-        const response = await fetch(
-          `/api/admin/district-import/status/${jobId}`,
-        );
+        const response = await fetch(`/api/admin/district-import/status/${id}`);
         if (!response.ok) throw new Error("Failed to fetch status");
 
         const data = await response.json();
@@ -294,7 +389,7 @@ if (queryJobId && !jobId) {
     }
   }
 
-  function updateStatus(data: any) {
+  function updateStatus(data) {
     const statusText = document.getElementById("statusText");
     const progressBar = document.getElementById("progressBar");
     const progressText = document.getElementById("progressText");
@@ -312,9 +407,14 @@ if (queryJobId && !jobId) {
   }
 
   // Start polling if we have an active job
-  const currentJobId = "{jobId}";
-  if (currentJobId && currentJobId !== "null") {
-    startPolling(currentJobId);
+  if (jobId && jobId !== "null") {
+    const currentUrl = new URL(window.location.href);
+    if (currentUrl.searchParams.get("jobId") !== jobId) {
+      currentUrl.searchParams.set("jobId", jobId);
+      window.history.replaceState({}, "", currentUrl);
+    }
+
+    startPolling(jobId);
   }
 
   // Cleanup on page unload

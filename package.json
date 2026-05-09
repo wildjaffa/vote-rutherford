@@ -7,6 +7,9 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "worker:email": "tsx src/lib/jobs/emailWorker.ts",
+    "worker:district-import": "tsx src/lib/jobs/districtImportWorker.ts",
+    "dev:all": "npx concurrently \"npm run dev\" \"npm run worker:email\" \"npm run worker:district-import\"",
     "import:addresses": "tsx voter-data-parsing/parseVoterData.ts",
     "import:addresses:dry-run": "tsx voter-data-parsing/parseVoterData.ts --dry-run",
     "import:addresses:verbose": "tsx voter-data-parsing/parseVoterData.ts --verbose"

@@ -24,12 +24,6 @@ async function seedBaseData() {
     create: { value: "moderator" },
   });
 
-  const voterUserType = await prisma.userType.upsert({
-    where: { id: 3 },
-    update: {},
-    create: { value: "voter" },
-  });
-
   console.log("  ✓ Created user types and blob storage types");
 
   // Create qualification types
