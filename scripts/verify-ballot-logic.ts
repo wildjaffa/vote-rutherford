@@ -6,12 +6,8 @@ async function verifyBallotLogic() {
   try {
     // Step 1: Create or find a test VoterAddress
     console.log("Step 1: Creating/finding a test VoterAddress...");
-    const testAddress = await prisma.voterAddress.upsert({
-      where: {
-        normalizedAddress: "123 TEST ST",
-      },
-      update: {},
-      create: {
+    const testAddress = await prisma.voterAddress.create({
+      data: {
         address: "123 Test Street",
         normalizedAddress: "123 TEST ST",
         city: "Rutherford",
@@ -45,7 +41,7 @@ async function verifyBallotLogic() {
 
     // Step 3: Link VoterAddress to District
     console.log("Step 3: Linking VoterAddress to District...");
-    const link = await prisma.districtToVoterAddress.upsert({
+    await prisma.districtToVoterAddress.upsert({
       where: {
         districtId_voterAddressId: {
           districtId: testDistrict.id,

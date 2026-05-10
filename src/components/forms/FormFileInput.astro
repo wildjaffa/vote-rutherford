@@ -1,0 +1,114 @@
+---
+interface Props {
+  name: string;
+  label: string;
+  accept: string;
+  required?: boolean;
+  validateContentName?: string;
+}
+
+const {
+  name,
+  label,
+  accept,
+  required = false,
+  validateContentName,
+} = Astro.props;
+---
+
+<div class="space-y-2">
+  <label class="block text-sm font-medium text-gray-700">
+    {label}
+    {required && <span class="text-red-500">*</span>}
+  </label>
+
+  <div>
+    <input
+      type="file"
+      accept={accept}
+      id={`${name}Input`}
+      class="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
+      required={required}
+    />
+    <input type="hidden" name={name} id={`${name}Content`} />
+    <p id={`${name}Status`} class="mt-1 text-xs text-gray-500"></p>
+  </div>
+</div>
+
+<script is:inline define:vars={{ name, accept, validateContentName }}>
+  const input = document.getElementById(`${name}Input`);
+  const hidden = document.getElementById(`${name}Content`);
+  const status = document.getElementById(`${name}Status`);
+
+  input.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) {
+      hidden.value = "";
+      status.textContent = "";
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = accept.split(",").map((t) => t.trim());
+    const isValidType = allowedTypes.some((type) => {
+      if (type.startsWith(".")) {
+        return file.name.toLowerCase().endsWith(type);
+      }
+      return file.type === type;
+    });
+
+    if (!isValidType) {
+      status.textContent = `Invalid file type. Allowed: ${accept}`;
+      status.className = "mt-1 text-xs text-red-500";
+      hidden.value = "";
+      return;
+    }
+
+    // Check file size (1000MB limit)
+    if (file.size > 1000 * 1024 * 1024) {
+      status.textContent = "File must be <= 1000 MB";
+      status.className = "mt-1 text-xs text-red-500";
+      hidden.value = "";
+      return;
+    }
+
+    status.textContent = "Reading file...";
+    status.className = "mt-1 text-xs text-blue-600";
+
+    try {
+      const content = await readFileAsText(file);
+
+      // Validate content if validator provided
+      if (
+        validateContentName &&
+        typeof window[validateContentName] === "function"
+      ) {
+        const validationError = window[validateContentName](content, file.name);
+        if (validationError) {
+          status.textContent = validationError;
+          status.className = "mt-1 text-xs text-red-500";
+          hidden.value = "";
+          return;
+        }
+      }
+
+      hidden.value = content;
+      status.textContent = `Loaded ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      status.className = "mt-1 text-xs text-green-600";
+    } catch (error) {
+      console.error("Error reading file:", error);
+      status.textContent = "Failed to read file";
+      status.className = "mt-1 text-xs text-red-500";
+      hidden.value = "";
+    }
+  });
+
+  function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsText(file);
+    });
+  }
+</script>

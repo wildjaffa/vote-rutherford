@@ -1,64 +1,38 @@
 # Vote Rutherford
 
-A modern voting information platform built with Astro, Prisma, and PostgreSQL. This application provides comprehensive information about elections, races, and candidates to help voters make informed decisions.
+A modern voting information platform and candidate outreach system for Rutherford County, built with Astro 5, Prisma 7, LibSQL, and Tailwind CSS 4.
+
+This application provides comprehensive information about elections, races, and candidates, and includes internal tools for managing candidate responses and automated outreach.
 
 ## Features
 
-- **Hybrid Rendering**: Static site generation with server-side rendering for dynamic content
-- **Content Collections**: Astro content collections backed by Prisma for efficient data management
-- **Database-Driven**: PostgreSQL database with Prisma ORM
-- **Docker Support**: Full Docker development and production environments
-- **Modern Stack**: Astro 5, TypeScript, Tailwind CSS 4, and Prisma
+- **Candidate Database**: Comprehensive tracking of elections, races, and candidate profiles.
+- **Candidate Policy Responses**: Support for multi-question policy surveys with markdown formatting and versioned responses.
+- **Candidate Outreach**: Automated email outreach system using BullMQ, Redis, and Google OAuth.
+- **Voter Address Search**: Advanced Full-Text Search (FTS5) for Rutherford County addresses, supporting thousands of records for precinct-based candidate filtering.
+- **Admin Portal**: Secure management interface for all election data, integrated with Firebase Authentication.
+- **Image Hosting**: Integration with Cloudflare R2 for candidate and election imagery.
+- **Performance**: Edge-ready caching with Cloudflare-compatible middleware and localized DB syncing via LibSQL (Turso).
 
-## Quick Start with Docker
+## Tech Stack
 
-The fastest way to get started is using Docker Compose:
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd vote-rutherford
-
-# Start the application and database
-docker-compose up
-
-# The application will be available at http://localhost:4321
-```
-
-This will:
-
-- Start a PostgreSQL database
-- Run database migrations
-- Start the Astro development server with hot-reload
-- Seed the database with sample data (on first run)
+- **Framework**: Astro 5 (Hybrid SSR)
+- **Database**: LibSQL / SQLite with Prisma 7 ORM
+- **Styling**: Tailwind CSS 4
+- **Background Jobs**: BullMQ and IORedis
+- **Search**: SQLite FTS / Meilisearch (optional)
+- **Deployment**: Docker with PM2 (clustering & worker management)
+- **External Services**: Cloudflare (R2, Caching), Google APIs (OAuth, Gmail), Firebase (Admin/Auth)
 
 ## Development Setup
 
 ### Prerequisites
 
-- Docker and Docker Compose (recommended)
-- **OR** Node.js 20+ and PostgreSQL 16+ (for local development)
+- **Node.js**: 22+
+- **Redis**: Required for background email workers
+- **LibSQL/SQLite**: Local files used by default
 
-### Option 1: Docker Development (Recommended)
-
-```bash
-# Start all services
-docker-compose up
-
-# Run in detached mode
-docker-compose up -d
-
-# View logs
-docker-compose logs -f app
-
-# Stop services
-docker-compose down
-
-# Reset database (removes all data)
-docker-compose down -v
-```
-
-### Option 2: Local Development
+### Local Installation
 
 1. **Install dependencies**
 
@@ -66,230 +40,116 @@ docker-compose down -v
    npm install
    ```
 
-2. **Set up environment variables**
+2. **Set up environment**
 
    ```bash
    cp .env.example .env
-   # Edit .env with your database credentials
+   # Update .env with your local Redis and database paths
    ```
 
-3. **Start PostgreSQL**
+   If you don't already have Redis running locally, start it with Docker:
 
    ```bash
-   # Using Docker for just the database
-   docker-compose up database -d
-
-   # OR use your local PostgreSQL installation
+   docker run -d --name vote-rutherford-redis -p 6379:6379 redis:7-alpine
    ```
 
-4. **Run database migrations**
+   Or, if using Docker Compose:
 
    ```bash
-   npx prisma migrate deploy
+   docker-compose up -d redis
    ```
 
-5. **Generate Prisma Client**
+3. **Database Preparation**
 
    ```bash
    npx prisma generate
+   npx prisma migrate dev
    ```
 
-6. **Seed the database (optional)**
+4. **Seed Database (optional)**
 
    ```bash
-   npx tsx -r dotenv/config prisma/seed.ts
+   npx tsx prisma/seed.ts
    ```
 
-7. **Start development server**
+5. **Start Development Servers**
+
    ```bash
+   # Start the Astro development portal
    npm run dev
+
+   # Start the email background worker (separate terminal)
+   npx tsx src/lib/jobs/emailWorker.ts
    ```
+
+## Docker Development
+
+The included `docker-compose.yml` starts the application in development mode.
+
+```bash
+docker-compose up
+```
 
 ## Available Commands
 
-| Command                  | Action                               |
-| :----------------------- | :----------------------------------- |
-| `npm install`            | Install dependencies                 |
-| `npm run dev`            | Start dev server at `localhost:4321` |
-| `npm run build`          | Build production site to `./dist/`   |
-| `npm run preview`        | Preview production build locally     |
-| `npx prisma studio`      | Open Prisma Studio to view/edit data |
-| `npx prisma migrate dev` | Create and apply new migration       |
-| `npx prisma generate`    | Generate Prisma Client               |
-
-## Docker Commands
-
-### Development
-
-```bash
-# Start development environment
-docker-compose up
-
-# Rebuild after dependency changes
-docker-compose up --build
-
-# Run Prisma commands in container
-docker-compose exec app npx prisma studio
-docker-compose exec app npx prisma migrate dev
-
-# Access database directly
-docker-compose exec database psql -U username -d default_database
-
-# Seed the database
-docker-compose exec app npx tsx -r dotenv/config prisma/seed.ts
-```
-
-### Production
-
-```bash
-# Build and start production environment
-docker-compose -f docker-compose.prod.yml up --build
-
-# Run in background
-docker-compose -f docker-compose.prod.yml up -d
-
-# View logs
-docker-compose -f docker-compose.prod.yml logs -f
-
-# Stop production environment
-docker-compose -f docker-compose.prod.yml down
-```
+| Command                               | Action                                                              |
+| :------------------------------------ | :------------------------------------------------------------------ |
+| `npm run dev`                         | Start Astro dev server at `localhost:4321`                          |
+| `npm run build`                       | Build production site to `./dist/`                                  |
+| `npm run preview`                     | Preview production build locally                                    |
+| `npx prisma studio`                   | Open Prisma Studio GUI                                              |
+| `npx prisma migrate dev`              | Create and apply new migrations                                     |
+| `npx tsx src/lib/jobs/emailWorker.ts` | Start the background email worker locally                           |
+| `npm run worker:email`                | Start the background email worker locally                           |
+| `npm run worker:district-import`      | Start the background district import worker locally                 |
+| `npm run dev:all`                     | Start Astro + email worker + district import worker in one terminal |
+| `npm run import:addresses`            | Parse and import voter address data                                 |
 
 ## Project Structure
 
 ```
 /
 ├── prisma/
-│   ├── schema.prisma          # Database schema
+│   ├── schema.prisma          # Database schema (LibSQL/SQLite)
+│   ├── auditExtension.ts      # Custom Prisma extension for audit logging
 │   └── seed.ts                # Database seeding script
 ├── src/
-│   ├── components/            # Astro components
-│   ├── content/
-│   │   └── config.ts          # Content collections configuration
+│   ├── actions/               # Astro Actions (Contact forms, Admin tasks)
+│   ├── components/            # Astro & UI components
+│   ├── firebase/              # Server-side Firebase Admin setup
 │   ├── layouts/               # Page layouts
 │   ├── lib/
-│   │   ├── prisma.ts          # Prisma client instance
-│   │   └── types.ts           # TypeScript types
+│   │   ├── jobs/              # BullMQ Producers and Workers (Email)
+│   │   ├── services/          # Core business logic (Email, Candidates, Search)
+│   │   └── prisma.ts          # Lazily initialized Prisma Client
 │   ├── pages/
-│   │   ├── api/               # API endpoints
-│   │   └── elections/         # Election pages
-│   └── styles/                # Global styles
-├── docker-compose.yml         # Development Docker setup
-├── docker-compose.prod.yml    # Production Docker setup
-├── Dockerfile                 # Production Dockerfile
-├── Dockerfile.dev             # Development Dockerfile
+│   │   ├── admin/             # Restricted administrative portal
+│   │   ├── api/               # Server-side API endpoints
+│   │   └── elections/         # Public-facing election pages
+│   └── middleware.ts          # Auth and Cache-Control logic
+├── voter-data-parsing/        # Tooling for processing TN voter GIS data
+├── Dockerfile                 # Multi-stage production build
+├── ecosystem.config.cjs       # PM2 configuration for process clustering
 └── astro.config.mjs           # Astro configuration
-```
-
-## Database Management
-
-### Migrations
-
-```bash
-# Create a new migration
-npx prisma migrate dev --name description_of_changes
-
-# Apply migrations in production
-npx prisma migrate deploy
-
-# Reset database (WARNING: deletes all data)
-npx prisma migrate reset
-```
-
-### Prisma Studio
-
-Access the database GUI:
-
-```bash
-# Local development
-npx prisma studio
-
-# Docker development
-docker-compose exec app npx prisma studio
-```
-
-## Environment Variables
-
-Create a `.env` file in the root directory:
-
-```env
-DATABASE_URL="postgresql://username:password@localhost:5432/default_database?schema=public"
-```
-
-For Docker, these are configured in `docker-compose.yml`.
-
-## Troubleshooting
-
-### Port Already in Use
-
-If port 4321 or 5432 is already in use:
-
-```bash
-# Change ports in docker-compose.yml
-# For app: "3000:4321" (access at localhost:3000)
-# For database: "5433:5432" (update DATABASE_URL accordingly)
-```
-
-### Database Connection Issues
-
-```bash
-# Check database is running
-docker-compose ps
-
-# View database logs
-docker-compose logs database
-
-# Restart database
-docker-compose restart database
-```
-
-### Hot Reload Not Working
-
-```bash
-# Rebuild the development container
-docker-compose up --build
-
-# Ensure volumes are mounted correctly in docker-compose.yml
-```
-
-### Prisma Client Out of Sync
-
-```bash
-# Regenerate Prisma Client
-npx prisma generate
-
-# In Docker
-docker-compose exec app npx prisma generate
 ```
 
 ## Production Deployment
 
-1. **Build the Docker image**
+The application is designed to be deployed as a Docker container managed by PM2.
+
+1. **Build the image**:
 
    ```bash
-   docker build -t vote-rutherford:latest .
+   docker build -t vote-rutherford .
    ```
 
-2. **Run with production compose**
+2. **Run the container**:
+   Ensure environment variables for `DATABASE_URL`, `REDIS_URL`, and Cloudflare/Firebase credentials are provided.
 
-   ```bash
-   docker-compose -f docker-compose.prod.yml up -d
-   ```
-
-3. **Set environment variables** for your production environment
-
-4. **Run migrations**
-   ```bash
-   docker-compose -f docker-compose.prod.yml exec app npx prisma migrate deploy
-   ```
-
-## Contributing
-
-1. Create a feature branch
-2. Make your changes
-3. Create a migration if database changes are needed
-4. Test with Docker: `docker-compose up --build`
-5. Submit a pull request
+3. **PM2 Management**:
+   The container starts `entrypoint.sh` which launches PM2 using `ecosystem.config.cjs`. This manages:
+   - Astro SSR Server (clustered)
+   - Email Background Worker (singleton)
 
 ## License
 

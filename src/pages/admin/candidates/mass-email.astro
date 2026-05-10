@@ -558,6 +558,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
 
       const urlParams = new URLSearchParams(window.location.search);
       const tt = urlParams.get('targetType') || 'candidate';
+      const targetType = tt === 'candidate' || tt === 'contact' ? tt : undefined;
 
       try {
         const { data, error } = await actions.sendMassEmail({
@@ -565,7 +566,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
           bodyTemplate,
           userGoogleAccountId,
           targets,
-          targetType: tt,
+          targetType,
           scheduledAt: sendLaterCb.checked ? scheduledAtInput.value : undefined
         });
 

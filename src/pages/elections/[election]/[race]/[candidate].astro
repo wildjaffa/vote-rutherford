@@ -193,13 +193,38 @@ if (mobileFullName.length > 15) {
               <Square class="relative h-5 w-5" />
               <Check
                 stroke-width={4}
-                class="selected-icon text-secondary absolute bottom-[-2px] left-[-4px] z-10 hidden h-12 w-12"
+                class="selected-icon text-secondary absolute -bottom-0.5 -left-1 z-10 hidden h-12 w-12"
               />
             </button>
             <div class="ml-16">
               <h2 class="hidden text-2xl md:block">{fullName}</h2>
               <h2 class="text-2xl md:hidden">{mobileFullName}</h2>
-              <p class="text-md md:text-lg">{candidateData.partyAffiliation}</p>
+              <div class="flex items-center gap-2">
+                <p class="text-md md:text-lg">
+                  {candidateData.partyAffiliation}
+                </p>
+                {
+                  candidateData.isWinner && (
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full bg-yellow-400 px-2 py-0.5 text-xs font-bold text-yellow-900 shadow-sm"
+                      title="Winner of this race"
+                    >
+                      <svg
+                        class="h-3 w-3"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fill-rule="evenodd"
+                          d="M10 2l2.4 7.4h7.6l-6 4.6 2.3 7.5L10 16.5l-6.3 5 2.3-7.5-6-4.6h7.6L10 2z"
+                          clip-rule="evenodd"
+                        />
+                      </svg>
+                      Winner
+                    </span>
+                  )
+                }
+              </div>
             </div>
           </div>
         </div>
@@ -216,7 +241,7 @@ if (mobileFullName.length > 15) {
                   {question.questionText}
                 </h2>
                 <div class="bg-primary h-1 w-full md:w-[90%]" />
-                <p class="mt-4 w-full text-gray-700 whitespace-pre-wrap">
+                <p class="mt-4 w-full whitespace-pre-wrap text-gray-700">
                   {response?.response ?? "No response provided"}
                 </p>
                 {response?.source && (
@@ -233,11 +258,10 @@ if (mobileFullName.length > 15) {
                       >
                         <ExternalLink class="size-3" /> View Source
                       </a>
-                      <CircleQuestionMark class="text-gray-400 size-3.5 cursor-help" />
-                      <div class="bg-primary pointer-events-none absolute bottom-full left-0 mb-2 w-64 rounded-lg px-3 py-2 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus:opacity-100 md:left-1/2 md:w-48 md:-translate-x-1/2 z-50">
+                      <CircleQuestionMark class="size-3.5 cursor-help text-gray-400" />
+                      <div class="bg-primary pointer-events-none absolute bottom-full left-0 z-50 mb-2 w-64 rounded-lg px-3 py-2 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus:opacity-100 md:left-1/2 md:w-48 md:-translate-x-1/2">
                         The candidate answered a similar question, but not this
-                        exact question. We provided the answer for
-                        transparency.
+                        exact question. We provided the answer for transparency.
                         <div class="border-t-primary absolute top-full left-10 -ml-1 border-4 border-transparent md:left-1/2" />
                       </div>
                     </div>

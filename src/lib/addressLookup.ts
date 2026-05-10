@@ -12,7 +12,7 @@ export interface AddressSearchResult {
 
 const meilisearchClient = new MeiliSearch({
   host: env("MEILISEARCH_HOST") || "http://localhost:7700",
-  apiKey: env("MEILISEARCH_API_KEY") || "masterKey",
+  apiKey: env("MEILISEARCH_API_KEY") || "password",
 });
 
 export async function searchAddresses(

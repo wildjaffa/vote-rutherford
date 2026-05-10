@@ -66,6 +66,9 @@ model Race {
   candidates             Candidate[]
   policyQuestionsToRaces PolicyQuestionToRace[]
 
+  sourceRaces Race[] @relation("RaceToSourceRaces")
+  targetRaces Race[] @relation("RaceToSourceRaces")
+
   @@unique([electionId, slug])
   @@map("races")
 }
@@ -93,6 +96,7 @@ model Candidate {
   partyAffiliation  String?
   email             String?
   isIncumbent       Boolean               @default(false)
+  isWinner          Boolean               @default(false)
   profileImage      BlobStorageReference? @relation("CandidateProfileImage", fields: [profileImageId], references: [id])
   profileImageId    String?               
   historicalLink    Candidate?            @relation("HistoricalLink", fields: [historicalLinkId], references: [id])
@@ -378,12 +382,21 @@ enum DistrictType {
   ALL
 }
 
+enum ImportJobStatus {
+  PENDING
+  RUNNING
+  AWAITING_MAPPING
+  COMPLETED
+  FAILED
+}
+
 model District {
   id        String       @id @default(uuid())
   name      String
   number    Int?
   type      DistrictType
   meta      Json?
+  oldDistrictId String?
   createdAt DateTime     @default(now())
   updatedAt DateTime     @default(now())
   deletedAt DateTime?
@@ -455,6 +468,21 @@ model DistrictToVoterAddress {
 
   @@unique([districtId, voterAddressId])
   @@map("districts_to_voter_addresses")
+}
+
+model DistrictImportJob {
+  id            String          @id @default(uuid())
+  status        ImportJobStatus @default(PENDING)
+  progress      Json?
+  districtMapping Json?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  errorMessage  String?
+  createdBy     String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @default(now())
+
+  @@map("district_import_jobs")
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.

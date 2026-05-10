@@ -4,6 +4,7 @@ import CandidateCard from "../../../../components/CandidateCard.astro";
 import prisma from "../../../../lib/prisma";
 import BackOption from "../../../../components/BackOption.astro";
 import CandidateProfilePicture from "../../../../components/CandidateProfilePicture.astro";
+import PlaceholderCandidateCard from "../../../../components/PlaceholderCandidateCard.astro";
 
 export const prerender = false;
 
@@ -33,6 +34,14 @@ const raceData = await prisma.race.findFirst({
         },
       },
     },
+    sourceRaces: {
+      include: {
+        election: true,
+        candidates: {
+          where: { isWinner: true, deletedAt: null },
+        },
+      },
+    },
   },
 });
 
@@ -41,7 +50,12 @@ if (raceData === null) {
 }
 
 const questions = raceData.election.policyQuestions;
-const { candidates } = raceData;
+const { candidates, sourceRaces } = raceData;
+
+// A source race is pending if it has no winners marked
+const pendingSourceRaces = sourceRaces.filter(
+  (sr) => sr.candidates.length === 0,
+);
 
 // Serialize to JSON for client-side script
 const candidatesJson = JSON.stringify(
@@ -93,7 +107,7 @@ const noIncumbent = candidates.filter((c) => c.isIncumbent).length === 0;
     <section class="mb-16">
       <h2 class="mb-6 text-2xl font-semibold text-gray-900">Candidates</h2>
       {
-        candidates.length > 0 ? (
+        candidates.length > 0 || pendingSourceRaces.length > 0 ? (
           <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {candidates.map((candidate) => (
               <CandidateCard
@@ -108,6 +122,13 @@ const noIncumbent = candidates.filter((c) => c.isIncumbent).length === 0;
                       ? "Incumbent"
                       : ""
                 }
+              />
+            ))}
+
+            {/* Show pending placeholders for source races without winners */}
+            {pendingSourceRaces.map((sr) => (
+              <PlaceholderCandidateCard
+                sourceRaceName={`${sr.name} (${sr.election.name})`}
               />
             ))}
           </div>
@@ -175,7 +196,7 @@ const noIncumbent = candidates.filter((c) => c.isIncumbent).length === 0;
   </main>
 </Layout>
 
-<script define:vars={{ candidatesJson, questionsJson }} type="module">
+<script is:inline define:vars={{ candidatesJson, questionsJson }} type="module">
   /** @type {Array} */
   const candidates = JSON.parse(candidatesJson);
   /** @type {Array} */
