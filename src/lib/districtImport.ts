@@ -8,7 +8,11 @@ import prisma from "./prisma";
 import { Prisma } from "../generated/prisma/client";
 import { MeiliSearch } from "meilisearch";
 import { env } from "./utils/environment";
-import type { DistrictMapping, ImportProgress, ImportResult } from "./types/districtImport";
+import type {
+  DistrictMapping,
+  ImportProgress,
+  ImportResult,
+} from "./types/districtImport";
 
 // Re-export for compatibility
 export type { DistrictMapping, ImportProgress, ImportResult };
@@ -25,8 +29,8 @@ interface DistrictProperties {
 const BATCH_SIZE = 500;
 
 const meilisearchClient = new MeiliSearch({
-  host: env("MEILISEARCH_HOST") || "http://192.168.1.61:7700",
-  apiKey: env("MEILISEARCH_API_KEY") || "'Entitle-Threefold-Bluish4'\\",
+  host: env("MEILISEARCH_HOST") || "http://localhost:7700",
+  apiKey: env("MEILISEARCH_API_KEY") || "password",
 });
 
 interface MunicipalMeta {
@@ -87,8 +91,6 @@ interface BatchItem {
   districtGroupId: string;
 }
 
-
-
 function districtKey(type: DistrictType, name: string, number: number | null) {
   return `${type}:${String(name).trim()}:${number ?? 0}`;
 }
@@ -141,7 +143,7 @@ export async function loadGeoJsonLayers(
 }
 
 export async function analyzeDistricts(
-  layers: LoadedLayer[]
+  layers: LoadedLayer[],
 ): Promise<DistrictMapping[]> {
   const mappings: DistrictMapping[] = [];
   const map = new Set<string>();
@@ -150,7 +152,7 @@ export async function analyzeDistricts(
     for (const feature of layer.features) {
       const info = extractDistrictInfo(feature.properties, layer.type);
       const key = districtKey(layer.type, info.name, info.number);
-      
+
       if (map.has(key)) continue;
       map.add(key);
 
@@ -654,7 +656,7 @@ export async function analyzeDistrictImport(
 
   try {
     const layers = await loadGeoJsonLayers(geoJsonFiles, entireCountyTypes);
-    
+
     await onProgress?.({
       stage: "analyzing",
       processed: 0,
@@ -665,14 +667,14 @@ export async function analyzeDistrictImport(
 
     await prisma.districtImportJob.update({
       where: { id: jobId },
-      data: { 
+      data: {
         status: ImportJobStatus.AWAITING_MAPPING,
         districtMapping: proposedMappings as unknown as Prisma.InputJsonValue,
         progress: {
           stage: "awaiting_mapping",
           processed: 100,
           message: "Awaiting manual district mapping confirmation",
-        }
+        },
       },
     });
 

@@ -35,8 +35,8 @@ const DRY_RUN = process.argv.includes("--dry-run");
 const VERBOSE = process.argv.includes("--verbose");
 
 const meilisearchClient = new MeiliSearch({
-  host: env("MEILISEARCH_HOST") || "http://192.168.1.61:7700",
-  apiKey: env("MEILISEARCH_API_KEY") || "'Entitle-Threefold-Bluish4'\\",
+  host: env("MEILISEARCH_HOST") || "http://localhost:7700",
+  apiKey: env("MEILISEARCH_API_KEY") || "password",
 });
 
 // Map DistrictType to GeoJSON filenames

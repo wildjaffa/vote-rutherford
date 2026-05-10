@@ -13,13 +13,13 @@ export const startDistrictImport = defineAction({
     entireCountyTypes: z.array(z.string()).default([]),
   }),
   handler: async ({ csvContent, geoJsonFiles, entireCountyTypes }, context) => {
-    if (!(await canManageDistricts())) {
-      throw new Error("Insufficient permissions");
-    }
-
     const userId = await getCurrentUserId(
       context.cookies.get("__session")?.value,
     );
+
+    if (!(await canManageDistricts(userId))) {
+      throw new Error("Insufficient permissions");
+    }
 
     const job = await prisma.districtImportJob.create({
       data: {
@@ -76,8 +76,12 @@ export const getDistrictImportStatus = defineAction({
   input: z.object({
     jobId: z.string(),
   }),
-  handler: async ({ jobId }) => {
-    if (!(await canManageDistricts())) {
+  handler: async ({ jobId }, context) => {
+    const userId = await getCurrentUserId(
+      context.cookies.get("__session")?.value,
+    );
+
+    if (!(await canManageDistricts(userId))) {
       throw new Error("Insufficient permissions");
     }
 
@@ -106,8 +110,12 @@ export const confirmDistrictImport = defineAction({
     jobId: z.string(),
     confirmedMappings: z.custom<DistrictMapping>().array(),
   }),
-  handler: async ({ jobId, confirmedMappings }) => {
-    if (!(await canManageDistricts())) {
+  handler: async ({ jobId, confirmedMappings }, context) => {
+    const userId = await getCurrentUserId(
+      context.cookies.get("__session")?.value,
+    );
+
+    if (!(await canManageDistricts(userId))) {
       throw new Error("Insufficient permissions");
     }
 

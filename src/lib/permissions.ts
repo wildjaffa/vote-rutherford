@@ -48,10 +48,13 @@ export async function canManageRace(_raceId: string): Promise<boolean> {
  * Check if the current user can manage districts
  * Future: Check if user is admin
  */
-export async function canManageDistricts(): Promise<boolean> {
+export async function canManageDistricts(userId: string): Promise<boolean> {
   // TODO: Implement authentication check
   // const session = await getSession();
   // return session?.user?.userType === 'admin';
+  if (!userId) {
+    throw new Error("Unauthorized");
+  }
   return true;
 }
 
