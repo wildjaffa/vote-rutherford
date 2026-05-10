@@ -53,7 +53,7 @@ export async function canManageDistricts(userId: string): Promise<boolean> {
   // const session = await getSession();
   // return session?.user?.userType === 'admin';
   if (!userId) {
-    throw new Error("Unauthorized");
+    return false;
   }
   return true;
 }

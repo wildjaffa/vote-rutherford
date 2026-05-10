@@ -21,7 +21,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     const cookies = parse(request.headers.get("cookie") || "");
     const sessionCookie = cookies["__session"];
     const user = await getSessionUser(sessionCookie);
-    if (!user || !canManageDistricts()) {
+    if (!user || !(await canManageDistricts(user.uid))) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 403,
         headers: { "Content-Type": "application/json" },
@@ -61,11 +61,11 @@ export const GET: APIRoute = async ({ params, request }) => {
         headers: { "Content-Type": "application/json" },
       },
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error fetching import status:", error);
     return new Response(
       JSON.stringify({
-        error: error.message || "Failed to fetch import status",
+        error: "Failed to fetch import status",
       }),
       {
         status: 500,
