@@ -385,6 +385,7 @@ enum DistrictType {
 enum ImportJobStatus {
   PENDING
   RUNNING
+  AWAITING_MAPPING
   COMPLETED
   FAILED
 }

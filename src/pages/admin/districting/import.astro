@@ -3,15 +3,29 @@ import AdminLayout from "../../../layouts/AdminLayout.astro";
 import FormFileInput from "../../../components/forms/FormFileInput.astro";
 import FormGeoJsonFilesInput from "../../../components/forms/FormGeoJsonFilesInput.astro";
 import Button from "../../../components/Button.astro";
+import DistrictMappingTable from "../../../components/DistrictMappingTable.astro";
 import { actions } from "astro:actions";
+import type {
+  ImportProgress,
+  DistrictMapping,
+} from "../../../lib/types/districtImport";
+import type { District } from "../../../generated/prisma/client";
 
 export const prerender = false;
 
+type ImportStatusData = {
+  id?: string;
+  status: string;
+  progress?: ImportProgress | null;
+  districtMapping?: DistrictMapping[] | null;
+  errorMessage?: string | null;
+} | null;
+
 let error: string | null = null;
 let jobId: string | null = null;
-let importStatus: any = null;
+let importStatus: ImportStatusData = null;
 
-function calculateProgress(progress: any) {
+function calculateProgress(progress: ImportProgress | null | undefined) {
   if (!progress) return 0;
 
   const stages = [
@@ -41,7 +55,7 @@ function calculateProgress(progress: any) {
   return baseProgress;
 }
 
-function getProgressText(progress: any) {
+function getProgressText(progress: ImportProgress | null | undefined) {
   if (!progress) return "";
 
   if (progress.message) {
@@ -159,11 +173,19 @@ if (queryJobId && !jobId) {
       },
     );
     if (statusResult.data) {
-      importStatus = statusResult.data;
+      importStatus = statusResult.data as unknown as ImportStatusData;
     }
   } catch (err) {
     error = "Failed to load import status";
   }
+}
+
+let existingDistricts: District[] = [];
+if (importStatus?.status === "AWAITING_MAPPING") {
+  const prisma = (await import("../../../lib/prisma")).default;
+  existingDistricts = await prisma.district.findMany({
+    orderBy: [{ type: "asc" }, { name: "asc" }, { number: "asc" }],
+  });
 }
 ---
 
@@ -206,6 +228,26 @@ if (queryJobId && !jobId) {
                 </p>
               </div>
             )}
+            {importStatus.status === "AWAITING_MAPPING" &&
+              importStatus.districtMapping && (
+                <div class="mt-4">
+                  <form id="mappingForm">
+                    <input type="hidden" name="jobId" value={jobId} />
+                    <DistrictMappingTable />
+                    <import-mapping-table
+                      data-mappings={JSON.stringify(
+                        importStatus.districtMapping,
+                      )}
+                      data-existing={JSON.stringify(existingDistricts)}
+                    ></import-mapping-table>
+                    <div class="mt-4 flex justify-end">
+                      <Button type="button" id="confirmMappingBtn">
+                        Confirm & Resume Import
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              )}
             {importStatus.status === "COMPLETED" && (
               <div class="mt-4 rounded bg-green-100 p-3">
                 <p class="text-sm text-green-800">
@@ -374,6 +416,11 @@ if (queryJobId && !jobId) {
 
         if (data.status === "COMPLETED" || data.status === "FAILED") {
           stopPolling();
+        } else if (data.status === "AWAITING_MAPPING") {
+          stopPolling();
+          if (!document.getElementById("mappingForm")) {
+            window.location.reload();
+          }
         }
       } catch (error) {
         console.error("Polling error:", error);

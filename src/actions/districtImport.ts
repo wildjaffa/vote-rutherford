@@ -4,6 +4,7 @@ import { districtImportQueue } from "../lib/jobs/districtImportQueue.ts";
 import prisma from "../lib/prisma";
 import { canManageDistricts, getCurrentUserId } from "../lib/permissions";
 import { ImportJobStatus } from "../generated/prisma/enums";
+import type { DistrictMapping } from "../lib/types/districtImport";
 
 export const startDistrictImport = defineAction({
   input: z.object({
@@ -41,8 +42,10 @@ export const startDistrictImport = defineAction({
           geoJsonFiles,
           entireCountyTypes,
           userId,
+          mode: "analyze",
         },
         {
+          jobId: job.id,
           removeOnComplete: 100,
           removeOnFail: 100,
           attempts: 3,
@@ -95,5 +98,56 @@ export const getDistrictImportStatus = defineAction({
       completedAt: job.completedAt,
       errorMessage: job.errorMessage,
     };
+  },
+});
+
+export const confirmDistrictImport = defineAction({
+  input: z.object({
+    jobId: z.string(),
+    confirmedMappings: z.custom<DistrictMapping>().array(),
+  }),
+  handler: async ({ jobId, confirmedMappings }) => {
+    if (!(await canManageDistricts())) {
+      throw new Error("Insufficient permissions");
+    }
+
+    const job = await prisma.districtImportJob.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      throw new Error("Import job not found");
+    }
+
+    if (job.status !== ImportJobStatus.AWAITING_MAPPING) {
+      throw new Error("Job is not awaiting mapping");
+    }
+
+    const { districtImportQueue } =
+      await import("../lib/jobs/districtImportQueue.ts");
+    const oldJob = await districtImportQueue.getJob(jobId);
+
+    if (!oldJob) {
+      throw new Error(
+        "Original file upload expired. Please upload files again.",
+      );
+    }
+
+    await districtImportQueue.add(
+      "district-import",
+      {
+        ...oldJob.data,
+        mode: "execute",
+        confirmedMappings,
+      },
+      {
+        jobId: `${job.id}-execute`,
+        removeOnComplete: 100,
+        removeOnFail: 100,
+        attempts: 3,
+      },
+    );
+
+    return { success: true, jobId: job.id };
   },
 });

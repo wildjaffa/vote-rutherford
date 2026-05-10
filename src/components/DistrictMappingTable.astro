@@ -1,105 +1,163 @@
 ---
-interface Props {
-  mappings: Array<{
-    oldDistrictId: string;
-    newDistrictId: string;
+// This is now purely a client-side web component for interactivity
+---
+
+<script>
+  import { actions } from "astro:actions";
+  import type { DistrictMapping } from "../lib/types/districtImport";
+
+  interface ExistingDistrict {
+    id: string;
     type: string;
     name: string;
     number: number | null;
-  }>;
-}
+  }
 
-const { mappings } = Astro.props;
----
+  class ImportMappingTable extends HTMLElement {
+    mappings: DistrictMapping[];
+    existingDistricts: ExistingDistrict[];
 
-<div class="mt-6">
-  <h4 class="text-md mb-4 font-medium text-gray-900">District Mappings</h4>
+    constructor() {
+      super();
+      this.mappings = JSON.parse(this.dataset.mappings || "[]");
+      this.existingDistricts = JSON.parse(this.dataset.existing || "[]");
+    }
 
-  <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-gray-200">
-      <thead class="bg-gray-50">
-        <tr>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-          >
-            Type
-          </th>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-          >
-            Name
-          </th>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-          >
-            Number
-          </th>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-          >
-            Status
-          </th>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-          >
-            Action
-          </th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-200 bg-white">
-        {
-          mappings.map((mapping) => (
-            <tr>
-              <td class="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900">
-                {mapping.type}
-              </td>
-              <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
-                {mapping.name}
-              </td>
-              <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
-                {mapping.number ?? "N/A"}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                {mapping.oldDistrictId ? (
-                  <span class="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
-                    Will Update
-                  </span>
-                ) : (
-                  <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                    New District
-                  </span>
-                )}
-              </td>
-              <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
-                {mapping.oldDistrictId ? (
-                  <button
-                    type="button"
-                    class="text-sm text-blue-600 hover:text-blue-900"
-                    onclick={`editMapping('${mapping.newDistrictId}')`}
-                  >
-                    Edit
-                  </button>
-                ) : (
-                  <span class="text-gray-400">No action needed</span>
-                )}
-              </td>
-            </tr>
-          ))
+    connectedCallback() {
+      this.render();
+
+      const confirmBtn = document.getElementById("confirmMappingBtn");
+      if (confirmBtn) {
+        confirmBtn.addEventListener("click", this.handleConfirm.bind(this));
+      }
+    }
+
+    handleSelectChange(e: Event) {
+      const select = e.target as HTMLSelectElement;
+      const index = parseInt(select.dataset.index || "0");
+      if (this.mappings[index])
+        this.mappings[index].oldDistrictId = select.value;
+      this.render(); // Re-render to update the status text
+    }
+
+    async handleConfirm() {
+      const jobId = (
+        document.querySelector('input[name="jobId"]') as HTMLInputElement
+      ).value;
+      const btn = document.getElementById(
+        "confirmMappingBtn",
+      ) as HTMLButtonElement;
+      btn.disabled = true;
+      btn.textContent = "Confirming...";
+
+      try {
+        const { error } = await actions.confirmDistrictImport({
+          jobId,
+          confirmedMappings: this.mappings,
+        });
+
+        if (error) {
+          throw new Error(error.message);
         }
-      </tbody>
-    </table>
-  </div>
 
-  <div class="mt-4 text-sm text-gray-600">
-    <p>
-      <strong>{mappings.filter((m) => m.oldDistrictId).length}</strong> districts
-      will be updated with new boundaries.
-      <strong>{mappings.filter((m) => !m.oldDistrictId).length}</strong> new districts
-      will be created.
-    </p>
-  </div>
-</div>
+        // Reload to let Astro pick up the new job status
+        window.location.reload();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        alert("Failed to confirm mappings: " + message);
+        btn.disabled = false;
+        btn.textContent = "Confirm & Resume Import";
+      }
+    }
 
-<script>
-  // TODO: Implement manual mapping override
+    render() {
+      const updatedCount = this.mappings.filter((m) => m.oldDistrictId).length;
+      const newCount = this.mappings.filter((m) => !m.oldDistrictId).length;
+
+      this.innerHTML = `
+        <div class="mt-6">
+          <h4 class="text-md mb-4 font-medium text-gray-900">Review District Mappings</h4>
+          <p class="text-sm text-gray-600 mb-4">
+            Please verify how new districts from your files map to existing districts.
+          </p>
+
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Type</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">New Name</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Map To Existing</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Status</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 bg-white">
+                ${this.mappings
+                  .map((mapping, idx) => {
+                    const matchingExisting = this.existingDistricts.filter(
+                      (d) => d.type === mapping.type,
+                    );
+
+                    return `
+                    <tr>
+                      <td class="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900">
+                        ${mapping.type}
+                      </td>
+                      <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
+                        ${mapping.name} ${mapping.number ? `(#${mapping.number})` : ""}
+                      </td>
+                      <td class="px-6 py-4 text-sm whitespace-nowrap">
+                        <select class="mapping-select block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" data-index="${idx}">
+                          <option value="">-- Create New District --</option>
+                          ${matchingExisting
+                            .map(
+                              (d) => `
+                            <option value="${d.id}" ${d.id === mapping.oldDistrictId ? "selected" : ""}>
+                              ${d.name} ${d.number ? `(#${d.number})` : ""}
+                            </option>
+                          `,
+                            )
+                            .join("")}
+                        </select>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        ${
+                          mapping.oldDistrictId
+                            ? `
+                          <span class="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
+                            Will Update Existing
+                          </span>
+                        `
+                            : `
+                          <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                            Create New District
+                          </span>
+                        `
+                        }
+                      </td>
+                    </tr>
+                  `;
+                  })
+                  .join("")}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-4 text-sm text-gray-600">
+            <p>
+              <strong>${updatedCount}</strong> districts will update existing records.
+              <strong>${newCount}</strong> new districts will be created.
+            </p>
+          </div>
+        </div>
+      `;
+
+      // Attach event listeners to new selects
+      this.querySelectorAll(".mapping-select").forEach((select) => {
+        select.addEventListener("change", this.handleSelectChange.bind(this));
+      });
+    }
+  }
+
+  customElements.define("import-mapping-table", ImportMappingTable);
 </script>

@@ -8,6 +8,10 @@ import prisma from "./prisma";
 import { Prisma } from "../generated/prisma/client";
 import { MeiliSearch } from "meilisearch";
 import { env } from "./utils/environment";
+import type { DistrictMapping, ImportProgress, ImportResult } from "./types/districtImport";
+
+// Re-export for compatibility
+export type { DistrictMapping, ImportProgress, ImportResult };
 
 interface DistrictProperties {
   NAME?: string;
@@ -83,27 +87,7 @@ interface BatchItem {
   districtGroupId: string;
 }
 
-interface DistrictMapping {
-  oldDistrictId: string;
-  newDistrictId: string;
-  type: DistrictType;
-  name: string;
-  number: number | null;
-}
 
-export interface ImportProgress {
-  stage: string;
-  processed: number;
-  total?: number;
-  message: string;
-}
-
-export interface ImportResult {
-  success: boolean;
-  districtMappings: DistrictMapping[];
-  jobId: string;
-  error?: string;
-}
 
 function districtKey(type: DistrictType, name: string, number: number | null) {
   return `${type}:${String(name).trim()}:${number ?? 0}`;
@@ -156,21 +140,65 @@ export async function loadGeoJsonLayers(
   return layers;
 }
 
+export async function analyzeDistricts(
+  layers: LoadedLayer[]
+): Promise<DistrictMapping[]> {
+  const mappings: DistrictMapping[] = [];
+  const map = new Set<string>();
+
+  for (const layer of layers) {
+    for (const feature of layer.features) {
+      const info = extractDistrictInfo(feature.properties, layer.type);
+      const key = districtKey(layer.type, info.name, info.number);
+      
+      if (map.has(key)) continue;
+      map.add(key);
+
+      const existingDistrict = await prisma.district.findUnique({
+        where: {
+          type_name_number: {
+            type: layer.type,
+            name: info.name,
+            number: info.number ?? 0,
+          },
+        },
+      });
+
+      mappings.push({
+        oldDistrictId: existingDistrict?.id || "",
+        newDistrictId: key, // Using the key temporarily
+        type: layer.type,
+        name: info.name,
+        number: info.number,
+      });
+    }
+  }
+
+  return mappings;
+}
+
 export async function upsertDistricts(
   layers: LoadedLayer[],
+  confirmedMappings: DistrictMapping[],
   onProgress?: (progress: ImportProgress) => Promise<void> | void,
 ): Promise<{
   districtIdMap: Map<string, string>;
   mappings: DistrictMapping[];
 }> {
   const map = new Map<string, string>();
-  const mappings: DistrictMapping[] = [];
+  const finalMappings: DistrictMapping[] = [];
 
   await onProgress?.({
     stage: "districts",
     processed: 0,
     message: "Starting district upsert...",
   });
+
+  const mappingLookup = new Map<string, string>();
+  for (const m of confirmedMappings) {
+    const key = districtKey(m.type, m.name, m.number);
+    mappingLookup.set(key, m.oldDistrictId);
+  }
 
   for (const layer of layers) {
     await onProgress?.({
@@ -186,16 +214,7 @@ export async function upsertDistricts(
       if (map.has(key)) continue;
 
       try {
-        // Check if district already exists
-        const existingDistrict = await prisma.district.findUnique({
-          where: {
-            type_name_number: {
-              type: layer.type,
-              name: info.name,
-              number: info.number ?? 0,
-            },
-          },
-        });
+        const oldDistrictId = mappingLookup.get(key) || null;
 
         const district = await prisma.district.upsert({
           where: {
@@ -207,21 +226,22 @@ export async function upsertDistricts(
           },
           update: {
             meta: feature.properties,
+            oldDistrictId: oldDistrictId,
           },
           create: {
             type: layer.type,
             name: info.name,
             number: info.number,
             meta: feature.properties,
-            oldDistrictId: existingDistrict?.id ?? null,
+            oldDistrictId: oldDistrictId,
           },
         });
 
         map.set(key, district.id);
 
-        if (existingDistrict) {
-          mappings.push({
-            oldDistrictId: existingDistrict.id,
+        if (oldDistrictId) {
+          finalMappings.push({
+            oldDistrictId: oldDistrictId,
             newDistrictId: district.id,
             type: layer.type,
             name: info.name,
@@ -242,7 +262,7 @@ export async function upsertDistricts(
     message: `Upserted ${map.size} districts`,
   });
 
-  return { districtIdMap: map, mappings };
+  return { districtIdMap: map, mappings: finalMappings };
 }
 
 export async function ensureAllDistrict(): Promise<string> {
@@ -369,7 +389,7 @@ export async function processAddressCsv(
       // For entire county types, assign all addresses to the single district
       if (entireCountyTypes.includes(layer.type)) {
         const info = extractDistrictInfo(
-          layer.features[0].properties,
+          layer.features[0]?.properties || {},
           layer.type,
         );
         const key = districtKey(layer.type, info.name, info.number);
@@ -613,9 +633,8 @@ export async function createDistrictImportJob(
   return job.id;
 }
 
-export async function executeDistrictImport(
+export async function analyzeDistrictImport(
   jobId: string,
-  csvContent: string,
   geoJsonFiles: Record<string, string>,
   entireCountyTypes: string[] = [],
   onProgress?: (progress: ImportProgress) => Promise<void> | void,
@@ -628,28 +647,81 @@ export async function executeDistrictImport(
       progress: {
         stage: "initializing",
         processed: 0,
+        message: "Analyzing GeoJSON layers...",
+      },
+    },
+  });
+
+  try {
+    const layers = await loadGeoJsonLayers(geoJsonFiles, entireCountyTypes);
+    
+    await onProgress?.({
+      stage: "analyzing",
+      processed: 0,
+      message: "Generating proposed mappings...",
+    });
+
+    const proposedMappings = await analyzeDistricts(layers);
+
+    await prisma.districtImportJob.update({
+      where: { id: jobId },
+      data: { 
+        status: ImportJobStatus.AWAITING_MAPPING,
+        districtMapping: proposedMappings as unknown as Prisma.InputJsonValue,
+        progress: {
+          stage: "awaiting_mapping",
+          processed: 100,
+          message: "Awaiting manual district mapping confirmation",
+        }
+      },
+    });
+
+    return { success: true, districtMappings: proposedMappings, jobId };
+  } catch (error) {
+    await prisma.districtImportJob.update({
+      where: { id: jobId },
+      data: {
+        status: ImportJobStatus.FAILED,
+        completedAt: new Date(),
+        errorMessage: error instanceof Error ? error.message : String(error),
+      },
+    });
+
+    return {
+      success: false,
+      districtMappings: [],
+      jobId,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+export async function executeDistrictImport(
+  jobId: string,
+  csvContent: string,
+  geoJsonFiles: Record<string, string>,
+  confirmedMappings: DistrictMapping[],
+  entireCountyTypes: string[] = [],
+  onProgress?: (progress: ImportProgress) => Promise<void> | void,
+): Promise<ImportResult> {
+  await prisma.districtImportJob.update({
+    where: { id: jobId },
+    data: {
+      status: ImportJobStatus.RUNNING,
+      progress: {
+        stage: "initializing",
+        processed: 0,
         message: "Loading GeoJSON layers...",
       },
     },
   });
 
   try {
-    await onProgress?.({
-      stage: "initializing",
-      processed: 0,
-      message: "Loading GeoJSON layers...",
-    });
-
     const layers = await loadGeoJsonLayers(geoJsonFiles, entireCountyTypes);
-
-    await onProgress?.({
-      stage: "districts",
-      processed: 0,
-      message: "Upserting districts...",
-    });
 
     const { districtIdMap, mappings } = await upsertDistricts(
       layers,
+      confirmedMappings,
       onProgress,
     );
     const allDistrictId = await ensureAllDistrict();
@@ -744,6 +816,7 @@ export async function runDistrictImport(
     jobId,
     csvContent,
     geoJsonFiles,
+    [],
     entireCountyTypes,
     onProgress,
   );

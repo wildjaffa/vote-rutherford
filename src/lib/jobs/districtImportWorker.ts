@@ -2,9 +2,12 @@ import { Worker, type Job, type ConnectionOptions } from "bullmq";
 import IORedis from "ioredis";
 import { Prisma } from "../../generated/prisma/client";
 import prisma from "../prisma";
-import { executeDistrictImport } from "../districtImport";
-import { ImportJobStatus } from "../../generated/prisma/enums";
-import type { DistrictImportJobData } from "./districtImportQueue";
+import {
+  executeDistrictImport,
+  analyzeDistrictImport,
+} from "../districtImport";
+
+import type { DistrictImportJobData } from "../types/districtImport";
 import "dotenv/config";
 
 const connection = new IORedis(
@@ -18,35 +21,47 @@ export const spawnDistrictImportWorker = () => {
   const worker = new Worker<DistrictImportJobData>(
     "district-import",
     async (job: Job<DistrictImportJobData>) => {
-      const { jobId, csvContent, geoJsonFiles, entireCountyTypes } = job.data;
-
-      await prisma.districtImportJob.update({
-        where: { id: jobId },
-        data: {
-          status: ImportJobStatus.RUNNING,
-          startedAt: new Date(),
-          progress: {
-            stage: "initializing",
-            processed: 0,
-            message: "Starting import",
-          },
-        },
-      });
-
-      const result = await executeDistrictImport(
+      const {
         jobId,
         csvContent,
         geoJsonFiles,
         entireCountyTypes,
-        async (progress) => {
-          await prisma.districtImportJob.update({
-            where: { id: jobId },
-            data: {
-              progress: progress as unknown as Prisma.InputJsonValue,
-            },
-          });
-        },
-      );
+        mode,
+        confirmedMappings,
+      } = job.data;
+
+      let result;
+      if (mode === "analyze") {
+        result = await analyzeDistrictImport(
+          jobId,
+          geoJsonFiles,
+          entireCountyTypes,
+          async (progress) => {
+            await prisma.districtImportJob.update({
+              where: { id: jobId },
+              data: {
+                progress: progress as unknown as Prisma.InputJsonValue,
+              },
+            });
+          },
+        );
+      } else {
+        result = await executeDistrictImport(
+          jobId,
+          csvContent,
+          geoJsonFiles,
+          confirmedMappings || [],
+          entireCountyTypes,
+          async (progress) => {
+            await prisma.districtImportJob.update({
+              where: { id: jobId },
+              data: {
+                progress: progress as unknown as Prisma.InputJsonValue,
+              },
+            });
+          },
+        );
+      }
 
       if (!result.success) {
         throw new Error(result.error || "Import failed");
