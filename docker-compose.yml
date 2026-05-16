@@ -5,16 +5,18 @@ services:
       dockerfile: Dockerfile
       args:
         - PUBLIC_FIREBASE_CLIENT_ACCOUNT_KEY=${PUBLIC_FIREBASE_CLIENT_ACCOUNT_KEY}
+        - DATABASE_URL=${DATABASE_URL}
     container_name: vote-rutherford-app
     restart: unless-stopped
     ports:
       - "4321:4321"
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=file:./prisma/dev.db
+      - DATABASE_URL=postgresql://vote_rutherford_app:change_me_to_a_strong_password@postgres:5432/vote_rutherford_staging
       - REDIS_URL=redis://redis:6379
     depends_on:
       - redis
+      - postgres
     # volumes:
     # Mount source code for hot-reload
     # - ./src:/app/src
@@ -26,9 +28,31 @@ services:
     # # Prevent overwriting node_modules
     # - /app/node_modules
 
+  postgres:
+    image: postgres:16-alpine
+    container_name: vote-rutherford-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=vote_rutherford_staging
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/setup-postgres.sql:/docker-entrypoint-initdb.d/01-create-user.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:7-alpine
     container_name: vote-rutherford-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
+
+volumes:
+  postgres_data:

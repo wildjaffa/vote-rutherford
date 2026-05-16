@@ -1,6 +1,6 @@
 # Vote Rutherford
 
-A modern voting information platform and candidate outreach system for Rutherford County, built with Astro 5, Prisma 7, LibSQL, and Tailwind CSS 4.
+A modern voting information platform and candidate outreach system for Rutherford County, built with Astro 5, Prisma 7, PostgreSQL, and Tailwind CSS 4.
 
 This application provides comprehensive information about elections, races, and candidates, and includes internal tools for managing candidate responses and automated outreach.
 
@@ -17,10 +17,10 @@ This application provides comprehensive information about elections, races, and 
 ## Tech Stack
 
 - **Framework**: Astro 5 (Hybrid SSR)
-- **Database**: LibSQL / SQLite with Prisma 7 ORM
+- **Database**: PostgreSQL with Prisma 7 ORM
 - **Styling**: Tailwind CSS 4
 - **Background Jobs**: BullMQ and IORedis
-- **Search**: SQLite FTS / Meilisearch (optional)
+- **Search**: Meilisearch
 - **Deployment**: Docker with PM2 (clustering & worker management)
 - **External Services**: Cloudflare (R2, Caching), Google APIs (OAuth, Gmail), Firebase (Admin/Auth)
 
@@ -29,8 +29,8 @@ This application provides comprehensive information about elections, races, and 
 ### Prerequisites
 
 - **Node.js**: 22+
+- **PostgreSQL**: 14+ (local or remote)
 - **Redis**: Required for background email workers
-- **LibSQL/SQLite**: Local files used by default
 
 ### Local Installation
 
@@ -44,8 +44,40 @@ This application provides comprehensive information about elections, races, and 
 
    ```bash
    cp .env.example .env
-   # Update .env with your local Redis and database paths
+   # Update .env with your PostgreSQL connection string and other variables
+   DATABASE_URL="postgresql://user:password@localhost:5432/vote_rutherford_staging"
    ```
+
+3. **Set Up PostgreSQL**
+
+   Ensure PostgreSQL is running:
+   
+   **Option A: Local PostgreSQL**
+   ```bash
+   # macOS with Homebrew
+   brew install postgresql
+   brew services start postgresql
+   
+   # Linux
+   sudo systemctl start postgresql
+   ```
+   
+   **Option B: Docker PostgreSQL**
+   ```bash
+   docker run -d --name postgres -p 5432:5432 \
+     -e POSTGRES_PASSWORD=postgres \
+     postgres:16-alpine
+   ```
+
+4. **Database Setup**
+
+   ```bash
+   npx prisma generate
+   npx prisma migrate deploy
+   npx prisma db seed  # optional: seed sample data
+   ```
+
+5. **Start Redis**
 
    If you don't already have Redis running locally, start it with Docker:
 
@@ -59,20 +91,7 @@ This application provides comprehensive information about elections, races, and 
    docker-compose up -d redis
    ```
 
-3. **Database Preparation**
-
-   ```bash
-   npx prisma generate
-   npx prisma migrate dev
-   ```
-
-4. **Seed Database (optional)**
-
-   ```bash
-   npx tsx prisma/seed.ts
-   ```
-
-5. **Start Development Servers**
+6. **Start Development Servers**
 
    ```bash
    # Start the Astro development portal
@@ -80,7 +99,19 @@ This application provides comprehensive information about elections, races, and 
 
    # Start the email background worker (separate terminal)
    npx tsx src/lib/jobs/emailWorker.ts
+   
+   # Start the district import worker (separate terminal)
+   npx tsx src/lib/jobs/districtImportWorker.ts
    ```
+
+   Or run all together:
+   ```bash
+   npm run dev:all
+   ```
+
+## Migrating from SQLite to PostgreSQL
+
+If you're migrating from SQLite, see [POSTGRES_MIGRATION.md](docs/POSTGRES_MIGRATION.md) for detailed migration instructions.
 
 ## Docker Development
 

@@ -10,7 +10,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 enum AuditAction {
@@ -485,56 +485,4 @@ model DistrictImportJob {
   @@map("district_import_jobs")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model voter_addresses_fts {
-  id                Unsupported("")?
-  address           Unsupported("")?
-  normalizedAddress Unsupported("")?
-  city              Unsupported("")?
-  zip               Unsupported("")?
 
-  @@ignore
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model voter_addresses_fts_config {
-  k Unsupported("")  @id
-  v Unsupported("")?
-
-  @@ignore
-}
-
-model voter_addresses_fts_content {
-  id Int              @id @default(autoincrement())
-  c0 Unsupported("")?
-  c1 Unsupported("")?
-  c2 Unsupported("")?
-  c3 Unsupported("")?
-  c4 Unsupported("")?
-
-  @@ignore
-}
-
-model voter_addresses_fts_data {
-  id    Int    @id @default(autoincrement())
-  block Bytes?
-
-  @@ignore
-}
-
-model voter_addresses_fts_docsize {
-  id Int    @id @default(autoincrement())
-  sz Bytes?
-
-  @@ignore
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model voter_addresses_fts_idx {
-  segid Unsupported("")
-  term  Unsupported("")
-  pgno  Unsupported("")?
-
-  @@id([segid, term])
-  @@ignore
-}
