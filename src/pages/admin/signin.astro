@@ -5,8 +5,16 @@ import { getSessionUser } from "../../firebase/server";
 
 export const prerender = false;
 
-/* Check if the user is authenticated */
-const user = await getSessionUser(Astro.cookies.get("__session")?.value);
+const session = Astro.cookies.get("__session");
+let user = null;
+
+if (session?.value) {
+  user = await getSessionUser(session.value);
+  if (!user) {
+    Astro.cookies.delete("__session", { path: "/" });
+  }
+}
+
 if (user) {
   return Astro.redirect("/admin/elections");
 }
