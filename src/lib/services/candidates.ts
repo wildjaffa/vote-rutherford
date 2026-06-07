@@ -647,3 +647,57 @@ export async function promoteCandidate(
 
   return newCandidate;
 }
+
+export async function moveCandidate(
+  candidateId: string,
+  targetRaceId: string,
+  userId: string,
+): Promise<Candidate> {
+  const existingCandidate = await prisma.candidate.findUnique({
+    where: { id: candidateId },
+    include: {
+      race: { include: { election: true } },
+    },
+  });
+
+  if (!existingCandidate) {
+    throw makeError("Candidate not found", 404);
+  }
+
+  const targetRace = await prisma.race.findUnique({
+    where: { id: targetRaceId },
+    include: { election: true },
+  });
+
+  if (!targetRace) {
+    throw makeError("Target race not found", 404);
+  }
+  
+  if (existingCandidate.race.electionId !== targetRace.electionId) {
+    throw makeError("Cannot move candidate to a different election", 400);
+  }
+
+  const hasSourcePermission = await canManageRace(existingCandidate.raceId);
+  const hasTargetPermission = await canManageRace(targetRaceId);
+  if (!hasSourcePermission || !hasTargetPermission) {
+    throw makeError("Unauthorized", 403);
+  }
+
+  const updatedCandidate = await withUserContext(userId, async () => {
+    return prisma.candidate.update({
+      where: { id: candidateId },
+      data: {
+        raceId: targetRaceId,
+      },
+    });
+  });
+
+  void purgeCloudflareCache([
+    `/elections/${targetRace.election.slug}/${targetRace.slug}`,
+    `/elections/${existingCandidate.race.election.slug}/${existingCandidate.race.slug}`,
+    `/elections/${existingCandidate.race.election.slug}/${existingCandidate.race.slug}/${existingCandidate.slug}`,
+    `/elections/${targetRace.election.slug}/${targetRace.slug}/${updatedCandidate.slug}`,
+  ]);
+
+  return updatedCandidate;
+}

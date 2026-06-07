@@ -5,6 +5,7 @@ import {
   deleteCandidate,
   sendMassEmail,
   promoteCandidate,
+  moveCandidate,
 } from "./candidates";
 import { createElection, updateElection, deleteElection } from "./elections";
 import { createRace, updateRace, deleteRace, reorderRaces } from "./races";
@@ -22,6 +23,7 @@ export const server = {
   deleteCandidate,
   sendMassEmail,
   promoteCandidate,
+  moveCandidate,
   createElection,
   updateElection,
   deleteElection,

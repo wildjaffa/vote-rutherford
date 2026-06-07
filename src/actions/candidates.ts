@@ -136,3 +136,19 @@ export const promoteCandidate = defineAction({
     }
   }
 });
+
+export const moveCandidate = defineAction({
+  accept: "json",
+  input: z.object({
+    candidateId: z.string(),
+    targetRaceId: z.string()
+  }),
+  handler: async (input, context) => {
+    const userId = await getCurrentUserId(context.cookies.get("__session")?.value);
+    try {
+      return await candidateService.moveCandidate(input.candidateId, input.targetRaceId, userId);
+    } catch (err) {
+      handleActionError(err, "Failed to move candidate");
+    }
+  }
+});

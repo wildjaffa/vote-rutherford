@@ -76,6 +76,11 @@ const questions = election.policyQuestions.map((q) => ({
   isPrioritized: prioritizedQuestionIds.includes(q.id),
 }));
 
+const otherRaces = await prisma.race.findMany({
+  where: { electionId: election.id, id: { not: race.id } },
+  orderBy: { order: "asc" },
+});
+
 let error: string | null = null;
 let success: string | null = null;
 
@@ -118,6 +123,30 @@ if (Astro.request.method === "POST") {
       });
       if (updatedCandidate) {
         Object.assign(candidate, updatedCandidate);
+      }
+    } else if (action === "move") {
+      const candidateId = formData.get("candidateId") as string;
+      const targetRaceId = formData.get("targetRaceId") as string;
+
+      const { actions } = await import("astro:actions");
+      const result = await Astro.callAction(actions.moveCandidate, {
+        candidateId,
+        targetRaceId,
+      });
+
+      if (result.error) {
+        error = result.error.message || "Failed to move candidate.";
+      } else {
+        const targetRace = await prisma.race.findUnique({
+          where: { id: targetRaceId },
+        });
+        if (targetRace) {
+          return Astro.redirect(
+            `/admin/elections/${electionSlug}/races/${targetRace.slug}/candidates/${candidateSlug}/edit`,
+          );
+        } else {
+          return Astro.redirect(`/admin/elections/${electionSlug}/races`);
+        }
       }
     } else {
       const externalLinksUrls = formData.getAll("link-url") as string[];
@@ -422,6 +451,69 @@ const profileImageUrl = convertKeyToPublicUrl(
         <Button type="submit">Save Changes</Button>
       </div>
     </form>
+
+    <!-- Move Candidate Zone -->
+    <div class="border-t border-gray-200 pt-6">
+      <h3 class="mb-4 text-lg font-semibold text-gray-900">Move Candidate</h3>
+      <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <p class="mb-4 text-sm text-gray-700">
+          Move this candidate to another race within the same election. This
+          will change the candidate's race and update their public URL.
+        </p>
+        <Button
+          type="button"
+          variant="secondary"
+          onclick="document.getElementById('moveCandidateDialog').showModal()"
+        >
+          Move Candidate
+        </Button>
+      </div>
+    </div>
+
+    <dialog
+      id="moveCandidateDialog"
+      class="w-full max-w-md rounded-lg p-6 shadow-xl backdrop:bg-black/50"
+    >
+      <form method="dialog" class="mb-4 flex items-center justify-between">
+        <h3 class="text-lg font-bold">Move Candidate</h3>
+        <button class="text-gray-500 hover:text-gray-700">✕</button>
+      </form>
+      <form method="POST" class="space-y-4">
+        <input type="hidden" name="action" value="move" />
+        <input type="hidden" name="candidateId" value={candidate.id} />
+
+        <div>
+          <label class="mb-1 block text-sm font-medium text-gray-700">
+            Target Race
+          </label>
+          <select
+            name="targetRaceId"
+            required
+            class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          >
+            <option value="">Select a race...</option>
+            {
+              otherRaces.map((r) => (
+                <option value={r.id}>
+                  {r.name}-{r.partyCategory}
+                </option>
+              ))
+            }
+          </select>
+        </div>
+
+        <div class="mt-6 flex justify-end gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            onclick="document.getElementById('moveCandidateDialog').close()"
+          >
+            Cancel
+          </Button>
+          <Button type="submit">Confirm Move</Button>
+        </div>
+      </form>
+    </dialog>
 
     <!-- Danger Zone -->
     <div class="border-t border-gray-200 pt-6">
