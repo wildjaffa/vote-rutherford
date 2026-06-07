@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y openssl postgresql-client && rm -rf /va
 FROM base AS deps
 COPY package*.json ./
 # We need devDeps for building
-RUN npm ci
+RUN npm install
 
 # Stage 3: Builder - Build the application
 FROM deps AS builder
@@ -29,7 +29,7 @@ RUN npm run build
 # Stage 4: Production dependencies - Isolated production node_modules
 FROM base AS production-deps
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # Stage 5: Runner - Final production image
 FROM base AS runner
