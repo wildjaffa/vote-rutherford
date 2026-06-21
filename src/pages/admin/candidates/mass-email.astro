@@ -3,6 +3,7 @@ import type { Election } from "../../../generated/prisma/browser";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import prisma from "../../../lib/prisma";
 import { getSessionUser } from "../../../firebase/server";
+import { env } from "../../../lib/utils/environment";
 
 import { Prisma } from "../../../generated/prisma/browser";
 
@@ -16,6 +17,7 @@ interface CandidateEmail {
   partyAffiliation: string;
   raceName: string;
   raceType: string;
+  profileLink?: string;
 }
 
 type CandidateWithRace = Prisma.CandidateGetPayload<{
@@ -23,6 +25,7 @@ type CandidateWithRace = Prisma.CandidateGetPayload<{
     race: {
       include: {
         raceType: true;
+        election: true;
       }
     }
   }
@@ -52,6 +55,9 @@ const url = new URL(Astro.request.url);
 const targetType = url.searchParams.get("targetType") || "candidate";
 const selectedElectionId = url.searchParams.get("electionId") || (elections.length > 0 ? elections[0]?.id : null);
 
+const baseUrl = env("PUBLIC_SITE_URL") || url.origin;
+const cleanBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+
 let candidates: CandidateEmail[] = [];
 let error: string | null = null;
 
@@ -68,6 +74,7 @@ if (targetType === "candidate" && selectedElectionId) {
         race: {
           include: {
             raceType: true,
+            election: true,
           }
         }
       },
@@ -85,6 +92,7 @@ if (targetType === "candidate" && selectedElectionId) {
       partyAffiliation: c.partyAffiliation || '',
       raceName: c.race.name,
       raceType: c.race.raceType.value,
+      profileLink: `${cleanBaseUrl}/elections/${c.race.election.slug}/${c.race.slug}/${c.slug}`,
     }));
   } catch (err) {
     error = "Failed to load candidates";
@@ -104,6 +112,7 @@ if (targetType === "candidate" && selectedElectionId) {
       partyAffiliation: "",
       raceName: c.description || "N/A",
       raceType: "Contact",
+      profileLink: "",
     }));
   } catch (err) {
     error = "Failed to load contacts";
@@ -117,6 +126,9 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
 ---
 
 <AdminLayout title="Mass Email Candidates">
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js" is:inline></script>
+
   <div class="space-y-6">
     <!-- Header & Election Selector -->
     <!-- Header & Target Selector -->
@@ -211,6 +223,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
                         data-last={candidate.lastName}
                         data-race={candidate.raceName}
                         data-party={candidate.partyAffiliation}
+                        data-link={candidate.profileLink || ''}
                         disabled={!candidate.email}
                       />
                     </td>
@@ -235,7 +248,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
         <div class="space-y-4">
           <h3 class="text-lg font-semibold text-gray-900">2. Compose Email</h3>
           
-          {userGoogleAccounts.length === 0 ? (
+          {userGoogleAccounts.length === 0 && false ? (
             <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                <p class="text-sm text-yellow-800 mb-3">You need to connect a Google account to send emails.</p>
                <a href="/admin/auth/google" class="inline-block bg-white border border-gray-300 rounded px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50">Connect Google Account</a>
@@ -275,16 +288,10 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
                 <button type="button" class="var-btn bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-xs font-mono" data-var="{{last name}}">&lcub;&lcub;last name&rcub;&rcub;</button>
                 <button type="button" class="var-btn bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-xs font-mono" data-var="{{race}}">&lcub;&lcub;race&rcub;&rcub;</button>
                 <button type="button" class="var-btn bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-xs font-mono" data-var="{{party}}">&lcub;&lcub;party&rcub;&rcub;</button>
+                <button type="button" class="var-btn bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-xs font-mono" data-var="{{profile link}}">&lcub;&lcub;profile link&rcub;&rcub;</button>
               </div>
-              <textarea 
-                id="emailBody" 
-                rows="10" 
-                placeholder="Dear {{first name}},&#10;&#10;Regarding the {{race}} race...&#10;&#10;Sincerely,&#10;Vote Rutherford"
-                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm"
-              ></textarea>
-              <p class="text-[10px] text-gray-400 mt-1 italic">
-                Tip: Standard newlines are converted to &lt;br&gt; tags. Basic HTML is supported but not required.
-              </p>
+              <div id="editor-container" class="bg-white rounded-b-md" style="height: 250px;"></div>
+              <input type="hidden" id="emailBody" />
             </div>
 
             <!-- Preview Toggle -->
@@ -353,8 +360,29 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
 
     // Form elements
     const emailSubject = document.getElementById("emailSubject") as HTMLInputElement;
-    const emailBody = document.getElementById("emailBody") as HTMLTextAreaElement;
+    const emailBody = document.getElementById("emailBody") as HTMLInputElement;
     const userGoogleAccountIdSelect = document.getElementById("userGoogleAccountId") as HTMLSelectElement;
+
+    // Initialize Quill
+    // @ts-expect-error Quill is loaded via script tag
+    const Quill = window.Quill;
+    const quill = new Quill('#editor-container', {
+      theme: 'snow',
+      placeholder: 'Dear {{first name}},\n\nRegarding the {{race}} race...\n\nSincerely,\nVote Rutherford',
+      modules: {
+        toolbar: [
+          ['bold', 'italic', 'underline'],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          ['link'],
+          ['clean']
+        ]
+      }
+    });
+
+    quill.on('text-change', () => {
+      emailBody.value = quill.root.innerHTML;
+      updateSelectionState();
+    });
 
     // Preview elements
     const togglePreviewBtn = document.getElementById("togglePreviewBtn") as HTMLButtonElement;
@@ -426,7 +454,8 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
       if (btnCountSpan) btnCountSpan.textContent = totalChecked.toString();
       
       if (sendBtn) {
-        sendBtn.disabled = totalChecked === 0 || !emailSubject || emailSubject.value.trim() === "" || !emailBody || emailBody.value.trim() === "";
+        const textContent = quill ? quill.getText().trim() : "";
+        sendBtn.disabled = totalChecked === 0 || !emailSubject || emailSubject.value.trim() === "" || !emailBody || textContent === "";
       }
 
       refreshPreview();
@@ -453,7 +482,6 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
     });
 
     emailSubject?.addEventListener("input", updateSelectionState);
-    emailBody?.addEventListener("input", updateSelectionState);
 
     // Preview Logic
     function getSelectedTargets() {
@@ -467,7 +495,8 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
             "first name": cb.dataset.first as string,
             "last name": cb.dataset.last as string,
             "race": cb.dataset.race as string,
-            "party": cb.dataset.party as string
+            "party": cb.dataset.party as string,
+            "profile link": cb.dataset.link as string
           }
         }));
     }
@@ -495,26 +524,22 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
         personalizedBody = personalizedBody.replace(regex, value as string);
       }
       
-      // Convert newlines to BR for the preview to match final email
-      // We also escape HTML to show it as literal if they typed it, 
-      // OR we just render it. Given the preview is for them, rendering it is better.
-      previewBody.innerHTML = personalizedBody.split("\n").join("<br />");
+      // The body is already HTML from Quill
+      previewBody.innerHTML = personalizedBody;
     }
 
     // Variable insertion
     document.querySelectorAll(".var-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         const variable = (btn as HTMLButtonElement).dataset.var;
-        if (!variable || !emailBody) return;
+        if (!variable) return;
         
-        const start = emailBody.selectionStart;
-        const end = emailBody.selectionEnd;
-        const text = emailBody.value;
-        emailBody.value = text.substring(0, start) + variable + text.substring(end);
-        
-        // Return focus and move cursor
-        emailBody.focus();
-        emailBody.selectionStart = emailBody.selectionEnd = start + variable.length;
+        const selection = quill.getSelection(true);
+        if (selection) {
+          quill.insertText(selection.index, variable);
+        } else {
+          quill.insertText(quill.getLength(), variable);
+        }
         
         updateSelectionState();
       });
@@ -579,6 +604,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
           // Reset form
           emailSubject.value = "";
           emailBody.value = "";
+          quill.setContents([]);
           Array.from(allCbs).forEach(cb => cb.checked = false);
           updateSelectionState();
           refreshPreview();
