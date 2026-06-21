@@ -14,7 +14,10 @@ export const GET: APIRoute = async ({ url, redirect }) => {
     });
   }
 
-  const redirectUri = `${url.origin}/admin/auth/google/callback`;
+  const baseUrl = env("PUBLIC_SITE_URL") || url.origin;
+  // Ensure no trailing slash on baseUrl
+  const cleanBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+  const redirectUri = `${cleanBaseUrl}/admin/auth/google/callback`;
 
   const oauth2Client = new google.auth.OAuth2(
     clientId,

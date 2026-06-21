@@ -20,7 +20,10 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
 
   const clientId = env("GMAIL_CLIENT_ID");
   const clientSecret = env("GMAIL_CLIENT_SECRET");
-  const redirectUri = `${url.origin}/admin/auth/google/callback`;
+  const baseUrl = env("PUBLIC_SITE_URL") || url.origin;
+  // Ensure no trailing slash on baseUrl
+  const cleanBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+  const redirectUri = `${cleanBaseUrl}/admin/auth/google/callback`;
 
   if (!clientId || !clientSecret) {
     return new Response("Missing GMAIL_CLIENT_ID or GMAIL_CLIENT_SECRET", {
