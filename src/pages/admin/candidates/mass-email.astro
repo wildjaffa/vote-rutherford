@@ -39,7 +39,7 @@ const elections = await prisma.election.findMany({
 // Fetch user's Google accounts
 const sessionCookie = Astro.cookies.get("__session")?.value;
 const firebaseUser = await getSessionUser(sessionCookie);
-let userGoogleAccounts: any[] = [];
+let userGoogleAccounts: { id: string, email: string }[] = [];
 if (firebaseUser?.email) {
   const user = await prisma.user.findUnique({
     where: { email: firebaseUser.email },
@@ -123,6 +123,16 @@ if (targetType === "candidate" && selectedElectionId) {
 // Extract unique filters
 const raceTypes = [...new Set(candidates.map(c => c.raceType))].sort();
 const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boolean).sort();
+
+// Fetch email history
+const recentEmails = await prisma.emailOutreach.findMany({
+  orderBy: { sentAt: 'desc' },
+  take: 50,
+  include: {
+    candidate: true,
+    contact: true
+  }
+});
 ---
 
 <AdminLayout title="Mass Email Candidates">
@@ -199,7 +209,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
           </div>
 
           <!-- Table -->
-          <div class="overflow-hidden rounded-lg border border-gray-200 shadow bg-white max-h-[600px] overflow-y-auto relative">
+          <div class="overflow-hidden rounded-lg border border-gray-200 shadow bg-white max-h-150 overflow-y-auto relative">
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50 sticky top-0 z-10">
                 <tr>
@@ -260,7 +270,8 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
                 <div class="flex-1">
                   <label class="block text-sm font-medium text-gray-700 mb-1">From Account</label>
                   <select id="userGoogleAccountId" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm">
-                    {userGoogleAccounts.map((account: any) => (
+                    <option value="system-mailgun">System Default (Mailgun)</option>
+                    {userGoogleAccounts.map((account: { id: string, email: string }) => (
                       <option value={account.id}>{account.email}</option>
                     ))}
                   </select>
@@ -340,6 +351,48 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
       </div>
     )}
 
+  </div>
+
+  <!-- History Section -->
+  <div class="space-y-4 pt-8 border-t mt-8">
+    <h3 class="text-xl font-bold text-gray-900">Recent Email History</h3>
+    <div class="overflow-hidden rounded-lg border border-gray-200 shadow bg-white">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+            <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">To</th>
+            <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
+            <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sent At</th>
+            <th scope="col" class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {recentEmails.length === 0 ? (
+            <tr><td colspan="5" class="px-3 py-4 text-center text-sm text-gray-500">No emails sent yet</td></tr>
+          ) : recentEmails.map(email => (
+            <tr class="hover:bg-gray-50">
+              <td class="px-3 py-3 whitespace-nowrap">
+                {email.status === 'SENT' ? (
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Sent</span>
+                ) : (
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800" title={email.errorMessage || "Unknown error"}>Failed</span>
+                )}
+              </td>
+              <td class="px-3 py-3">
+                <div class="text-sm font-medium text-gray-900">{email.candidate ? `${email.candidate.firstName} ${email.candidate.lastName}` : (email.contact ? `${email.contact.firstName} ${email.contact.lastName}` : 'Unknown')}</div>
+                <div class="text-xs text-gray-500">{email.emailAddress}</div>
+              </td>
+              <td class="px-3 py-3 text-sm text-gray-900 max-w-xs truncate" title={email.subject}>{email.subject}</td>
+              <td class="px-3 py-3 text-sm text-gray-500">{new Date(email.sentAt).toLocaleString()}</td>
+              <td class="px-3 py-3 text-right text-sm font-medium">
+                <button type="button" class="text-secondary hover:text-secondary/80 resend-btn cursor-pointer" data-id={email.id}>Resend</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <script>
@@ -569,7 +622,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
         return;
       }
       if (!userGoogleAccountId) {
-        window.toast.error("A Google account must be connected and selected");
+        window.toast.error("A sending account must be selected");
         return;
       }
 
@@ -616,6 +669,39 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
         sendBtn.innerHTML = originalText;
         updateSelectionState(); // restores correct disabled state
       }
+    });
+
+    // Resend Logic
+    document.querySelectorAll(".resend-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = (btn as HTMLButtonElement).dataset.id;
+        if (!id) return;
+        const userGoogleAccountId = userGoogleAccountIdSelect?.value;
+        if (!userGoogleAccountId) {
+          window.toast.error("Please select a From Account to use for resending");
+          return;
+        }
+
+        const originalText = btn.textContent || "Resend";
+        btn.textContent = "Resending...";
+        (btn as HTMLButtonElement).disabled = true;
+
+        try {
+          const { error } = await actions.resendEmail({ id, userGoogleAccountId });
+          if (error) {
+            console.error(error);
+            window.toast.error(error.message || "Failed to resend");
+          } else {
+            window.toast.success("Resend job queued!");
+          }
+        } catch (e) {
+          console.error(e);
+          window.toast.error("Unexpected error");
+        } finally {
+          btn.textContent = originalText;
+          (btn as HTMLButtonElement).disabled = false;
+        }
+      });
     });
 
   </script>

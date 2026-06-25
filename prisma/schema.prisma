@@ -348,6 +348,8 @@ model EmailOutreach {
   emailAddress String
   subject      String
   body         String
+  status       String     @default("SENT")
+  errorMessage String?
   sentAt       DateTime   @default(now())
 
   @@map("email_outreach")

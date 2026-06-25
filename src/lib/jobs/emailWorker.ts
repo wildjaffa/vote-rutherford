@@ -18,19 +18,27 @@ export const spawnEmailWorker = () => {
     async (job: Job<SendEmailJobData>) => {
       const { candidateId, contactId, emailAddress, subject, body, userGoogleAccountId } = job.data;
 
-      const provider = await getEmailProvider(userGoogleAccountId);
-      const success = await provider.sendEmail({
-        to: emailAddress,
-        subject,
-        body,
-        candidateId: candidateId ?? undefined,
-      });
+      let success = false;
+      let errorMessage: string | null = null;
 
-      if (!success) {
-        throw new Error("Email sending failed");
+      try {
+        const provider = await getEmailProvider(userGoogleAccountId);
+        success = await provider.sendEmail({
+          to: emailAddress,
+          subject,
+          body,
+          candidateId: candidateId ?? undefined,
+        });
+
+        if (!success) {
+          errorMessage = "Provider reported failure (returned false)";
+        }
+      } catch (err: unknown) {
+        success = false;
+        errorMessage = err instanceof Error ? err.message : "Unknown error";
       }
 
-      // Record successful outreach in database
+      // Record outreach attempt in database
       await prisma.emailOutreach.create({
         data: {
           candidateId: candidateId || null,
@@ -38,9 +46,15 @@ export const spawnEmailWorker = () => {
           emailAddress,
           subject,
           body,
+          status: success ? "SENT" : "FAILED",
+          errorMessage,
           sentAt: new Date(),
         },
       });
+
+      if (!success) {
+        throw new Error(errorMessage || "Email sending failed");
+      }
 
       return { success: true };
     },
