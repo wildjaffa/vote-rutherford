@@ -88,15 +88,15 @@ export const qualificationTypeToIcon: Record<string, AstroComponent> = {
 };
 
 export const linkTypeToIcon: Record<string, AstroComponent> = {
-  [LinkTypes.FACEBOOK]: Facebook,
+  [LinkTypes.FACEBOOK]: Facebook as unknown as AstroComponent,
   [LinkTypes.LINKEDIN]: Linkedin,
-  [LinkTypes.INSTAGRAM]: Instagram,
-  [LinkTypes.YOUTUBE]: Youtube,
-  [LinkTypes.THREADS]: Threads,
-  [LinkTypes.X]: X,
+  [LinkTypes.INSTAGRAM]: Instagram as unknown as AstroComponent,
+  [LinkTypes.YOUTUBE]: Youtube as unknown as AstroComponent,
+  [LinkTypes.THREADS]: Threads as unknown as AstroComponent,
+  [LinkTypes.X]: X as unknown as AstroComponent,
   [LinkTypes.WEBSITE]: Globe,
-  [LinkTypes.WIKIPEDIA]: Wikipedia,
+  [LinkTypes.WIKIPEDIA]: Wikipedia as unknown as AstroComponent,
   [LinkTypes.OTHER]: ExternalLink,
   [LinkTypes.NEWS]: Newspaper,
-  [LinkTypes.TIKTOK]: Tiktok,
+  [LinkTypes.TIKTOK]: Tiktok as unknown as AstroComponent,
 };

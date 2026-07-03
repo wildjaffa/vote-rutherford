@@ -18,6 +18,7 @@ interface CandidateEmail {
   raceName: string;
   raceType: string;
   profileLink?: string;
+  hasAnsweredPolicyQuestions: boolean;
 }
 
 type CandidateWithRace = Prisma.CandidateGetPayload<{
@@ -27,7 +28,12 @@ type CandidateWithRace = Prisma.CandidateGetPayload<{
         raceType: true;
         election: true;
       }
-    }
+    };
+    policyResponses: {
+      where: {
+        deletedAt: null;
+      }
+    };
   }
 }>;
 
@@ -39,7 +45,7 @@ const elections = await prisma.election.findMany({
 // Fetch user's Google accounts
 const sessionCookie = Astro.cookies.get("__session")?.value;
 const firebaseUser = await getSessionUser(sessionCookie);
-let userGoogleAccounts: any[] = [];
+let userGoogleAccounts: { id: string, email: string }[] = [];
 if (firebaseUser?.email) {
   const user = await prisma.user.findUnique({
     where: { email: firebaseUser.email },
@@ -76,6 +82,11 @@ if (targetType === "candidate" && selectedElectionId) {
             raceType: true,
             election: true,
           }
+        },
+        policyResponses: {
+          where: {
+            deletedAt: null,
+          }
         }
       },
       orderBy: [
@@ -93,6 +104,7 @@ if (targetType === "candidate" && selectedElectionId) {
       raceName: c.race.name,
       raceType: c.race.raceType.value,
       profileLink: `${cleanBaseUrl}/elections/${c.race.election.slug}/${c.race.slug}/${c.slug}`,
+      hasAnsweredPolicyQuestions: c.policyResponses.some(r => !r.source || r.source.trim() === ''),
     }));
   } catch (err) {
     error = "Failed to load candidates";
@@ -113,6 +125,7 @@ if (targetType === "candidate" && selectedElectionId) {
       raceName: c.description || "N/A",
       raceType: "Contact",
       profileLink: "",
+      hasAnsweredPolicyQuestions: false,
     }));
   } catch (err) {
     error = "Failed to load contacts";
@@ -123,6 +136,16 @@ if (targetType === "candidate" && selectedElectionId) {
 // Extract unique filters
 const raceTypes = [...new Set(candidates.map(c => c.raceType))].sort();
 const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boolean).sort();
+
+// Fetch email history
+const recentEmails = await prisma.emailOutreach.findMany({
+  orderBy: { sentAt: 'desc' },
+  take: 50,
+  include: {
+    candidate: true,
+    contact: true
+  }
+});
 ---
 
 <AdminLayout title="Mass Email Candidates">
@@ -177,7 +200,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
           <h3 class="text-lg font-semibold text-gray-900">1. Select Recipients</h3>
           
           <!-- Filters -->
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 bg-gray-50 p-4 rounded-lg border border-gray-200" id="filter-container">
+          <div class={`grid grid-cols-1 gap-4 ${targetType === 'candidate' ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} bg-gray-50 p-4 rounded-lg border border-gray-200`} id="filter-container">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Search Component</label>
               <input type="text" id="searchName" placeholder="Name or Email..." class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm" />
@@ -196,10 +219,20 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
                 {parties.map(party => <option value={party}>{party}</option>)}
               </select>
             </div>
+            {targetType === "candidate" && (
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Policy Responses</label>
+                <select id="filterPolicyQuestions" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm">
+                  <option value="">All</option>
+                  <option value="answered">Answered</option>
+                  <option value="unanswered">Unanswered</option>
+                </select>
+              </div>
+            )}
           </div>
 
           <!-- Table -->
-          <div class="overflow-hidden rounded-lg border border-gray-200 shadow bg-white max-h-[600px] overflow-y-auto relative">
+          <div class="overflow-hidden rounded-lg border border-gray-200 shadow bg-white max-h-150 overflow-y-auto relative">
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50 sticky top-0 z-10">
                 <tr>
@@ -212,7 +245,13 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
               </thead>
               <tbody id="candidates-tbody" class="bg-white divide-y divide-gray-200">
                 {candidates.map(candidate => (
-                  <tr class="candidate-row hover:bg-gray-50" data-id={candidate.id} data-racetype={candidate.raceType} data-email={candidate.email}>
+                  <tr 
+                    class="candidate-row hover:bg-gray-50" 
+                    data-id={candidate.id} 
+                    data-racetype={candidate.raceType} 
+                    data-email={candidate.email}
+                    data-answered-policy={candidate.hasAnsweredPolicyQuestions ? "true" : "false"}
+                  >
                     <td class="px-3 py-3 whitespace-nowrap">
                       <input 
                         type="checkbox" 
@@ -260,7 +299,9 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
                 <div class="flex-1">
                   <label class="block text-sm font-medium text-gray-700 mb-1">From Account</label>
                   <select id="userGoogleAccountId" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm">
-                    {userGoogleAccounts.map((account: any) => (
+                    <option value="system-brevo">System Default (Brevo)</option>
+                    <option value="system-mailgun">System Default (Mailgun)</option>
+                    {userGoogleAccounts.map((account: { id: string, email: string }) => (
                       <option value={account.id}>{account.email}</option>
                     ))}
                   </select>
@@ -292,6 +333,25 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
               </div>
               <div id="editor-container" class="bg-white rounded-b-md" style="height: 250px;"></div>
               <input type="hidden" id="emailBody" />
+              <input type="hidden" id="cleanBaseUrl" value={cleanBaseUrl} />
+            </div>
+
+            <!-- Include Signature -->
+            <div class="space-y-3 pt-2 border-t border-gray-100">
+              <div class="flex items-center gap-2">
+                <input type="checkbox" id="includeSignature" class="rounded border-gray-300 text-secondary focus:ring-secondary" checked />
+                <label for="includeSignature" class="text-sm font-medium text-gray-700">Include Vote Rutherford Signature</label>
+              </div>
+              <div id="signatureDetailsContainer" class="grid grid-cols-2 gap-3 pl-6">
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Signatory Name</label>
+                  <input type="text" id="signatureName" value="Joshua D. Jensen" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-xs py-1 px-2" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Signatory Title</label>
+                  <input type="text" id="signatureTitle" value="Co-President, Vote Rutherford" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-xs py-1 px-2" />
+                </div>
+              </div>
             </div>
 
             <!-- Preview Toggle -->
@@ -342,6 +402,48 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
 
   </div>
 
+  <!-- History Section -->
+  <div class="space-y-4 pt-8 border-t mt-8">
+    <h3 class="text-xl font-bold text-gray-900">Recent Email History</h3>
+    <div class="overflow-hidden rounded-lg border border-gray-200 shadow bg-white">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+            <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">To</th>
+            <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
+            <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sent At</th>
+            <th scope="col" class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {recentEmails.length === 0 ? (
+            <tr><td colspan="5" class="px-3 py-4 text-center text-sm text-gray-500">No emails sent yet</td></tr>
+          ) : recentEmails.map(email => (
+            <tr class="hover:bg-gray-50">
+              <td class="px-3 py-3 whitespace-nowrap">
+                {email.status === 'SENT' ? (
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Sent</span>
+                ) : (
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800" title={email.errorMessage || "Unknown error"}>Failed</span>
+                )}
+              </td>
+              <td class="px-3 py-3">
+                <div class="text-sm font-medium text-gray-900">{email.candidate ? `${email.candidate.firstName} ${email.candidate.lastName}` : (email.contact ? `${email.contact.firstName} ${email.contact.lastName}` : 'Unknown')}</div>
+                <div class="text-xs text-gray-500">{email.emailAddress}</div>
+              </td>
+              <td class="px-3 py-3 text-sm text-gray-900 max-w-xs truncate" title={email.subject}>{email.subject}</td>
+              <td class="px-3 py-3 text-sm text-gray-500">{new Date(email.sentAt).toLocaleString()}</td>
+              <td class="px-3 py-3 text-right text-sm font-medium">
+                <button type="button" class="text-secondary hover:text-secondary/80 resend-btn cursor-pointer" data-id={email.id}>Resend</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <script>
     import { actions } from "astro:actions";
 
@@ -349,6 +451,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
     const searchNameInput = document.getElementById("searchName") as HTMLInputElement;
     const filterRaceTypeInput = document.getElementById("filterRaceType") as HTMLSelectElement;
     const filterPartyInput = document.getElementById("filterParty") as HTMLSelectElement;
+    const filterPolicyQuestionsInput = document.getElementById("filterPolicyQuestions") as HTMLSelectElement | null;
     const tbody = document.getElementById("candidates-tbody");
 
     // Selection elements
@@ -362,6 +465,10 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
     const emailSubject = document.getElementById("emailSubject") as HTMLInputElement;
     const emailBody = document.getElementById("emailBody") as HTMLInputElement;
     const userGoogleAccountIdSelect = document.getElementById("userGoogleAccountId") as HTMLSelectElement;
+    const includeSignatureCb = document.getElementById("includeSignature") as HTMLInputElement;
+    const signatureDetailsContainer = document.getElementById("signatureDetailsContainer") as HTMLDivElement;
+    const signatureNameInput = document.getElementById("signatureName") as HTMLInputElement;
+    const signatureTitleInput = document.getElementById("signatureTitle") as HTMLInputElement;
 
     // Initialize Quill
     // @ts-expect-error Quill is loaded via script tag
@@ -410,11 +517,22 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
       }
     });
 
+    includeSignatureCb?.addEventListener("change", () => {
+      if (signatureDetailsContainer) {
+        signatureDetailsContainer.style.display = includeSignatureCb.checked ? "grid" : "none";
+      }
+      refreshPreview();
+    });
+
+    signatureNameInput?.addEventListener("input", refreshPreview);
+    signatureTitleInput?.addEventListener("input", refreshPreview);
+
     function applyFilters() {
       if (!tbody) return;
       const search = searchNameInput?.value.toLowerCase() || "";
       const raceType = filterRaceTypeInput?.value || "";
       const party = filterPartyInput?.value || "";
+      const policyFilter = filterPolicyQuestionsInput?.value || "";
 
       Array.from(tbody.querySelectorAll("tr.candidate-row")).forEach((tr) => {
         const row = tr as HTMLElement;
@@ -423,6 +541,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
         const emailPart = (row.querySelector('.candidate-email-display') as HTMLElement).textContent?.toLowerCase() || "";
         
         const rowRaceType = row.dataset.racetype || "";
+        const rowAnsweredPolicy = row.dataset.answeredPolicy === "true";
         const matchSearch = search === "" || namePart.includes(search) || emailPart.includes(search);
         const matchRaceType = raceType === "" || rowRaceType === raceType;
         
@@ -431,7 +550,14 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
           matchParty = partyPart.includes(party.toLowerCase());
         }
 
-        row.style.display = (matchSearch && matchRaceType && matchParty) ? "" : "none";
+        let matchPolicy = true;
+        if (policyFilter === "answered") {
+          matchPolicy = rowAnsweredPolicy;
+        } else if (policyFilter === "unanswered") {
+          matchPolicy = !rowAnsweredPolicy;
+        }
+
+        row.style.display = (matchSearch && matchRaceType && matchParty && matchPolicy) ? "" : "none";
       });
       updateSelectionState();
     }
@@ -465,6 +591,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
     searchNameInput?.addEventListener("input", applyFilters);
     filterRaceTypeInput?.addEventListener("change", applyFilters);
     filterPartyInput?.addEventListener("change", applyFilters);
+    filterPolicyQuestionsInput?.addEventListener("change", applyFilters);
 
     selectAllCb?.addEventListener("change", (e) => {
       const checked = (e.target as HTMLInputElement).checked;
@@ -505,10 +632,20 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
       if (!previewPane || previewPane.classList.contains("hidden")) return;
       
       const targets = getSelectedTargets();
+
+      let signatureHtml = "";
+      if (includeSignatureCb && includeSignatureCb.checked) {
+        const cleanBaseUrl = (document.getElementById("cleanBaseUrl") as HTMLInputElement).value;
+        const name = signatureNameInput?.value || "Joshua D. Jensen";
+        const title = signatureTitleInput?.value || "Co-President, Vote Rutherford";
+        signatureHtml = `<br /><br />--<br />Sincerely,<br />${name}<br />${title}<br /><br /><a href="https://GoVoteRutherford.com">GoVoteRutherford.com</a><br /><br /><span style="font-style: italic; color: #555;">"Wherever the people are well informed, they can be trusted with their own government."</span> - Thomas Jefferson<br /><br /><img src="${cleanBaseUrl}/Email-Logo.png" alt="Vote Rutherford Logo" style="width: 400px; max-width: 100%; height: auto;" />`;
+      }
+
       if (targets.length === 0) {
         previewTo.textContent = "Nobody selected";
         previewSubject.textContent = emailSubject.value || "(No subject)";
-        previewBody.innerHTML = (emailBody.value || "(No body)").split("\n").join("<br />");
+        const baseBody = emailBody.value || "(No body)";
+        previewBody.innerHTML = baseBody + signatureHtml;
         return;
       }
 
@@ -525,7 +662,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
       }
       
       // The body is already HTML from Quill
-      previewBody.innerHTML = personalizedBody;
+      previewBody.innerHTML = personalizedBody + signatureHtml;
     }
 
     // Variable insertion
@@ -569,7 +706,7 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
         return;
       }
       if (!userGoogleAccountId) {
-        window.toast.error("A Google account must be connected and selected");
+        window.toast.error("A sending account must be selected");
         return;
       }
 
@@ -592,7 +729,10 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
           userGoogleAccountId,
           targets,
           targetType,
-          scheduledAt: sendLaterCb.checked ? scheduledAtInput.value : undefined
+          scheduledAt: sendLaterCb.checked ? scheduledAtInput.value : undefined,
+          includeSignature: includeSignatureCb ? includeSignatureCb.checked : false,
+          signatureName: signatureNameInput ? signatureNameInput.value : undefined,
+          signatureTitle: signatureTitleInput ? signatureTitleInput.value : undefined
         });
 
         if (error) {
@@ -616,6 +756,39 @@ const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boo
         sendBtn.innerHTML = originalText;
         updateSelectionState(); // restores correct disabled state
       }
+    });
+
+    // Resend Logic
+    document.querySelectorAll(".resend-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = (btn as HTMLButtonElement).dataset.id;
+        if (!id) return;
+        const userGoogleAccountId = userGoogleAccountIdSelect?.value;
+        if (!userGoogleAccountId) {
+          window.toast.error("Please select a From Account to use for resending");
+          return;
+        }
+
+        const originalText = btn.textContent || "Resend";
+        btn.textContent = "Resending...";
+        (btn as HTMLButtonElement).disabled = true;
+
+        try {
+          const { error } = await actions.resendEmail({ id, userGoogleAccountId });
+          if (error) {
+            console.error(error);
+            window.toast.error(error.message || "Failed to resend");
+          } else {
+            window.toast.success("Resend job queued!");
+          }
+        } catch (e) {
+          console.error(e);
+          window.toast.error("Unexpected error");
+        } finally {
+          btn.textContent = originalText;
+          (btn as HTMLButtonElement).disabled = false;
+        }
+      });
     });
 
   </script>
