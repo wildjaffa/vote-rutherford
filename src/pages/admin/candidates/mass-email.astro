@@ -18,6 +18,7 @@ interface CandidateEmail {
   raceName: string;
   raceType: string;
   profileLink?: string;
+  hasAnsweredPolicyQuestions: boolean;
 }
 
 type CandidateWithRace = Prisma.CandidateGetPayload<{
@@ -27,7 +28,12 @@ type CandidateWithRace = Prisma.CandidateGetPayload<{
         raceType: true;
         election: true;
       }
-    }
+    };
+    policyResponses: {
+      where: {
+        deletedAt: null;
+      }
+    };
   }
 }>;
 
@@ -76,6 +82,11 @@ if (targetType === "candidate" && selectedElectionId) {
             raceType: true,
             election: true,
           }
+        },
+        policyResponses: {
+          where: {
+            deletedAt: null,
+          }
         }
       },
       orderBy: [
@@ -93,6 +104,7 @@ if (targetType === "candidate" && selectedElectionId) {
       raceName: c.race.name,
       raceType: c.race.raceType.value,
       profileLink: `${cleanBaseUrl}/elections/${c.race.election.slug}/${c.race.slug}/${c.slug}`,
+      hasAnsweredPolicyQuestions: c.policyResponses.some(r => !r.source || r.source.trim() === ''),
     }));
   } catch (err) {
     error = "Failed to load candidates";
@@ -113,6 +125,7 @@ if (targetType === "candidate" && selectedElectionId) {
       raceName: c.description || "N/A",
       raceType: "Contact",
       profileLink: "",
+      hasAnsweredPolicyQuestions: false,
     }));
   } catch (err) {
     error = "Failed to load contacts";
@@ -187,7 +200,7 @@ const recentEmails = await prisma.emailOutreach.findMany({
           <h3 class="text-lg font-semibold text-gray-900">1. Select Recipients</h3>
           
           <!-- Filters -->
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 bg-gray-50 p-4 rounded-lg border border-gray-200" id="filter-container">
+          <div class={`grid grid-cols-1 gap-4 ${targetType === 'candidate' ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} bg-gray-50 p-4 rounded-lg border border-gray-200`} id="filter-container">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Search Component</label>
               <input type="text" id="searchName" placeholder="Name or Email..." class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm" />
@@ -206,6 +219,16 @@ const recentEmails = await prisma.emailOutreach.findMany({
                 {parties.map(party => <option value={party}>{party}</option>)}
               </select>
             </div>
+            {targetType === "candidate" && (
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Policy Responses</label>
+                <select id="filterPolicyQuestions" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm">
+                  <option value="">All</option>
+                  <option value="answered">Answered</option>
+                  <option value="unanswered">Unanswered</option>
+                </select>
+              </div>
+            )}
           </div>
 
           <!-- Table -->
@@ -222,7 +245,13 @@ const recentEmails = await prisma.emailOutreach.findMany({
               </thead>
               <tbody id="candidates-tbody" class="bg-white divide-y divide-gray-200">
                 {candidates.map(candidate => (
-                  <tr class="candidate-row hover:bg-gray-50" data-id={candidate.id} data-racetype={candidate.raceType} data-email={candidate.email}>
+                  <tr 
+                    class="candidate-row hover:bg-gray-50" 
+                    data-id={candidate.id} 
+                    data-racetype={candidate.raceType} 
+                    data-email={candidate.email}
+                    data-answered-policy={candidate.hasAnsweredPolicyQuestions ? "true" : "false"}
+                  >
                     <td class="px-3 py-3 whitespace-nowrap">
                       <input 
                         type="checkbox" 
@@ -422,6 +451,7 @@ const recentEmails = await prisma.emailOutreach.findMany({
     const searchNameInput = document.getElementById("searchName") as HTMLInputElement;
     const filterRaceTypeInput = document.getElementById("filterRaceType") as HTMLSelectElement;
     const filterPartyInput = document.getElementById("filterParty") as HTMLSelectElement;
+    const filterPolicyQuestionsInput = document.getElementById("filterPolicyQuestions") as HTMLSelectElement | null;
     const tbody = document.getElementById("candidates-tbody");
 
     // Selection elements
@@ -502,6 +532,7 @@ const recentEmails = await prisma.emailOutreach.findMany({
       const search = searchNameInput?.value.toLowerCase() || "";
       const raceType = filterRaceTypeInput?.value || "";
       const party = filterPartyInput?.value || "";
+      const policyFilter = filterPolicyQuestionsInput?.value || "";
 
       Array.from(tbody.querySelectorAll("tr.candidate-row")).forEach((tr) => {
         const row = tr as HTMLElement;
@@ -510,6 +541,7 @@ const recentEmails = await prisma.emailOutreach.findMany({
         const emailPart = (row.querySelector('.candidate-email-display') as HTMLElement).textContent?.toLowerCase() || "";
         
         const rowRaceType = row.dataset.racetype || "";
+        const rowAnsweredPolicy = row.dataset.answeredPolicy === "true";
         const matchSearch = search === "" || namePart.includes(search) || emailPart.includes(search);
         const matchRaceType = raceType === "" || rowRaceType === raceType;
         
@@ -518,7 +550,14 @@ const recentEmails = await prisma.emailOutreach.findMany({
           matchParty = partyPart.includes(party.toLowerCase());
         }
 
-        row.style.display = (matchSearch && matchRaceType && matchParty) ? "" : "none";
+        let matchPolicy = true;
+        if (policyFilter === "answered") {
+          matchPolicy = rowAnsweredPolicy;
+        } else if (policyFilter === "unanswered") {
+          matchPolicy = !rowAnsweredPolicy;
+        }
+
+        row.style.display = (matchSearch && matchRaceType && matchParty && matchPolicy) ? "" : "none";
       });
       updateSelectionState();
     }
@@ -552,6 +591,7 @@ const recentEmails = await prisma.emailOutreach.findMany({
     searchNameInput?.addEventListener("input", applyFilters);
     filterRaceTypeInput?.addEventListener("change", applyFilters);
     filterPartyInput?.addEventListener("change", applyFilters);
+    filterPolicyQuestionsInput?.addEventListener("change", applyFilters);
 
     selectAllCb?.addEventListener("change", (e) => {
       const checked = (e.target as HTMLInputElement).checked;
