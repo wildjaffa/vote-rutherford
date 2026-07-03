@@ -92,12 +92,19 @@ export const sendMassEmail = defineAction({
       .min(1, "At least one target is required"),
     targetType: z.enum(["candidate", "contact"]).default("candidate"),
     scheduledAt: z.string().optional(),
+    includeSignature: z.boolean().optional(),
+    signatureName: z.string().optional(),
+    signatureTitle: z.string().optional(),
   }),
   handler: async (input, context) => {
     const { emailQueue } = await import("../lib/jobs/emailQueue");
 
     // Validate permission
     await getCurrentUserId(context.cookies.get("__session")?.value);
+
+    const url = new URL(context.request.url);
+    const baseUrl = process.env.PUBLIC_SITE_URL || url.origin;
+    const cleanBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
 
     // Calculate delay if scheduledAt is provided
     let delay = 0;
@@ -115,6 +122,12 @@ export const sendMassEmail = defineAction({
           const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "gi");
           personalizedBody = personalizedBody.replace(regex, value);
         }
+      }
+
+      if (input.includeSignature) {
+        const name = input.signatureName || "Joshua D. Jensen";
+        const title = input.signatureTitle || "Co-President, Vote Rutherford";
+        personalizedBody += `<br /><br />--<br />Sincerely,<br />${name}<br />${title}<br /><br /><a href="https://GoVoteRutherford.com">GoVoteRutherford.com</a><br /><br /><span style="font-style: italic; color: #555;">"Wherever the people are well informed, they can be trusted with their own government."</span> - Thomas Jefferson<br /><br /><img src="${cleanBaseUrl}/Email-Logo.png" alt="Vote Rutherford Logo" style="width: 400px; max-width: 100%; height: auto;" />`;
       }
 
       return {

@@ -270,6 +270,7 @@ const recentEmails = await prisma.emailOutreach.findMany({
                 <div class="flex-1">
                   <label class="block text-sm font-medium text-gray-700 mb-1">From Account</label>
                   <select id="userGoogleAccountId" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm">
+                    <option value="system-brevo">System Default (Brevo)</option>
                     <option value="system-mailgun">System Default (Mailgun)</option>
                     {userGoogleAccounts.map((account: { id: string, email: string }) => (
                       <option value={account.id}>{account.email}</option>
@@ -303,6 +304,25 @@ const recentEmails = await prisma.emailOutreach.findMany({
               </div>
               <div id="editor-container" class="bg-white rounded-b-md" style="height: 250px;"></div>
               <input type="hidden" id="emailBody" />
+              <input type="hidden" id="cleanBaseUrl" value={cleanBaseUrl} />
+            </div>
+
+            <!-- Include Signature -->
+            <div class="space-y-3 pt-2 border-t border-gray-100">
+              <div class="flex items-center gap-2">
+                <input type="checkbox" id="includeSignature" class="rounded border-gray-300 text-secondary focus:ring-secondary" checked />
+                <label for="includeSignature" class="text-sm font-medium text-gray-700">Include Vote Rutherford Signature</label>
+              </div>
+              <div id="signatureDetailsContainer" class="grid grid-cols-2 gap-3 pl-6">
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Signatory Name</label>
+                  <input type="text" id="signatureName" value="Joshua D. Jensen" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-xs py-1 px-2" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">Signatory Title</label>
+                  <input type="text" id="signatureTitle" value="Co-President, Vote Rutherford" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-xs py-1 px-2" />
+                </div>
+              </div>
             </div>
 
             <!-- Preview Toggle -->
@@ -415,6 +435,10 @@ const recentEmails = await prisma.emailOutreach.findMany({
     const emailSubject = document.getElementById("emailSubject") as HTMLInputElement;
     const emailBody = document.getElementById("emailBody") as HTMLInputElement;
     const userGoogleAccountIdSelect = document.getElementById("userGoogleAccountId") as HTMLSelectElement;
+    const includeSignatureCb = document.getElementById("includeSignature") as HTMLInputElement;
+    const signatureDetailsContainer = document.getElementById("signatureDetailsContainer") as HTMLDivElement;
+    const signatureNameInput = document.getElementById("signatureName") as HTMLInputElement;
+    const signatureTitleInput = document.getElementById("signatureTitle") as HTMLInputElement;
 
     // Initialize Quill
     // @ts-expect-error Quill is loaded via script tag
@@ -462,6 +486,16 @@ const recentEmails = await prisma.emailOutreach.findMany({
         scheduledAtInput.value = localISOTime;
       }
     });
+
+    includeSignatureCb?.addEventListener("change", () => {
+      if (signatureDetailsContainer) {
+        signatureDetailsContainer.style.display = includeSignatureCb.checked ? "grid" : "none";
+      }
+      refreshPreview();
+    });
+
+    signatureNameInput?.addEventListener("input", refreshPreview);
+    signatureTitleInput?.addEventListener("input", refreshPreview);
 
     function applyFilters() {
       if (!tbody) return;
@@ -558,10 +592,20 @@ const recentEmails = await prisma.emailOutreach.findMany({
       if (!previewPane || previewPane.classList.contains("hidden")) return;
       
       const targets = getSelectedTargets();
+
+      let signatureHtml = "";
+      if (includeSignatureCb && includeSignatureCb.checked) {
+        const cleanBaseUrl = (document.getElementById("cleanBaseUrl") as HTMLInputElement).value;
+        const name = signatureNameInput?.value || "Joshua D. Jensen";
+        const title = signatureTitleInput?.value || "Co-President, Vote Rutherford";
+        signatureHtml = `<br /><br />--<br />Sincerely,<br />${name}<br />${title}<br /><br /><a href="https://GoVoteRutherford.com">GoVoteRutherford.com</a><br /><br /><span style="font-style: italic; color: #555;">"Wherever the people are well informed, they can be trusted with their own government."</span> - Thomas Jefferson<br /><br /><img src="${cleanBaseUrl}/Email-Logo.png" alt="Vote Rutherford Logo" style="width: 400px; max-width: 100%; height: auto;" />`;
+      }
+
       if (targets.length === 0) {
         previewTo.textContent = "Nobody selected";
         previewSubject.textContent = emailSubject.value || "(No subject)";
-        previewBody.innerHTML = (emailBody.value || "(No body)").split("\n").join("<br />");
+        const baseBody = emailBody.value || "(No body)";
+        previewBody.innerHTML = baseBody + signatureHtml;
         return;
       }
 
@@ -578,7 +622,7 @@ const recentEmails = await prisma.emailOutreach.findMany({
       }
       
       // The body is already HTML from Quill
-      previewBody.innerHTML = personalizedBody;
+      previewBody.innerHTML = personalizedBody + signatureHtml;
     }
 
     // Variable insertion
@@ -645,7 +689,10 @@ const recentEmails = await prisma.emailOutreach.findMany({
           userGoogleAccountId,
           targets,
           targetType,
-          scheduledAt: sendLaterCb.checked ? scheduledAtInput.value : undefined
+          scheduledAt: sendLaterCb.checked ? scheduledAtInput.value : undefined,
+          includeSignature: includeSignatureCb ? includeSignatureCb.checked : false,
+          signatureName: signatureNameInput ? signatureNameInput.value : undefined,
+          signatureTitle: signatureTitleInput ? signatureTitleInput.value : undefined
         });
 
         if (error) {
