@@ -97,7 +97,7 @@ export const sendMassEmail = defineAction({
     signatureTitle: z.string().optional(),
   }),
   handler: async (input, context) => {
-    const { emailQueue } = await import("../lib/jobs/emailQueue");
+    const { addEmailJobs } = await import("../lib/jobs/emailQueue");
 
     // Validate permission
     await getCurrentUserId(context.cookies.get("__session")?.value);
@@ -107,15 +107,15 @@ export const sendMassEmail = defineAction({
     const cleanBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
 
     // Calculate delay if scheduledAt is provided
-    let delay = 0;
+    let delayMs = 0;
     if (input.scheduledAt) {
       const scheduledDate = new Date(input.scheduledAt);
       const now = new Date();
-      delay = Math.max(0, scheduledDate.getTime() - now.getTime());
+      delayMs = Math.max(0, scheduledDate.getTime() - now.getTime());
     }
 
-    // Add jobs to queue
-    const jobs = input.targets.map((target) => {
+    // Build personalised job data for each recipient
+    const jobData = input.targets.map((target) => {
       let personalizedBody = input.bodyTemplate;
       if (target.variables) {
         for (const [key, value] of Object.entries(target.variables)) {
@@ -127,28 +127,22 @@ export const sendMassEmail = defineAction({
       if (input.includeSignature) {
         const name = input.signatureName || "Joshua D. Jensen";
         const title = input.signatureTitle || "Co-President, Vote Rutherford";
-        personalizedBody += `<br /><br />--<br />Sincerely,<br />${name}<br />${title}<br /><br /><a href="https://GoVoteRutherford.com">GoVoteRutherford.com</a><br /><br /><span style="font-style: italic; color: #555;">"Wherever the people are well informed, they can be trusted with their own government."</span> - Thomas Jefferson<br /><br /><img src="${cleanBaseUrl}/Email-Logo.png" alt="Vote Rutherford Logo" style="width: 400px; max-width: 100%; height: auto;" />`;
+        personalizedBody += `<br /><br />--<br />Sincerely,<br />${name}<br />${title}<br /><br /><a href="https://GoVoteRutherford.com">GoVoteRutherford.com</a><br /><br /><span style="font-style: italic; color: #555;">&quot;Wherever the people are well informed, they can be trusted with their own government.&quot;</span> - Thomas Jefferson<br /><br /><img src="${cleanBaseUrl}/Email-Logo.png" alt="Vote Rutherford Logo" style="width: 400px; max-width: 100%; height: auto;" />`;
       }
 
       return {
-        name: "send-email",
-        data: {
-          candidateId:
-            input.targetType === "candidate" ? (target.id ?? null) : null,
-          contactId:
-            input.targetType === "contact" ? (target.id ?? null) : null,
-          emailAddress: target.email,
-          subject: input.subject,
-          body: personalizedBody,
-          userGoogleAccountId: input.userGoogleAccountId ?? "",
-        },
-        ...(delay > 0 && { opts: { delay } }),
+        candidateId: input.targetType === "candidate" ? (target.id ?? null) : null,
+        contactId: input.targetType === "contact" ? (target.id ?? null) : null,
+        emailAddress: target.email,
+        subject: input.subject,
+        body: personalizedBody,
+        userGoogleAccountId: input.userGoogleAccountId ?? "",
       };
     });
 
     try {
-      await emailQueue.addBulk(jobs);
-      return { success: true, count: jobs.length };
+      await addEmailJobs(jobData, delayMs);
+      return { success: true, count: jobData.length };
     } catch (err) {
       handleActionError(err, "Failed to enqueue email jobs");
     }
@@ -206,7 +200,7 @@ export const resendEmail = defineAction({
     userGoogleAccountId: z.string().optional(),
   }),
   handler: async (input, context) => {
-    const { emailQueue } = await import("../lib/jobs/emailQueue");
+    const { addEmailJobs } = await import("../lib/jobs/emailQueue");
     const prisma = await import("../lib/prisma").then((m) => m.default);
 
     await getCurrentUserId(context.cookies.get("__session")?.value);
@@ -219,20 +213,15 @@ export const resendEmail = defineAction({
       throw new Error("Email outreach record not found");
     }
 
-    const job = {
-      name: "send-email",
-      data: {
+    try {
+      await addEmailJobs([{
         candidateId: outreach.candidateId,
         contactId: outreach.contactId,
         emailAddress: outreach.emailAddress,
         subject: outreach.subject,
         body: outreach.body,
         userGoogleAccountId: input.userGoogleAccountId ?? "",
-      },
-    };
-
-    try {
-      await emailQueue.add(job.name, job.data);
+      }]);
       return { success: true };
     } catch (err) {
       handleActionError(err, "Failed to enqueue resend job");

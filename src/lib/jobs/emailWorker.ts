@@ -1,90 +1,91 @@
-import { Worker, type Job, type ConnectionOptions } from "bullmq";
-import IORedis from "ioredis";
-import { getEmailProvider } from "../services/email/EmailFactory";
+import { getEmailBoss, EMAIL_QUEUE_NAME } from "./emailQueue";
 import type { SendEmailJobData } from "./emailQueue";
+import { getEmailProvider } from "../services/email/EmailFactory";
 import prisma from "../prisma";
 import "dotenv/config";
+import type { Job } from "pg-boss";
 
-// BullMQ Workers MUST have their own dedicated Redis connection — sharing with
-// the Queue's connection causes blocking command conflicts that silently stall
-// jobs after the first one completes.
-function createWorkerConnection() {
-  return new IORedis(process.env.REDIS_URL || "redis://localhost:6379", {
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
+async function processEmailJob(job: Job<SendEmailJobData>): Promise<void> {
+  const {
+    candidateId,
+    contactId,
+    emailAddress,
+    subject,
+    body,
+    userGoogleAccountId,
+  } = job.data;
+
+  console.log(`[EmailWorker] Processing job ${job.id} → ${emailAddress}`);
+
+  let success = false;
+  let errorMessage: string | null = null;
+
+  try {
+    const provider = await getEmailProvider(userGoogleAccountId);
+    success = await provider.sendEmail({
+      to: emailAddress,
+      subject,
+      body,
+      candidateId: candidateId ?? undefined,
+    });
+
+    if (!success) {
+      errorMessage = "Provider reported failure (returned false)";
+    }
+  } catch (err: unknown) {
+    success = false;
+    errorMessage = err instanceof Error ? err.message : "Unknown error";
+  }
+
+  // Record outreach attempt in database regardless of outcome.
+  await prisma.emailOutreach.create({
+    data: {
+      candidateId: candidateId || null,
+      contactId: contactId || null,
+      emailAddress,
+      subject,
+      body,
+      status: success ? "SENT" : "FAILED",
+      errorMessage,
+      sentAt: new Date(),
+    },
   });
+
+  if (!success) {
+    // Throwing causes pg-boss to mark this job as failed and schedule
+    // a retry (up to retryLimit times, configured when the job was inserted).
+    throw new Error(errorMessage || "Email sending failed");
+  }
+
+  console.log(`[EmailWorker] ✓ Job ${job.id} complete → ${emailAddress}`);
 }
 
-export const spawnEmailWorker = () => {
-  const worker = new Worker<SendEmailJobData>(
-    "email-outreach",
-    async (job: Job<SendEmailJobData>) => {
-      const { candidateId, contactId, emailAddress, subject, body, userGoogleAccountId } = job.data;
+export async function spawnEmailWorker(): Promise<void> {
+  const boss = await getEmailBoss();
 
-      let success = false;
-      let errorMessage: string | null = null;
-
-      try {
-        const provider = await getEmailProvider(userGoogleAccountId);
-        success = await provider.sendEmail({
-          to: emailAddress,
-          subject,
-          body,
-          candidateId: candidateId ?? undefined,
-        });
-
-        if (!success) {
-          errorMessage = "Provider reported failure (returned false)";
-        }
-      } catch (err: unknown) {
-        success = false;
-        errorMessage = err instanceof Error ? err.message : "Unknown error";
-      }
-
-      // Record outreach attempt in database
-      await prisma.emailOutreach.create({
-        data: {
-          candidateId: candidateId || null,
-          contactId: contactId || null,
-          emailAddress,
-          subject,
-          body,
-          status: success ? "SENT" : "FAILED",
-          errorMessage,
-          sentAt: new Date(),
-        },
-      });
-
-      if (!success) {
-        throw new Error(errorMessage || "Email sending failed");
-      }
-
-      return { success: true };
-    },
+  // pg-boss work() handler receives an array of jobs (batch).
+  // With batchSize: 1 (default), each invocation gets exactly one job.
+  await boss.work<SendEmailJobData>(
+    EMAIL_QUEUE_NAME,
     {
-      connection: createWorkerConnection() as unknown as ConnectionOptions,
-      // Keep concurrency at 1 to avoid needing multiple blocking connections.
-      // Email sending is I/O-bound and sequential is fine for typical volumes.
-      concurrency: 1,
-      lockDuration: 30_000,      // 30s lock — plenty for a single email send
-      lockRenewTime: 10_000,     // renew every 10s
-      stalledInterval: 15_000,   // check for stalled jobs every 15s
-      maxStalledCount: 2,        // allow 2 stall retries before marking failed
+      // Process one job at a time — safe for rate-limited email providers.
+      // batchSize defaults to 1, so the handler receives a single-element array.
+      localConcurrency: 1,
+      // Poll every 2 seconds so large batches drain without waiting on idle timeout.
+      pollingIntervalSeconds: 2,
+    },
+    async (jobs: Job<SendEmailJobData>[]) => {
+      // With batchSize: 1 (default), this array always has exactly one element.
+      for (const job of jobs) {
+        await processEmailJob(job);
+      }
     },
   );
 
-  worker.on("completed", (job) => {
-    console.log(`[EmailWorker] Job ${job.id} has completed!`);
-  });
-
-  worker.on("failed", (job, err) => {
-    console.error(
-      `[EmailWorker] Job ${job?.id} has failed with ${err.message}`,
-    );
-  });
-
-  return worker;
-};
+  console.log(
+    `[EmailWorker] Worker registered — polling queue: ${EMAIL_QUEUE_NAME}`,
+  );
+}
 
 // Start the worker if this module is run directly (via tsx or node)
 const isMain =
@@ -93,8 +94,15 @@ const isMain =
 
 if (isMain) {
   console.log("Starting stand-alone email worker process...");
-  spawnEmailWorker();
-  console.log("Email worker running. Press Ctrl+C to stop.");
+
+  spawnEmailWorker()
+    .then(() => {
+      console.log("Email worker running. Press Ctrl+C to stop.");
+    })
+    .catch((err) => {
+      console.error("[EmailWorker] Failed to start:", err);
+      process.exit(1);
+    });
 
   // Prevent silent crashes — log and keep the process alive on unhandled errors
   process.on("unhandledRejection", (reason) => {
@@ -103,4 +111,22 @@ if (isMain) {
   process.on("uncaughtException", (err) => {
     console.error("[EmailWorker] Uncaught exception:", err);
   });
+
+  // Graceful shutdown: let in-progress jobs finish before exiting
+  const shutdown = async (signal: string) => {
+    console.log(
+      `[EmailWorker] ${signal} received — shutting down gracefully...`,
+    );
+    try {
+      const boss = await getEmailBoss();
+      await boss.stop({ graceful: true, timeout: 30_000 });
+      console.log("[EmailWorker] Shutdown complete.");
+    } catch (err) {
+      console.error("[EmailWorker] Error during shutdown:", err);
+    }
+    process.exit(0);
+  };
+
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
