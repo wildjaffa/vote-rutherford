@@ -74,90 +74,104 @@ const typeLabel = getRaceScopeLabel(race.raceScopeId);
           month: "long",
           day: "numeric",
         })
-      }<Users size="16" stroke-width={2} class="text-secondary ml-2 inline" />
-      {candidates.length} Candidates
+      }
       {
-        race.votingMethod === "RETENTION" ? (
+        race.votingMethod !== "RETENTION" && (
           <>
-            <span class="mx-2">•</span>
-            Vote on each candidate separately
+            <Users size="16" stroke-width={2} class="text-secondary ml-2 inline" />
+            {candidates.length} Candidates
+            {race.numSelections > 1 && (
+              <>
+                <span class="mx-2">•</span>
+                Select up to{" "}
+                <span class="num-selections">{race.numSelections}</span>
+              </>
+            )}
           </>
-        ) : (
-          race.numSelections > 1 && (
-            <>
-              <span class="mx-2">•</span>
-              Select up to{" "}
-              <span class="num-selections">{race.numSelections}</span>
-            </>
-          )
         )
       }
     </p>
 
     <div class="candidates-list mt-auto flex flex-col gap-2">
       {
-        race.votingMethod === "RETENTION" ? (
-          candidates.flatMap((candidate) => [
-            {
-              id: `${candidate.id}_retain`,
-              label: `Retain - ${candidate.firstName} ${candidate.lastName}`,
-              candidateId: candidate.id,
-              choice: "retain",
-            },
-            {
-              id: `${candidate.id}_replace`,
-              label: `Replace - ${candidate.firstName} ${candidate.lastName}`,
-              candidateId: candidate.id,
-              choice: "replace",
-            }
-          ]).map((option) => (
-            <button
-              class="candidate-row focus:ring-secondary/50 flex w-full items-center justify-between rounded-md border border-gray-200 p-3 text-left transition-colors hover:bg-gray-50 focus:ring-2 focus:outline-none"
-              data-candidate-id={option.id}
-              data-base-candidate-id={option.candidateId}
-              data-choice={option.choice}
-            >
-              <div>
-                <span class="font-medium text-gray-900">{option.label}</span>
-              </div>
-              <div class="checkbox-container text-gray-400">
-                <span class="unselected-icon">
-                  <Square class="h-6 w-6" />
-                </span>
-                <span class="selected-icon text-secondary hidden">
-                  <SquareCheck class="h-6 w-6" />
-                </span>
-              </div>
-            </button>
-          ))
-        ) : (
-          candidates.map((candidate) => (
-            <button
-              class="candidate-row focus:ring-secondary/50 flex w-full items-center justify-between rounded-md border border-gray-200 p-3 text-left transition-colors hover:bg-gray-50 focus:ring-2 focus:outline-none"
-              data-candidate-id={candidate.id}
-            >
-              <div>
-                <span class="font-medium text-gray-900">
-                  {candidate.firstName} {candidate.middleName}{" "}
-                  {candidate.lastName}
-                </span>
-                {candidate.partyAffiliation && (
-                  <span class="ml-2 text-sm text-gray-500">
-                    ({candidate.partyAffiliation})
-                  </span>
+        race.votingMethod === "RETENTION"
+          ? candidates.map((candidate, idx) => (
+              <>
+                {idx > 0 && (
+                  <div class="retention-divider flex items-center gap-3 py-1">
+                    <div class="h-px flex-1 bg-gray-200" />
+                    <span class="text-[10px] font-bold tracking-widest text-gray-400 uppercase"></span>
+                    <div class="h-px flex-1 bg-gray-200" />
+                  </div>
                 )}
-              </div>
-              <div class="checkbox-container text-gray-400">
-                <span class="unselected-icon">
-                  <Square class="h-6 w-6" />
-                </span>
-                <span class="selected-icon text-secondary hidden">
-                  <SquareCheck class="h-6 w-6" />
-                </span>
-              </div>
-            </button>
-          ))
-        )
+                <div class="retention-candidate-group flex flex-col gap-2">
+                  <p class="font-medium text-gray-900">
+                    {candidate.firstName} {candidate.lastName}
+                  </p>
+                  {[
+                    {
+                      id: `${candidate.id}_retain`,
+                      label: "Retain",
+                      candidateId: candidate.id,
+                      choice: "retain",
+                    },
+                    {
+                      id: `${candidate.id}_replace`,
+                      label: "Replace",
+                      candidateId: candidate.id,
+                      choice: "replace",
+                    },
+                  ].map((option) => (
+                    <button
+                      class="candidate-row focus:ring-secondary/50 flex w-full items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 focus:ring-2 focus:outline-none"
+                      data-candidate-id={option.id}
+                      data-base-candidate-id={option.candidateId}
+                      data-choice={option.choice}
+                    >
+                      <div>
+                        <span class="font-medium text-gray-500">
+                          {option.label}
+                        </span>
+                      </div>
+                      <div class="checkbox-container text-gray-400">
+                        <span class="unselected-icon">
+                          <Square class="h-5 w-5" />
+                        </span>
+                        <span class="selected-icon text-secondary hidden">
+                          <SquareCheck class="h-5 w-5" />
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ))
+          : candidates.map((candidate) => (
+              <button
+                class="candidate-row focus:ring-secondary/50 flex w-full items-center justify-between rounded-md border border-gray-200 p-3 text-left transition-colors hover:bg-gray-50 focus:ring-2 focus:outline-none"
+                data-candidate-id={candidate.id}
+              >
+                <div>
+                  <span class="font-medium text-gray-900">
+                    {candidate.firstName} {candidate.middleName}{" "}
+                    {candidate.lastName}
+                  </span>
+                  {candidate.partyAffiliation && (
+                    <span class="ml-2 text-sm text-gray-500">
+                      ({candidate.partyAffiliation})
+                    </span>
+                  )}
+                </div>
+                <div class="checkbox-container text-gray-400">
+                  <span class="unselected-icon">
+                    <Square class="h-6 w-6" />
+                  </span>
+                  <span class="selected-icon text-secondary hidden">
+                    <SquareCheck class="h-6 w-6" />
+                  </span>
+                </div>
+              </button>
+            ))
       }
     </div>
 
