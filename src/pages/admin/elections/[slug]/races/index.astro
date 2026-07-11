@@ -26,7 +26,7 @@ const election = await prisma.election.findUnique({
           },
         },
       },
-      orderBy: [{ raceTypeId: "desc" }, { order: "asc" }],
+      orderBy: [{ raceScopeId: "desc" }, { order: "asc" }],
     },
   },
 });

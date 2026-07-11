@@ -16,7 +16,7 @@ interface CandidateEmail {
   email: string;
   partyAffiliation: string;
   raceName: string;
-  raceType: string;
+  raceScope: string;
   profileLink?: string;
   hasAnsweredPolicyQuestions: boolean;
 }
@@ -25,7 +25,7 @@ type CandidateWithRace = Prisma.CandidateGetPayload<{
   include: {
     race: {
       include: {
-        raceType: true;
+        raceScope: true;
         election: true;
       }
     };
@@ -79,7 +79,7 @@ if (targetType === "candidate" && selectedElectionId) {
       include: {
         race: {
           include: {
-            raceType: true,
+            raceScope: true,
             election: true,
           }
         },
@@ -102,7 +102,7 @@ if (targetType === "candidate" && selectedElectionId) {
       email: c.email || '',
       partyAffiliation: c.partyAffiliation || '',
       raceName: c.race.name,
-      raceType: c.race.raceType.value,
+      raceScope: c.race.raceScope.value,
       profileLink: `${cleanBaseUrl}/elections/${c.race.election.slug}/${c.race.slug}/${c.slug}`,
       hasAnsweredPolicyQuestions: c.policyResponses.some(r => !r.source || r.source.trim() === ''),
     }));
@@ -123,7 +123,7 @@ if (targetType === "candidate" && selectedElectionId) {
       email: c.email,
       partyAffiliation: "",
       raceName: c.description || "N/A",
-      raceType: "Contact",
+      raceScope: "Contact",
       profileLink: "",
       hasAnsweredPolicyQuestions: false,
     }));
@@ -134,7 +134,7 @@ if (targetType === "candidate" && selectedElectionId) {
 }
 
 // Extract unique filters
-const raceTypes = [...new Set(candidates.map(c => c.raceType))].sort();
+const raceScopes = [...new Set(candidates.map(c => c.raceScope))].sort();
 const parties = [...new Set(candidates.map(c => c.partyAffiliation))].filter(Boolean).sort();
 
 // Fetch email history
@@ -206,10 +206,10 @@ const recentEmails = await prisma.emailOutreach.findMany({
               <input type="text" id="searchName" placeholder="Name or Email..." class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Race Type</label>
-              <select id="filterRaceType" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm">
-                <option value="">All Types</option>
-                {raceTypes.map(type => <option value={type}>{type}</option>)}
+              <label class="block text-sm font-medium text-gray-700 mb-1">Race Scope</label>
+              <select id="filterRaceScope" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-secondary focus:ring-secondary sm:text-sm">
+                <option value="">All Scopes</option>
+                {raceScopes.map(scope => <option value={scope}>{scope}</option>)}
               </select>
             </div>
             <div>
@@ -248,7 +248,7 @@ const recentEmails = await prisma.emailOutreach.findMany({
                   <tr 
                     class="candidate-row hover:bg-gray-50" 
                     data-id={candidate.id} 
-                    data-racetype={candidate.raceType} 
+                    data-racescope={candidate.raceScope}
                     data-email={candidate.email}
                     data-answered-policy={candidate.hasAnsweredPolicyQuestions ? "true" : "false"}
                   >
@@ -449,7 +449,7 @@ const recentEmails = await prisma.emailOutreach.findMany({
 
     // Filtering elements
     const searchNameInput = document.getElementById("searchName") as HTMLInputElement;
-    const filterRaceTypeInput = document.getElementById("filterRaceType") as HTMLSelectElement;
+    const filterRaceScopeInput = document.getElementById("filterRaceScope") as HTMLSelectElement;
     const filterPartyInput = document.getElementById("filterParty") as HTMLSelectElement;
     const filterPolicyQuestionsInput = document.getElementById("filterPolicyQuestions") as HTMLSelectElement | null;
     const tbody = document.getElementById("candidates-tbody");
@@ -530,7 +530,7 @@ const recentEmails = await prisma.emailOutreach.findMany({
     function applyFilters() {
       if (!tbody) return;
       const search = searchNameInput?.value.toLowerCase() || "";
-      const raceType = filterRaceTypeInput?.value || "";
+      const raceScope = filterRaceScopeInput?.value || "";
       const party = filterPartyInput?.value || "";
       const policyFilter = filterPolicyQuestionsInput?.value || "";
 
@@ -540,10 +540,10 @@ const recentEmails = await prisma.emailOutreach.findMany({
         const partyPart = (row.querySelector('.candidate-party') as HTMLElement).textContent?.toLowerCase() || "";
         const emailPart = (row.querySelector('.candidate-email-display') as HTMLElement).textContent?.toLowerCase() || "";
         
-        const rowRaceType = row.dataset.racetype || "";
+        const rowRaceScope = row.dataset.racescope || "";
         const rowAnsweredPolicy = row.dataset.answeredPolicy === "true";
         const matchSearch = search === "" || namePart.includes(search) || emailPart.includes(search);
-        const matchRaceType = raceType === "" || rowRaceType === raceType;
+        const matchRaceScope = raceScope === "" || rowRaceScope === raceScope;
         
         let matchParty = true;
         if (party !== "") {
@@ -557,7 +557,7 @@ const recentEmails = await prisma.emailOutreach.findMany({
           matchPolicy = !rowAnsweredPolicy;
         }
 
-        row.style.display = (matchSearch && matchRaceType && matchParty && matchPolicy) ? "" : "none";
+        row.style.display = (matchSearch && matchRaceScope && matchParty && matchPolicy) ? "" : "none";
       });
       updateSelectionState();
     }
@@ -589,7 +589,7 @@ const recentEmails = await prisma.emailOutreach.findMany({
 
     // Event listeners
     searchNameInput?.addEventListener("input", applyFilters);
-    filterRaceTypeInput?.addEventListener("change", applyFilters);
+    filterRaceScopeInput?.addEventListener("change", applyFilters);
     filterPartyInput?.addEventListener("change", applyFilters);
     filterPolicyQuestionsInput?.addEventListener("change", applyFilters);
 

@@ -8,7 +8,7 @@ import Button from "../../../../../components/Button.astro";
 import prisma from "../../../../../lib/prisma";
 import {
   DistrictType,
-  type RaceType,
+  type RaceScope,
 } from "../../../../../generated/prisma/browser";
 import { PartyCategories } from "../../../../../constants";
 
@@ -28,11 +28,11 @@ if (!election) {
   return Astro.redirect("/admin/elections");
 }
 
-// Get race types for dropdown
-const raceTypes = await prisma.raceType.findMany();
-const raceTypeOptions = raceTypes.map((rt: RaceType) => ({
-  value: rt.id.toString(),
-  label: rt.value,
+// Get race scopes for dropdown
+const raceScopes = await prisma.raceScope.findMany();
+const raceScopeOptions = raceScopes.map((rs: RaceScope) => ({
+  value: rs.id.toString(),
+  label: rs.value,
 }));
 
 // Get districts for dropdown
@@ -69,7 +69,8 @@ if (Astro.request.method === "POST") {
     const formData = await Astro.request.formData();
     const name = formData.get("name") as string;
     const shortName = formData.get("shortName") as string | null;
-    const raceTypeId = parseInt(formData.get("raceType") as string);
+    const raceScopeId = parseInt(formData.get("raceScope") as string);
+    const votingMethod = formData.get("votingMethod") as string;
     const description = formData.get("description") as string;
     const status = formData.get("status") as string;
     const slug = formData.get("slug") as string;
@@ -82,7 +83,8 @@ if (Astro.request.method === "POST") {
       name,
       shortName: shortName || undefined,
       partyCategory,
-      raceTypeId,
+      raceScopeId,
+      votingMethod,
       description,
       status,
       slug,
@@ -143,9 +145,19 @@ if (Astro.request.method === "POST") {
     />
 
     <FormSelect
-      label="Race Type"
-      name="raceType"
-      options={raceTypeOptions}
+      label="Race Scope"
+      name="raceScope"
+      options={raceScopeOptions}
+      required
+    />
+
+    <FormSelect
+      label="Voting Method"
+      name="votingMethod"
+      options={[
+        { value: "STANDARD", label: "Standard (Candidates Competing)" },
+        { value: "RETENTION", label: "Retain or Replace (Judicial/Retention)" },
+      ]}
       required
     />
 

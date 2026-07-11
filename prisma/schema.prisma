@@ -52,8 +52,9 @@ model Race {
   election    Election  @relation(fields: [electionId], references: [id])
   electionId  String    
   status      String
-  raceType    RaceType  @relation(fields: [raceTypeId], references: [id])
-  raceTypeId  Int
+  raceScope   RaceScope @relation(fields: [raceScopeId], references: [id])
+  raceScopeId Int
+  votingMethod String   @default("STANDARD")
   district    District? @relation(fields: [districtId], references: [id])
   districtId  String?
   numSelections Int @default(1)
@@ -73,15 +74,15 @@ model Race {
   @@map("races")
 }
 
-model RaceType {
+model RaceScope {
   id        Int       @id @default(autoincrement())
   value     String
   createdAt DateTime  @default(now()) 
   updatedAt DateTime  @default(now()) 
   deletedAt DateTime? 
-  races Race[]
+  races     Race[]
 
-  @@map("race_types")
+  @@map("race_scopes")
 }
 
 model Candidate {

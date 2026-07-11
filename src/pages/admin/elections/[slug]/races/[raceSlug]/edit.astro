@@ -22,7 +22,7 @@ if (!electionSlug || !raceSlug) {
 let race = await prisma.race.findFirst({
   where: { slug: raceSlug, election: { slug: electionSlug } },
   include: {
-    raceType: true,
+    raceScope: true,
     election: {
       include: {
         policyQuestions: true,
@@ -44,11 +44,11 @@ if (!election || race.electionId !== election.id) {
   return Astro.redirect(`/admin/elections/${electionSlug}/races`);
 }
 
-// Get race types for dropdown
-const raceTypes = await prisma.raceType.findMany();
-const raceTypeOptions = raceTypes.map((rt) => ({
-  value: rt.id.toString(),
-  label: rt.value,
+// Get race scopes for dropdown
+const raceScopes = await prisma.raceScope.findMany();
+const raceScopeOptions = raceScopes.map((rs) => ({
+  value: rs.id.toString(),
+  label: rs.value,
 }));
 
 // Get districts for dropdown
@@ -90,7 +90,8 @@ if (Astro.request.method === "POST") {
     const formData = await Astro.request.formData();
     const name = formData.get("name") as string;
     const shortName = formData.get("shortName") as string | null;
-    const raceTypeId = parseInt(formData.get("raceType") as string);
+    const raceScopeId = parseInt(formData.get("raceScope") as string);
+    const votingMethod = formData.get("votingMethod") as string;
     const description = formData.get("description") as string;
     const status = formData.get("status") as string;
     const slug = formData.get("slug") as string;
@@ -107,7 +108,8 @@ if (Astro.request.method === "POST") {
       name: name,
       shortName: shortName || undefined,
       partyCategory,
-      raceTypeId,
+      raceScopeId,
+      votingMethod,
       description: description || undefined,
       status: status,
       slug,
@@ -123,7 +125,7 @@ if (Astro.request.method === "POST") {
       race = (await prisma.race.findFirst({
         where: { slug: raceSlug, election: { slug: electionSlug } },
         include: {
-          raceType: true,
+          raceScope: true,
           election: {
             include: {
               policyQuestions: true,
@@ -193,10 +195,20 @@ if (Astro.request.method === "POST") {
       />
 
       <FormSelect
-        label="Race Type"
-        name="raceType"
-        options={raceTypeOptions}
-        value={race.raceTypeId.toString()}
+        label="Race Scope"
+        name="raceScope"
+        options={raceScopeOptions}
+        value={race.raceScopeId.toString()}
+      />
+
+      <FormSelect
+        label="Voting Method"
+        name="votingMethod"
+        options={[
+          { value: "STANDARD", label: "Standard (Candidates Competing)" },
+          { value: "RETENTION", label: "Retain or Replace (Judicial/Retention)" },
+        ]}
+        value={race.votingMethod}
       />
 
       <FormSelect

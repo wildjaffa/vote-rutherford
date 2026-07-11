@@ -1,6 +1,6 @@
 ---
 import { PartyCategories } from "../constants";
-import RaceType from "../enums/raceTypeEnum";
+import RaceScope from "../enums/raceScopeEnum";
 import type { Candidate, Election, Race } from "../generated/prisma/browser";
 import { Users, SquareCheck, Square, ArrowRight, Calendar } from "../lib/icons";
 
@@ -12,18 +12,18 @@ interface Props {
 
 const { race, candidates, election } = Astro.props;
 
-// Map raceTypeId to race type label
-const getRaceTypeLabel = (raceTypeId: number): string => {
-  const typeLabels: Record<number, string> = {
-    [RaceType.city]: "City",
-    [RaceType.county]: "County",
-    [RaceType.state]: "State",
-    [RaceType.federal]: "Federal",
+// Map raceScopeId to race scope label
+const getRaceScopeLabel = (raceScopeId: number): string => {
+  const scopeLabels: Record<number, string> = {
+    [RaceScope.city]: "City",
+    [RaceScope.county]: "County",
+    [RaceScope.state]: "State",
+    [RaceScope.federal]: "Federal",
   };
-  return typeLabels[raceTypeId] || "Unknown";
+  return scopeLabels[raceScopeId] || "Unknown";
 };
 
-const typeLabel = getRaceTypeLabel(race.raceTypeId);
+const typeLabel = getRaceScopeLabel(race.raceScopeId);
 ---
 
 <div
@@ -77,44 +77,87 @@ const typeLabel = getRaceTypeLabel(race.raceTypeId);
       }<Users size="16" stroke-width={2} class="text-secondary ml-2 inline" />
       {candidates.length} Candidates
       {
-        race.numSelections > 1 && (
+        race.votingMethod === "RETENTION" ? (
           <>
             <span class="mx-2">•</span>
-            Select up to{" "}
-            <span class="num-selections">{race.numSelections}</span>
+            Vote on each candidate separately
           </>
+        ) : (
+          race.numSelections > 1 && (
+            <>
+              <span class="mx-2">•</span>
+              Select up to{" "}
+              <span class="num-selections">{race.numSelections}</span>
+            </>
+          )
         )
       }
     </p>
 
     <div class="candidates-list mt-auto flex flex-col gap-2">
       {
-        candidates.map((candidate) => (
-          <button
-            class="candidate-row focus:ring-secondary/50 flex w-full items-center justify-between rounded-md border border-gray-200 p-3 text-left transition-colors hover:bg-gray-50 focus:ring-2 focus:outline-none"
-            data-candidate-id={candidate.id}
-          >
-            <div>
-              <span class="font-medium text-gray-900">
-                {candidate.firstName} {candidate.middleName}{" "}
-                {candidate.lastName}
-              </span>
-              {candidate.partyAffiliation && (
-                <span class="ml-2 text-sm text-gray-500">
-                  ({candidate.partyAffiliation})
+        race.votingMethod === "RETENTION" ? (
+          candidates.flatMap((candidate) => [
+            {
+              id: `${candidate.id}_retain`,
+              label: `Retain - ${candidate.firstName} ${candidate.lastName}`,
+              candidateId: candidate.id,
+              choice: "retain",
+            },
+            {
+              id: `${candidate.id}_replace`,
+              label: `Replace - ${candidate.firstName} ${candidate.lastName}`,
+              candidateId: candidate.id,
+              choice: "replace",
+            }
+          ]).map((option) => (
+            <button
+              class="candidate-row focus:ring-secondary/50 flex w-full items-center justify-between rounded-md border border-gray-200 p-3 text-left transition-colors hover:bg-gray-50 focus:ring-2 focus:outline-none"
+              data-candidate-id={option.id}
+              data-base-candidate-id={option.candidateId}
+              data-choice={option.choice}
+            >
+              <div>
+                <span class="font-medium text-gray-900">{option.label}</span>
+              </div>
+              <div class="checkbox-container text-gray-400">
+                <span class="unselected-icon">
+                  <Square class="h-6 w-6" />
                 </span>
-              )}
-            </div>
-            <div class="checkbox-container text-gray-400">
-              <span class="unselected-icon">
-                <Square class="h-6 w-6" />
-              </span>
-              <span class="selected-icon text-secondary hidden">
-                <SquareCheck class="h-6 w-6" />
-              </span>
-            </div>
-          </button>
-        ))
+                <span class="selected-icon text-secondary hidden">
+                  <SquareCheck class="h-6 w-6" />
+                </span>
+              </div>
+            </button>
+          ))
+        ) : (
+          candidates.map((candidate) => (
+            <button
+              class="candidate-row focus:ring-secondary/50 flex w-full items-center justify-between rounded-md border border-gray-200 p-3 text-left transition-colors hover:bg-gray-50 focus:ring-2 focus:outline-none"
+              data-candidate-id={candidate.id}
+            >
+              <div>
+                <span class="font-medium text-gray-900">
+                  {candidate.firstName} {candidate.middleName}{" "}
+                  {candidate.lastName}
+                </span>
+                {candidate.partyAffiliation && (
+                  <span class="ml-2 text-sm text-gray-500">
+                    ({candidate.partyAffiliation})
+                  </span>
+                )}
+              </div>
+              <div class="checkbox-container text-gray-400">
+                <span class="unselected-icon">
+                  <Square class="h-6 w-6" />
+                </span>
+                <span class="selected-icon text-secondary hidden">
+                  <SquareCheck class="h-6 w-6" />
+                </span>
+              </div>
+            </button>
+          ))
+        )
       }
     </div>
 
@@ -242,33 +285,57 @@ const typeLabel = getRaceTypeLabel(race.raceTypeId);
           console.log(candidateId);
           if (!selections[raceId]) selections[raceId] = [];
           const selectedCandidates = selections[raceId];
-          const index = selectedCandidates.indexOf(candidateId);
 
-          if (index > -1) {
-            // Deselect
-            selectedCandidates.splice(index, 1);
-          } else {
-            // Select (enforcing limits)
-            if (selectedCandidates.length < numSelectionsAllowed) {
-              selectedCandidates.push(candidateId);
-            } else if (numSelectionsAllowed === 1) {
-              // For single selection, behave like radio button (replace selection)
-              selections[raceId] = [candidateId];
+          const choice = btn.getAttribute("data-choice");
+          const baseId = btn.getAttribute("data-base-candidate-id");
+
+          if (choice && baseId) {
+            // Retention behavior
+            const otherChoice = choice === "retain" ? "replace" : "retain";
+            const otherId = `${baseId}_${otherChoice}`;
+
+            if (selectedCandidates.includes(candidateId)) {
+              // Deselect
+              const idx = selectedCandidates.indexOf(candidateId);
+              selectedCandidates.splice(idx, 1);
             } else {
-              // Maximum reached in multi-select, maybe flash limit?
-              const limitEl = raceEl.querySelector(".num-selections");
-              if (limitEl) {
-                limitEl.classList.add(
-                  "text-red-600",
-                  "font-bold",
-                  "transition-colors",
-                );
-                setTimeout(
-                  () => limitEl.classList.remove("text-red-600", "font-bold"),
-                  300,
-                );
+              // Select, and remove other choice
+              const otherIdx = selectedCandidates.indexOf(otherId);
+              if (otherIdx > -1) {
+                selectedCandidates.splice(otherIdx, 1);
               }
-              return; // Do not add
+              selectedCandidates.push(candidateId);
+            }
+          } else {
+            // Standard behavior
+            const index = selectedCandidates.indexOf(candidateId);
+
+            if (index > -1) {
+              // Deselect
+              selectedCandidates.splice(index, 1);
+            } else {
+              // Select (enforcing limits)
+              if (selectedCandidates.length < numSelectionsAllowed) {
+                selectedCandidates.push(candidateId);
+              } else if (numSelectionsAllowed === 1) {
+                // For single selection, behave like radio button (replace selection)
+                selections[raceId] = [candidateId];
+              } else {
+                // Maximum reached in multi-select, maybe flash limit?
+                const limitEl = raceEl.querySelector(".num-selections");
+                if (limitEl) {
+                  limitEl.classList.add(
+                    "text-red-600",
+                    "font-bold",
+                    "transition-colors",
+                  );
+                  setTimeout(
+                    () => limitEl.classList.remove("text-red-600", "font-bold"),
+                    300,
+                  );
+                }
+                return; // Do not add
+              }
             }
           }
 

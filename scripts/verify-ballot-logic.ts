@@ -75,13 +75,13 @@ async function verifyBallotLogic() {
 
     // Step 5: Create a test Race linked to the District and Election
     console.log("Step 5: Creating a test Race...");
-    const raceType = await prisma.raceType.findFirst({
+    const raceScope = await prisma.raceScope.findFirst({
       where: {},
     });
 
-    if (!raceType) {
+    if (!raceScope) {
       console.error(
-        "❌ No race types found in database. Please seed RaceType models.",
+        "❌ No race scopes found in database. Please seed RaceScope models.",
       );
       process.exit(1);
     }
@@ -92,7 +92,7 @@ async function verifyBallotLogic() {
         slug: `test-race-${Date.now()}`,
         description: "Test race for ballot verification",
         electionId: testElection.id,
-        raceTypeId: raceType.id,
+        raceScopeId: raceScope.id,
         districtId: testDistrict.id,
         status: "active",
       },

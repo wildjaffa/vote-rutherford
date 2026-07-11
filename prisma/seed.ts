@@ -134,31 +134,31 @@ async function seedBaseData() {
 
   console.log("  ✓ Created external link types");
 
-  await prisma.raceType.upsert({
+  await prisma.raceScope.upsert({
     where: { id: 1 },
     update: {},
     create: { value: "city" },
   });
 
-  await prisma.raceType.upsert({
+  await prisma.raceScope.upsert({
     where: { id: 2 },
     update: {},
     create: { value: "county" },
   });
 
-  await prisma.raceType.upsert({
+  await prisma.raceScope.upsert({
     where: { id: 3 },
     update: {},
     create: { value: "state" },
   });
 
-  await prisma.raceType.upsert({
+  await prisma.raceScope.upsert({
     where: { id: 4 },
     update: {},
     create: { value: "federal" },
   });
 
-  console.log("  ✓ Created race types");
+  console.log("  ✓ Created race scopes");
 
   return {
     imageStorageTypeId: imageStorageType.id,
@@ -233,7 +233,7 @@ async function seedSampleData(baseData: {
       description: "Vote for President of the United States",
       electionId: election.id,
       status: "active",
-      raceTypeId: 4, // federal
+      raceScopeId: 4, // federal
       slug: "presidential-race",
     },
   });
@@ -244,7 +244,7 @@ async function seedSampleData(baseData: {
       description: "Vote for U.S. Senator",
       electionId: election.id,
       status: "active",
-      raceTypeId: 4, // federal
+      raceScopeId: 4, // federal
       slug: "senate-race",
     },
   });

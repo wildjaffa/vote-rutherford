@@ -6,7 +6,8 @@ export const upsertRaceSchema = z.object({
   electionId: z.string().optional(), // required on create but validated in service
   name: z.string().min(1, "Race name is required"),
   shortName: z.string().optional().nullable(),
-  raceTypeId: z.number().min(0, "Race type is required"),
+  raceScopeId: z.number().min(0, "Race scope is required"),
+  votingMethod: z.string().default("STANDARD"),
   description: z.string().optional().nullable(),
   status: z.string().min(1, "Status is required"),
   slug: z.string().min(1, "Slug is required"),
