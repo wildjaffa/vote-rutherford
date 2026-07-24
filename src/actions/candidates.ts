@@ -86,7 +86,7 @@ export const sendMassEmail = defineAction({
         z.object({
           id: z.string().optional(),
           email: z.string().email(),
-          variables: z.record(z.string()).optional(),
+          variables: z.record(z.string(), z.string()).optional(),
         }),
       )
       .min(1, "At least one target is required"),
@@ -114,28 +114,64 @@ export const sendMassEmail = defineAction({
       delayMs = Math.max(0, scheduledDate.getTime() - now.getTime());
     }
 
-    // Build personalised job data for each recipient
+    // Build personalized job data for each recipient
     const jobData = input.targets.map((target) => {
       let personalizedBody = input.bodyTemplate;
       if (target.variables) {
         for (const [key, value] of Object.entries(target.variables)) {
           const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "gi");
-          personalizedBody = personalizedBody.replace(regex, value);
+          personalizedBody = personalizedBody.replace(regex, value as string);
         }
       }
 
       if (input.includeSignature) {
         const name = input.signatureName || "Joshua D. Jensen";
         const title = input.signatureTitle || "Co-President, Vote Rutherford";
-        personalizedBody += `<br /><br />--<br />Sincerely,<br />${name}<br />${title}<br /><br /><a href="https://GoVoteRutherford.com">GoVoteRutherford.com</a><br /><br /><span style="font-style: italic; color: #555;">&quot;Wherever the people are well informed, they can be trusted with their own government.&quot;</span> - Thomas Jefferson<br /><br /><img src="${cleanBaseUrl}/Email-Logo.png" alt="Vote Rutherford Logo" style="width: 400px; max-width: 100%; height: auto;" />`;
+        personalizedBody += `<br /><br />--<br />Sincerely,<br />${name}<br />${title}<br /><br /><a href="https://GoVoteRutherford.com">GoVoteRutherford.com</a><br /><br /><span style="font-style: italic; color: #555;">&quot;Wherever the people are well informed, they can be trusted with their own government.&quot;</span> - Thomas Jefferson<br /><br /><img src="${cleanBaseUrl}/Email-Logo.png" alt="Vote Rutherford Logo" border="0" style="width: 400px; max-width: 100%; height: auto; border: none; display: block;" />`;
       }
 
+      const fullHtmlBody = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>${input.subject}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style type="text/css">
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      color: #333333;
+    }
+    table {
+      border-collapse: collapse;
+    }
+    p {
+      margin-top: 0;
+      margin-bottom: 1em;
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; font-size: 16px; line-height: 1.5; color: #333333; background-color: #ffffff;">
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff;">
+    <tr>
+      <td align="left" style="padding: 10px; font-family: Arial, sans-serif; font-size: 16px; line-height: 1.5; color: #333333;">
+        ${personalizedBody}
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
       return {
-        candidateId: input.targetType === "candidate" ? (target.id ?? null) : null,
+        candidateId:
+          input.targetType === "candidate" ? (target.id ?? null) : null,
         contactId: input.targetType === "contact" ? (target.id ?? null) : null,
         emailAddress: target.email,
         subject: input.subject,
-        body: personalizedBody,
+        body: fullHtmlBody,
         userGoogleAccountId: input.userGoogleAccountId ?? "",
       };
     });
@@ -214,14 +250,16 @@ export const resendEmail = defineAction({
     }
 
     try {
-      await addEmailJobs([{
-        candidateId: outreach.candidateId,
-        contactId: outreach.contactId,
-        emailAddress: outreach.emailAddress,
-        subject: outreach.subject,
-        body: outreach.body,
-        userGoogleAccountId: input.userGoogleAccountId ?? "",
-      }]);
+      await addEmailJobs([
+        {
+          candidateId: outreach.candidateId,
+          contactId: outreach.contactId,
+          emailAddress: outreach.emailAddress,
+          subject: outreach.subject,
+          body: outreach.body,
+          userGoogleAccountId: input.userGoogleAccountId ?? "",
+        },
+      ]);
       return { success: true };
     } catch (err) {
       handleActionError(err, "Failed to enqueue resend job");
