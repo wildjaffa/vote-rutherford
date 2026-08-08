@@ -1,0 +1,143 @@
+---
+import FormFileInput from "./FormFileInput.astro";
+
+interface Props {
+  name?: string;
+  label?: string;
+}
+
+const { name = "geoJsonFiles", label = "District GeoJSON Files" } = Astro.props;
+
+// District types that need GeoJSON files
+const districtTypes = [
+  "COMMISSIONER",
+  "PRECINCT",
+  "US_HOUSE",
+  "STATE_SENATE",
+  "STATE_HOUSE",
+  "JUDICIAL",
+  "COUNTY",
+  "MUNICIPAL",
+  "SCHOOL",
+  "ROAD",
+];
+---
+
+<div class="space-y-4">
+  <label class="block text-sm font-medium text-gray-700">{label}</label>
+
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+    {
+      districtTypes.map((type) => (
+        <div
+          class="space-y-3 rounded border border-gray-200 p-4"
+          data-district-group={type}
+        >
+          <div class="space-y-2">
+            <FormFileInput
+              name={`${name}[${type}]`}
+              label={`${type.replace("_", " ")} Districts`}
+              accept=".geojson,application/geo+json"
+              validateContentName="validateGeoJson"
+            />
+          </div>
+          <label class="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              name={`entireCounty[${type}]`}
+              class="h-4 w-4 rounded border-gray-300 text-blue-600"
+              data-entire-county-checkbox={type}
+            />
+            <span class="text-xs text-gray-600">
+              Entire County (no file needed)
+            </span>
+          </label>
+        </div>
+      ))
+    }
+  </div>
+
+  <p class="text-xs text-gray-500">
+    Upload GeoJSON files for each district type, or check "Entire County" if all
+    addresses should be assigned to a single district. Files are processed in
+    memory and not stored permanently.
+  </p>
+</div>
+
+<script is:inline>
+  window.validateGeoJson = function (content) {
+    try {
+      const data = JSON.parse(content);
+
+      if (!data.type || data.type !== "FeatureCollection") {
+        return "File must be a GeoJSON FeatureCollection";
+      }
+
+      if (!Array.isArray(data.features)) {
+        return "GeoJSON must contain a features array";
+      }
+
+      if (data.features.length === 0) {
+        return "GeoJSON must contain at least one feature";
+      }
+
+      // Validate each feature has geometry
+      for (const feature of data.features) {
+        if (!feature.geometry || !feature.geometry.type) {
+          return "All features must have valid geometry";
+        }
+        if (!["Polygon", "MultiPolygon"].includes(feature.geometry.type)) {
+          return "Geometries must be Polygon or MultiPolygon";
+        }
+      }
+
+      return null; // Valid
+    } catch {
+      return "Invalid JSON format";
+    }
+  };
+
+  // Handle entire county checkbox toggles
+  function setupEntireCountyCheckboxes() {
+    const checkboxes = document.querySelectorAll(
+      "[data-entire-county-checkbox]",
+    );
+
+    checkboxes.forEach((checkbox) => {
+      checkbox.addEventListener("change", () => {
+        const districtType = checkbox.getAttribute(
+          "data-entire-county-checkbox",
+        );
+        const groupDiv = document.querySelector(
+          `[data-district-group="${districtType}"]`,
+        );
+
+        if (!groupDiv) return;
+
+        // Find all file inputs in this group
+        const fileInputs = groupDiv.querySelectorAll('input[type="file"]');
+
+        fileInputs.forEach((input) => {
+          if (checkbox.checked) {
+            input.disabled = true;
+            input
+              .closest("label")
+              ?.classList.add("opacity-50", "pointer-events-none");
+          } else {
+            input.disabled = false;
+            input
+              .closest("label")
+              ?.classList.remove("opacity-50", "pointer-events-none");
+          }
+        });
+      });
+    });
+  }
+
+  // Wait for DOM to be ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupEntireCountyCheckboxes);
+  } else {
+    setupEntireCountyCheckboxes();
+  }
+</script>

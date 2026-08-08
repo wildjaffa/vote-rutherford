@@ -1,5 +1,6 @@
 import type { AstroComponent } from "@lucide/astro";
 import { LinkTypes, QualificationTypes } from "../constants";
+import LinkedInIcon from "../components/icons/LinkedinIcon.astro";
 import {
   Users,
   Calendar,
@@ -9,7 +10,6 @@ import {
   User,
   ExternalLink,
   Menu,
-  Linkedin,
   Globe,
   Plus,
   Trash2,
@@ -53,7 +53,7 @@ export {
   ArrowRight,
   ArrowLeft,
   X,
-  Linkedin,
+  LinkedInIcon,
   Globe,
   Plus,
   Trash2,
@@ -88,15 +88,15 @@ export const qualificationTypeToIcon: Record<string, AstroComponent> = {
 };
 
 export const linkTypeToIcon: Record<string, AstroComponent> = {
-  [LinkTypes.FACEBOOK]: Facebook,
-  [LinkTypes.LINKEDIN]: Linkedin,
-  [LinkTypes.INSTAGRAM]: Instagram,
-  [LinkTypes.YOUTUBE]: Youtube,
-  [LinkTypes.THREADS]: Threads,
-  [LinkTypes.X]: X,
+  [LinkTypes.FACEBOOK]: Facebook as unknown as AstroComponent,
+  [LinkTypes.LINKEDIN]: LinkedInIcon as AstroComponent,
+  [LinkTypes.INSTAGRAM]: Instagram as unknown as AstroComponent,
+  [LinkTypes.YOUTUBE]: Youtube as unknown as AstroComponent,
+  [LinkTypes.THREADS]: Threads as unknown as AstroComponent,
+  [LinkTypes.X]: X as unknown as AstroComponent,
   [LinkTypes.WEBSITE]: Globe,
-  [LinkTypes.WIKIPEDIA]: Wikipedia,
+  [LinkTypes.WIKIPEDIA]: Wikipedia as unknown as AstroComponent,
   [LinkTypes.OTHER]: ExternalLink,
   [LinkTypes.NEWS]: Newspaper,
-  [LinkTypes.TIKTOK]: Tiktok,
+  [LinkTypes.TIKTOK]: Tiktok as unknown as AstroComponent,
 };

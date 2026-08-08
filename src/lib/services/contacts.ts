@@ -22,7 +22,10 @@ export async function createContact(
 
   return await withUserContext(userId, async () => {
     return prisma.contact.create({
-      data: validated,
+      data: {
+        ...validated,
+        description: validated.description ?? null,
+      },
     });
   });
 }
@@ -46,6 +49,7 @@ export async function updateContact(
       where: { id },
       data: {
         ...validated,
+        description: validated.description ?? null,
         updatedAt: new Date(),
       },
     });

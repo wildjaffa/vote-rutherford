@@ -10,7 +10,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 enum AuditAction {
@@ -52,8 +52,9 @@ model Race {
   election    Election  @relation(fields: [electionId], references: [id])
   electionId  String    
   status      String
-  raceType    RaceType  @relation(fields: [raceTypeId], references: [id])
-  raceTypeId  Int
+  raceScope   RaceScope @relation(fields: [raceScopeId], references: [id])
+  raceScopeId Int
+  votingMethod String   @default("STANDARD")
   district    District? @relation(fields: [districtId], references: [id])
   districtId  String?
   numSelections Int @default(1)
@@ -66,19 +67,22 @@ model Race {
   candidates             Candidate[]
   policyQuestionsToRaces PolicyQuestionToRace[]
 
+  sourceRaces Race[] @relation("RaceToSourceRaces")
+  targetRaces Race[] @relation("RaceToSourceRaces")
+
   @@unique([electionId, slug])
   @@map("races")
 }
 
-model RaceType {
+model RaceScope {
   id        Int       @id @default(autoincrement())
   value     String
   createdAt DateTime  @default(now()) 
   updatedAt DateTime  @default(now()) 
   deletedAt DateTime? 
-  races Race[]
+  races     Race[]
 
-  @@map("race_types")
+  @@map("race_scopes")
 }
 
 model Candidate {
@@ -93,6 +97,8 @@ model Candidate {
   partyAffiliation  String?
   email             String?
   isIncumbent       Boolean               @default(false)
+  isWinner          Boolean               @default(false)
+  optedOutCommunications Boolean           @default(false)
   profileImage      BlobStorageReference? @relation("CandidateProfileImage", fields: [profileImageId], references: [id])
   profileImageId    String?               
   historicalLink    Candidate?            @relation("HistoricalLink", fields: [historicalLinkId], references: [id])
@@ -344,6 +350,8 @@ model EmailOutreach {
   emailAddress String
   subject      String
   body         String
+  status       String     @default("SENT")
+  errorMessage String?
   sentAt       DateTime   @default(now())
 
   @@map("email_outreach")
@@ -378,12 +386,21 @@ enum DistrictType {
   ALL
 }
 
+enum ImportJobStatus {
+  PENDING
+  RUNNING
+  AWAITING_MAPPING
+  COMPLETED
+  FAILED
+}
+
 model District {
   id        String       @id @default(uuid())
   name      String
   number    Int?
   type      DistrictType
   meta      Json?
+  oldDistrictId String?
   createdAt DateTime     @default(now())
   updatedAt DateTime     @default(now())
   deletedAt DateTime?
@@ -457,56 +474,19 @@ model DistrictToVoterAddress {
   @@map("districts_to_voter_addresses")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model voter_addresses_fts {
-  id                Unsupported("")?
-  address           Unsupported("")?
-  normalizedAddress Unsupported("")?
-  city              Unsupported("")?
-  zip               Unsupported("")?
+model DistrictImportJob {
+  id            String          @id @default(uuid())
+  status        ImportJobStatus @default(PENDING)
+  progress      Json?
+  districtMapping Json?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  errorMessage  String?
+  createdBy     String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @default(now())
 
-  @@ignore
+  @@map("district_import_jobs")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model voter_addresses_fts_config {
-  k Unsupported("")  @id
-  v Unsupported("")?
 
-  @@ignore
-}
-
-model voter_addresses_fts_content {
-  id Int              @id @default(autoincrement())
-  c0 Unsupported("")?
-  c1 Unsupported("")?
-  c2 Unsupported("")?
-  c3 Unsupported("")?
-  c4 Unsupported("")?
-
-  @@ignore
-}
-
-model voter_addresses_fts_data {
-  id    Int    @id @default(autoincrement())
-  block Bytes?
-
-  @@ignore
-}
-
-model voter_addresses_fts_docsize {
-  id Int    @id @default(autoincrement())
-  sz Bytes?
-
-  @@ignore
-}
-
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model voter_addresses_fts_idx {
-  segid Unsupported("")
-  term  Unsupported("")
-  pgno  Unsupported("")?
-
-  @@id([segid, term])
-  @@ignore
-}

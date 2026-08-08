@@ -10,6 +10,7 @@ import { normalizeAddress } from "../src/lib/utils/addressNormalizer";
 import prisma from "../src/lib/prisma";
 import { Prisma } from "../src/generated/prisma/client";
 import { MeiliSearch } from "meilisearch";
+import { env } from "../src/lib/utils/environment";
 
 // {"OBJECTID":"40546","ESN":"261","CITY":"MURFREESBORO","GlobalID":"{4D96048E-F2E2-4DD6-9054-4430D03D5335}","Shape.STArea()":"1,869,993,867.68","Shape.STLength()":"1,237,601.61"}
 interface MunicipalMeta {
@@ -34,8 +35,8 @@ const DRY_RUN = process.argv.includes("--dry-run");
 const VERBOSE = process.argv.includes("--verbose");
 
 const meilisearchClient = new MeiliSearch({
-  host: process.env.MEILISEARCH_HOST || "http://localhost:7700",
-  apiKey: process.env.MEILISEARCH_API_KEY || "masterKey",
+  host: env("MEILISEARCH_HOST") || "http://localhost:7700",
+  apiKey: env("MEILISEARCH_API_KEY") || "password",
 });
 
 // Map DistrictType to GeoJSON filenames
@@ -482,8 +483,9 @@ async function main() {
       );
 
       console.log("Cleaning up existing district groups...");
-      const deletedGroupAssoc =
-        await prisma.districtGroupToDistrict.deleteMany({});
+      const deletedGroupAssoc = await prisma.districtGroupToDistrict.deleteMany(
+        {},
+      );
       const deletedGroups = await prisma.districtGroup.deleteMany({});
       console.log(
         `  ✓ Deleted ${deletedGroupAssoc.count} group associations and ${deletedGroups.count} groups.`,

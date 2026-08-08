@@ -22,13 +22,14 @@ if (!electionSlug || !raceSlug) {
 let race = await prisma.race.findFirst({
   where: { slug: raceSlug, election: { slug: electionSlug } },
   include: {
-    raceType: true,
+    raceScope: true,
     election: {
       include: {
         policyQuestions: true,
       },
     },
     policyQuestionsToRaces: true,
+    sourceRaces: true,
   },
 });
 
@@ -43,11 +44,11 @@ if (!election || race.electionId !== election.id) {
   return Astro.redirect(`/admin/elections/${electionSlug}/races`);
 }
 
-// Get race types for dropdown
-const raceTypes = await prisma.raceType.findMany();
-const raceTypeOptions = raceTypes.map((rt) => ({
-  value: rt.id.toString(),
-  label: rt.value,
+// Get race scopes for dropdown
+const raceScopes = await prisma.raceScope.findMany();
+const raceScopeOptions = raceScopes.map((rs) => ({
+  value: rs.id.toString(),
+  label: rs.value,
 }));
 
 // Get districts for dropdown
@@ -71,6 +72,16 @@ const districtTypeOptions = districtTypes.map((type) => ({
   label: type.replace(/_/g, " "),
 }));
 
+// Get earlier elections for Source Races
+const earlierElections = await prisma.election.findMany({
+  where: { date: { lte: election.date }, deletedAt: null },
+  orderBy: { date: "desc" },
+  include: { races: { where: { deletedAt: null }, orderBy: { order: "asc" } } },
+});
+
+// Map currently selected source races for easy checking
+let currentSourceRaceIds = new Set(race.sourceRaces.map((sr) => sr.id));
+
 let error: string | null = null;
 let success: string | null = null;
 
@@ -79,7 +90,8 @@ if (Astro.request.method === "POST") {
     const formData = await Astro.request.formData();
     const name = formData.get("name") as string;
     const shortName = formData.get("shortName") as string | null;
-    const raceTypeId = parseInt(formData.get("raceType") as string);
+    const raceScopeId = parseInt(formData.get("raceScope") as string);
+    const votingMethod = formData.get("votingMethod") as string;
     const description = formData.get("description") as string;
     const status = formData.get("status") as string;
     const slug = formData.get("slug") as string;
@@ -96,12 +108,14 @@ if (Astro.request.method === "POST") {
       name: name,
       shortName: shortName || undefined,
       partyCategory,
-      raceTypeId,
+      raceScopeId,
+      votingMethod,
       description: description || undefined,
       status: status,
       slug,
       order,
       numSelections: parseInt(formData.get("numSelections") as string) || 1,
+      sourceRaceIds: formData.getAll("sourceRaceIds") as string[],
       ...(districtId && { districtId }),
       policyQuestionIds,
     });
@@ -111,15 +125,17 @@ if (Astro.request.method === "POST") {
       race = (await prisma.race.findFirst({
         where: { slug: raceSlug, election: { slug: electionSlug } },
         include: {
-          raceType: true,
+          raceScope: true,
           election: {
             include: {
               policyQuestions: true,
             },
           },
           policyQuestionsToRaces: true,
+          sourceRaces: true,
         },
       }))!;
+      currentSourceRaceIds = new Set(race.sourceRaces.map((sr) => sr.id));
     }
   } catch (err) {
     error = err instanceof Error ? err.message : "Failed to update race";
@@ -153,6 +169,26 @@ if (Astro.request.method === "POST") {
       )
     }
 
+    <div class="flex items-center justify-between">
+      <a
+        href={`/admin/elections/${electionSlug}/races/${raceSlug}/candidates`}
+        class="inline-flex items-center gap-1.5 rounded-md bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 ring-1 ring-blue-200 transition hover:bg-blue-100 hover:text-blue-800"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-1a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v1h-3zM4.75 12.094A5.973 5.973 0 004 15v1H1v-1a3 3 0 013.75-2.906z"
+          />
+        </svg>
+        Manage Candidates
+      </a>
+    </div>
+
     <form method="POST" class="max-w-2xl space-y-6">
       <FormInput
         label="Race Name"
@@ -179,10 +215,20 @@ if (Astro.request.method === "POST") {
       />
 
       <FormSelect
-        label="Race Type"
-        name="raceType"
-        options={raceTypeOptions}
-        value={race.raceTypeId.toString()}
+        label="Race Scope"
+        name="raceScope"
+        options={raceScopeOptions}
+        value={race.raceScopeId.toString()}
+      />
+
+      <FormSelect
+        label="Voting Method"
+        name="votingMethod"
+        options={[
+          { value: "STANDARD", label: "Standard (Candidates Competing)" },
+          { value: "RETENTION", label: "Retain or Replace (Judicial/Retention)" },
+        ]}
+        value={race.votingMethod}
       />
 
       <FormSelect
@@ -264,6 +310,60 @@ if (Astro.request.method === "POST") {
           (p) => p.policyQuestionId,
         )}
       />
+
+      <div class="space-y-3">
+        <label class="block text-sm font-medium text-gray-700"
+          >Source Races (Optional)</label
+        >
+        <p class="text-xs text-gray-500">
+          Select races from previous elections that this race is based on.
+        </p>
+        <div
+          class="max-h-64 space-y-6 overflow-y-auto rounded-md border border-gray-300 bg-white p-4"
+        >
+          {
+            earlierElections.map((previousElection) => (
+              <div>
+                <h4 class="font-medium text-gray-900">
+                  {previousElection.name} (
+                  {new Date(previousElection.date).toLocaleDateString()})
+                </h4>
+                <div class="mt-2 space-y-2 pl-4">
+                  {previousElection.races.map((r) => (
+                    <label class="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        name="sourceRaceIds"
+                        value={r.id}
+                        checked={currentSourceRaceIds.has(r.id)}
+                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span class="text-sm text-gray-700">
+                        {r.name}{" "}
+                        {r.partyCategory !== "General Election"
+                          ? `(${r.partyCategory})`
+                          : ""}
+                      </span>
+                    </label>
+                  ))}
+                  {previousElection.races.length === 0 && (
+                    <span class="text-sm text-gray-400 italic">
+                      No races configured
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))
+          }
+          {
+            earlierElections.length === 0 && (
+              <span class="text-sm text-gray-500 italic">
+                No previous elections found
+              </span>
+            )
+          }
+        </div>
+      </div>
 
       <div class="flex justify-end gap-3 border-t border-gray-200 pt-4">
         <Button

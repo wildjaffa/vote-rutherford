@@ -26,7 +26,7 @@ const election = await prisma.election.findUnique({
           },
         },
       },
-      orderBy: [{ raceTypeId: "desc" }, { order: "asc" }],
+      orderBy: [{ raceScopeId: "desc" }, { order: "asc" }],
     },
   },
 });
@@ -34,6 +34,13 @@ const election = await prisma.election.findUnique({
 if (!election) {
   return Astro.redirect("/admin/elections");
 }
+
+const searchableCandidates = election.races.flatMap((race) =>
+  race.candidates.map((candidate) => ({
+    name: `${candidate.firstName} ${candidate.lastName}`,
+    url: `/admin/elections/${slug}/races/${race.slug}/candidates/${candidate.slug}/edit`,
+  })),
+);
 ---
 
 <AdminLayout
@@ -45,8 +52,37 @@ if (!election) {
   ]}
 >
   <div class="space-y-6">
-    <!-- Create Button -->
-    <div class="flex justify-end">
+    <!-- Actions -->
+    <div
+      class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
+    >
+      <div class="w-full sm:max-w-md">
+        <label
+          for="candidate-jump"
+          class="mb-1 block text-sm font-medium text-gray-700"
+        >
+          Jump to candidate
+        </label>
+        <div class="relative">
+          <input
+            id="candidate-jump"
+            type="text"
+            placeholder="Search by candidate name"
+            class="focus:border-secondary focus:ring-secondary block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none"
+            data-candidates={searchableCandidates
+              .map((candidate) => `${candidate.name}::${candidate.url}`)
+              .join("||")}
+            autocomplete="off"
+            autocapitalize="none"
+            spellcheck="false"
+          />
+          <div
+            id="candidate-jump-results"
+            class="absolute z-10 mt-1 hidden max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg"
+          >
+          </div>
+        </div>
+      </div>
       <a
         href={`/admin/elections/${slug}/races/create`}
         class="bg-secondary hover:bg-secondary/90 focus:ring-secondary inline-flex items-center rounded-lg px-4 py-2 text-white transition-colors focus:ring-2 focus:ring-offset-2"
@@ -136,6 +172,84 @@ if (!election) {
 
   <script>
     import { actions } from "astro:actions";
+
+    const input = document.getElementById(
+      "candidate-jump",
+    ) as HTMLInputElement | null;
+    const results = document.getElementById(
+      "candidate-jump-results",
+    ) as HTMLDivElement | null;
+    const candidates = (input?.dataset.candidates || "")
+      .split("||")
+      .filter(Boolean)
+      .map((entry) => {
+        const [name, url] = entry.split("::");
+        return { name, url };
+      });
+
+    function renderResults(query: string) {
+      if (!results || !input) return;
+
+      const normalized = query.trim().toLowerCase();
+
+      if (!normalized) {
+        results.innerHTML = "";
+        results.classList.add("hidden");
+        return;
+      }
+
+      const filtered = candidates.filter((candidate) =>
+        candidate.name?.toLowerCase().includes(normalized),
+      );
+
+      if (filtered.length === 0) {
+        results.innerHTML =
+          '<div class="px-3 py-2 text-sm text-gray-500">No matches</div>';
+        results.classList.remove("hidden");
+        return;
+      }
+
+      results.innerHTML = filtered
+        .map(
+          (candidate) => `
+            <button
+              type="button"
+              class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+              data-url="${candidate.url}"
+            >
+              ${candidate.name}
+            </button>
+          `,
+        )
+        .join("");
+      results.classList.remove("hidden");
+    }
+
+    input?.addEventListener("input", (event) => {
+      const target = event.target as HTMLInputElement;
+      renderResults(target.value);
+    });
+
+    input?.addEventListener("focus", () => {
+      renderResults(input.value);
+    });
+
+    document.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      if (!results?.contains(target) && target !== input) {
+        results?.classList.add("hidden");
+      }
+    });
+
+    results?.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      const button = target.closest(
+        "button[data-url]",
+      ) as HTMLButtonElement | null;
+      if (button?.dataset.url) {
+        window.location.href = button.dataset.url;
+      }
+    });
 
     const tbody = document.getElementById("races-tbody") as HTMLElement;
     const electionId = tbody?.dataset.electionId;

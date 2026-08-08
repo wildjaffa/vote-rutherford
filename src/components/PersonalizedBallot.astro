@@ -26,13 +26,13 @@ if (!groupId) {
     },
     include: {
       races: {
-        orderBy: [{ raceType: { id: "desc" } }, { order: "asc" }],
+        orderBy: [{ raceScope: { id: "desc" } }, { order: "asc" }],
         where: {
           deletedAt: null,
         },
         include: {
           election: true,
-          raceType: true,
+          raceScope: true,
           candidates: {
             where: { deletedAt: null },
           },
@@ -50,13 +50,13 @@ if (!groupId) {
           district: {
             include: {
               races: {
-                orderBy: [{ raceType: { id: "desc" } }, { order: "asc" }],
+                orderBy: [{ raceScope: { id: "desc" } }, { order: "asc" }],
                 where: {
                   deletedAt: null,
                 },
                 include: {
                   election: true,
-                  raceType: true,
+                  raceScope: true,
                   candidates: {
                     where: { deletedAt: null },
                   },
@@ -131,7 +131,7 @@ const races = election
   ? validRaces
       .filter((r) => r.election && r.election.id === election.id)
       .sort((a, b) => {
-        const typeDiff = b.raceType.id - a.raceType.id;
+        const typeDiff = b.raceScope.id - a.raceScope.id;
         if (typeDiff !== 0) return typeDiff;
 
         const orderDiff = (a.order || 0) - (b.order || 0);
@@ -145,7 +145,7 @@ const races = election
   : [];
 
 // Efficiently group into sections for display while maintaining sort order
-const raceTypeLabels: Record<number, string> = {
+const raceScopeLabels: Record<number, string> = {
   4: "Federal",
   3: "State",
   2: "County",
@@ -158,17 +158,17 @@ interface RaceSection {
 }
 
 const raceSections: RaceSection[] = [];
-let lastTypeId = -1;
+let lastScopeId = -1;
 
 for (const race of races) {
-  const typeId = race.raceType.id;
-  if (typeId !== lastTypeId) {
+  const scopeId = race.raceScope.id;
+  if (scopeId !== lastScopeId) {
     raceSections.push({
       label:
-        raceTypeLabels[typeId] || (race.raceType.value as string) || "Other",
+        raceScopeLabels[scopeId] || (race.raceScope.value as string) || "Other",
       races: [race],
     });
-    lastTypeId = typeId;
+    lastScopeId = scopeId;
   } else {
     const lastSection = raceSections[raceSections.length - 1];
     if (lastSection) {
@@ -189,8 +189,9 @@ const clientRaces = races.map((r) => ({
   id: r.id,
   name: r.name,
   shortName: r.shortName,
+  votingMethod: r.votingMethod,
   typeLabel:
-    raceTypeLabels[r.raceType.id] || (r.raceType.value as string) || "Other",
+    raceScopeLabels[r.raceScope.id] || (r.raceScope.value as string) || "Other",
   candidates: r.candidates.map((c) => ({
     id: c.id,
     name: `${c.firstName}${c.middleName ? " " + c.middleName : ""} ${c.lastName}`,
@@ -388,6 +389,7 @@ const clientRaces = races.map((r) => ({
     name: string;
     shortName: string | null;
     typeLabel: string;
+    votingMethod: string;
     candidates: ClientCandidate[];
   }
 
@@ -487,9 +489,26 @@ const clientRaces = races.map((r) => ({
         const selectedIds = selections[id] || [];
         if (!selectedIds || selectedIds.length === 0) continue;
 
-        const selectedCandidates = race.candidates.filter((c) =>
-          selectedIds.includes(String(c.id)),
-        );
+        let selectedCandidates: ClientCandidate[] = [];
+        if (race.votingMethod === "RETENTION") {
+          selectedCandidates = race.candidates
+            .map((c) => {
+              const matchedId = selectedIds.find((selId) => selId.startsWith(String(c.id)));
+              if (matchedId) {
+                const choice = matchedId.endsWith("_retain") ? "Retain" : "Replace";
+                return {
+                  ...c,
+                  name: `${c.name} (${choice})`,
+                };
+              }
+              return null;
+            })
+            .filter(Boolean) as ClientCandidate[];
+        } else {
+          selectedCandidates = race.candidates.filter((c) =>
+            selectedIds.includes(String(c.id)),
+          );
+        }
 
         if (selectedCandidates.length > 0) {
           hasActiveSelection = true;

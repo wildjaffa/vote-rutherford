@@ -6,12 +6,8 @@ async function verifyBallotLogic() {
   try {
     // Step 1: Create or find a test VoterAddress
     console.log("Step 1: Creating/finding a test VoterAddress...");
-    const testAddress = await prisma.voterAddress.upsert({
-      where: {
-        normalizedAddress: "123 TEST ST",
-      },
-      update: {},
-      create: {
+    const testAddress = await prisma.voterAddress.create({
+      data: {
         address: "123 Test Street",
         normalizedAddress: "123 TEST ST",
         city: "Rutherford",
@@ -45,7 +41,7 @@ async function verifyBallotLogic() {
 
     // Step 3: Link VoterAddress to District
     console.log("Step 3: Linking VoterAddress to District...");
-    const link = await prisma.districtToVoterAddress.upsert({
+    await prisma.districtToVoterAddress.upsert({
       where: {
         districtId_voterAddressId: {
           districtId: testDistrict.id,
@@ -79,13 +75,13 @@ async function verifyBallotLogic() {
 
     // Step 5: Create a test Race linked to the District and Election
     console.log("Step 5: Creating a test Race...");
-    const raceType = await prisma.raceType.findFirst({
+    const raceScope = await prisma.raceScope.findFirst({
       where: {},
     });
 
-    if (!raceType) {
+    if (!raceScope) {
       console.error(
-        "❌ No race types found in database. Please seed RaceType models.",
+        "❌ No race scopes found in database. Please seed RaceScope models.",
       );
       process.exit(1);
     }
@@ -96,7 +92,7 @@ async function verifyBallotLogic() {
         slug: `test-race-${Date.now()}`,
         description: "Test race for ballot verification",
         electionId: testElection.id,
-        raceTypeId: raceType.id,
+        raceScopeId: raceScope.id,
         districtId: testDistrict.id,
         status: "active",
       },

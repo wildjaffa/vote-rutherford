@@ -21,5 +21,14 @@ module.exports = {
       },
       restart_delay: 5000,
     },
+    {
+      name: "district-import-worker",
+      script: "./src/lib/jobs/districtImportWorker.ts",
+      interpreter: "tsx",
+      env: {
+        NODE_ENV: "production",
+      },
+      restart_delay: 5000,
+    },
   ],
 };

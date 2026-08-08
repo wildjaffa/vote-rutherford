@@ -57,6 +57,8 @@ export async function createCandidate(
       policyResponses,
       qualifications,
       isIncumbent,
+      isWinner,
+      optedOutCommunications,
     } = validated;
     const candidateData: Prisma.CandidateUncheckedCreateInput = {
       firstName,
@@ -69,6 +71,8 @@ export async function createCandidate(
       birthYear: birthYear ?? null,
       profileImageId: profileImageId ?? null,
       isIncumbent: isIncumbent ?? false,
+      isWinner: isWinner ?? false,
+      optedOutCommunications: optedOutCommunications ?? false,
     };
     const newCandidate = await prisma.candidate.create({
       data: candidateData,
@@ -190,6 +194,8 @@ export async function updateCandidate(
     policyResponses,
     qualifications,
     isIncumbent,
+    isWinner,
+    optedOutCommunications,
   } = validationData;
 
   const updated = await withUserContext(userId, async () => {
@@ -202,6 +208,8 @@ export async function updateCandidate(
       ...(birthYear !== undefined && { birthYear: birthYear || null }),
       updatedAt: new Date(),
       isIncumbent: isIncumbent ?? false,
+      isWinner: isWinner ?? false,
+      ...(optedOutCommunications !== undefined && { optedOutCommunications }),
     };
 
     if (profileImageId !== undefined) {
@@ -495,6 +503,8 @@ export async function partialUpdateCandidate(
     partyAffiliation,
     birthYear,
     isIncumbent,
+    isWinner,
+    optedOutCommunications,
     slug,
   } = validation.data;
 
@@ -506,6 +516,9 @@ export async function partialUpdateCandidate(
     dataToUpdate.partyAffiliation = partyAffiliation;
   if (birthYear !== undefined) dataToUpdate.birthYear = birthYear || null;
   if (isIncumbent !== undefined) dataToUpdate.isIncumbent = isIncumbent;
+  if (isWinner !== undefined) dataToUpdate.isWinner = isWinner;
+  if (optedOutCommunications !== undefined)
+    dataToUpdate.optedOutCommunications = optedOutCommunications;
   if (slug !== undefined) dataToUpdate.slug = slug;
 
   const updated = await withUserContext(userId, async () => {
@@ -567,4 +580,132 @@ export async function deleteCandidate(
   ]);
 
   return deletedCandidate;
+}
+
+export async function promoteCandidate(
+  candidateId: string,
+  targetRaceId: string,
+  userId: string,
+): Promise<Candidate> {
+  const existingCandidate = await prisma.candidate.findUnique({
+    where: { id: candidateId },
+    include: {
+      race: { include: { election: true } },
+      externalLinks: true,
+      qualifications: true,
+    },
+  });
+
+  if (!existingCandidate) {
+    throw makeError("Candidate not found", 404);
+  }
+
+  const targetRace = await prisma.race.findUnique({
+    where: { id: targetRaceId },
+    include: { election: true },
+  });
+
+  if (!targetRace) {
+    throw makeError("Target race not found", 404);
+  }
+
+  const hasSourcePermission = await canManageRace(existingCandidate.raceId);
+  const hasTargetPermission = await canManageRace(targetRaceId);
+  if (!hasSourcePermission || !hasTargetPermission) {
+    throw makeError("Unauthorized", 403);
+  }
+
+  const newCandidate = await withUserContext(userId, async () => {
+    return prisma.candidate.create({
+      data: {
+        firstName: existingCandidate.firstName,
+        middleName: existingCandidate.middleName,
+        lastName: existingCandidate.lastName,
+        raceId: targetRaceId,
+        email: existingCandidate.email,
+        partyAffiliation: existingCandidate.partyAffiliation,
+        birthYear: existingCandidate.birthYear,
+        profileImageId: existingCandidate.profileImageId,
+        isIncumbent: existingCandidate.isIncumbent,
+        isWinner: false,
+        optedOutCommunications: existingCandidate.optedOutCommunications,
+        historicalLinkId: candidateId,
+        externalLinks: {
+          create: existingCandidate.externalLinks.map(link => ({
+            hyperlink: link.hyperlink,
+            displayText: link.displayText,
+            externalLinkTypeId: link.externalLinkTypeId,
+          })),
+        },
+        qualifications: {
+          create: existingCandidate.qualifications.map(qual => ({
+            qualification_description: qual.qualification_description,
+            qualification_url: qual.qualification_url,
+            qualificationTypeId: qual.qualificationTypeId,
+          })),
+        },
+      },
+    });
+  });
+
+  void purgeCloudflareCache([
+    `/elections/${targetRace.election.slug}/${targetRace.slug}`,
+    `/elections/${existingCandidate.race.election.slug}/${existingCandidate.race.slug}/${existingCandidate.slug}`,
+  ]);
+
+  return newCandidate;
+}
+
+export async function moveCandidate(
+  candidateId: string,
+  targetRaceId: string,
+  userId: string,
+): Promise<Candidate> {
+  const existingCandidate = await prisma.candidate.findUnique({
+    where: { id: candidateId },
+    include: {
+      race: { include: { election: true } },
+    },
+  });
+
+  if (!existingCandidate) {
+    throw makeError("Candidate not found", 404);
+  }
+
+  const targetRace = await prisma.race.findUnique({
+    where: { id: targetRaceId },
+    include: { election: true },
+  });
+
+  if (!targetRace) {
+    throw makeError("Target race not found", 404);
+  }
+  
+  if (existingCandidate.race.electionId !== targetRace.electionId) {
+    throw makeError("Cannot move candidate to a different election", 400);
+  }
+
+  const hasSourcePermission = await canManageRace(existingCandidate.raceId);
+  const hasTargetPermission = await canManageRace(targetRaceId);
+  if (!hasSourcePermission || !hasTargetPermission) {
+    throw makeError("Unauthorized", 403);
+  }
+
+  const updatedCandidate = await withUserContext(userId, async () => {
+    return prisma.candidate.update({
+      where: { id: candidateId },
+      data: {
+        raceId: targetRaceId,
+      },
+    });
+  });
+
+  void purgeCloudflareCache([
+    `/elections/${targetRace.election.slug}/${targetRace.slug}`,
+    `/elections/${existingCandidate.race.election.slug}/${existingCandidate.race.slug}`,
+    `/elections/${existingCandidate.race.election.slug}/${existingCandidate.race.slug}/${existingCandidate.slug}`,
+    `/elections/${targetRace.election.slug}/${targetRace.slug}/${updatedCandidate.slug}`,
+  ]);
+
+  return updatedCandidate;
 }

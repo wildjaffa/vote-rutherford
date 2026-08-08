@@ -12,7 +12,14 @@ const authentication = defineMiddleware(async (context, next) => {
   }
 
   const session = context.cookies.get("__session");
-  const user = await getSessionUser(session?.value);
+  let user = null;
+
+  if (session?.value) {
+    user = await getSessionUser(session.value);
+    if (!user) {
+      context.cookies.delete("__session", { path: "/" });
+    }
+  }
 
   if (!user) {
     return context.redirect("/admin/signin");
@@ -30,7 +37,8 @@ const cacheControl = defineMiddleware(async (context, next) => {
   if (
     !pathName.startsWith("/admin") &&
     !pathName.startsWith("/api/admin/") &&
-    !pathName.startsWith("/api/create-checkout-session")
+    !pathName.startsWith("/api/create-checkout-session") &&
+    !pathName.startsWith("/api/auth/")
   ) {
     response.headers.set(
       "Cache-Control",

@@ -1,19 +1,20 @@
 # Stage 1: Base setup for all stages
 FROM node:22-slim AS base
 WORKDIR /app
-# Install runtime dependencies for Prisma and other native modules
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+# Install runtime dependencies for Prisma and PostgreSQL client
+RUN apt-get update && apt-get install -y openssl postgresql-client && rm -rf /var/lib/apt/lists/*
 
 # Stage 2: Dependencies - Install ALL dependencies for building
 FROM base AS deps
 COPY package*.json ./
 # We need devDeps for building
-RUN npm ci
+RUN npm install
 
 # Stage 3: Builder - Build the application
 FROM deps AS builder
 # DATABASE_URL is required by Prisma at generate/build time.
-ARG DATABASE_URL=file:/tmp/build-placeholder.db
+# Use a PostgreSQL connection string format as placeholder
+ARG DATABASE_URL=postgresql://user:password@localhost:5432/placeholder
 ARG CONTACT_EMAIL
 ARG PUBLIC_FIREBASE_CLIENT_ACCOUNT_KEY
 ENV DATABASE_URL=${DATABASE_URL}
@@ -28,7 +29,7 @@ RUN npm run build
 # Stage 4: Production dependencies - Isolated production node_modules
 FROM base AS production-deps
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # Stage 5: Runner - Final production image
 FROM base AS runner

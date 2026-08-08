@@ -21,8 +21,19 @@ const fullName = `${candidate.firstName} ${candidate.middleName ? candidate.midd
 ---
 
 <div
-  class="group flex h-full transform-gpu flex-col items-center overflow-hidden rounded-lg border border-gray-200 bg-white p-6 text-center shadow transition-transform hover:-translate-y-1 hover:shadow-lg"
+  class="group relative flex h-full transform-gpu flex-col items-center overflow-hidden rounded-lg border border-gray-200 bg-white p-6 text-center shadow transition-transform hover:-translate-y-1 hover:shadow-lg"
 >
+  {candidate.isWinner && (
+    <div class="absolute top-3 right-3 z-10">
+      <span class="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-semibold text-yellow-800 shadow-sm border border-yellow-200" title="Winner of this race">
+        <svg class="h-3.5 w-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 2l2.4 7.4h7.6l-6 4.6 2.3 7.5L10 16.5l-6.3 5 2.3-7.5-6-4.6h7.6L10 2z" clip-rule="evenodd" />
+        </svg>
+        Winner
+      </span>
+    </div>
+  )}
+
   <div
     class="mb-4 flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100"
   >

@@ -39,18 +39,25 @@ export async function createRace(
     throw makeError("Election not found", 404);
   }
 
-  const { policyQuestionIds, ...raceData } = validated;
+  const { policyQuestionIds, sourceRaceIds, ...raceData } = validated;
+
+  const createData: Prisma.RaceUncheckedCreateInput = {
+    ...(raceData as Prisma.RaceUncheckedCreateInput),
+    policyQuestionsToRaces: {
+      create: (policyQuestionIds || []).map((id) => ({
+        policyQuestionId: id,
+      })),
+    },
+  };
+  if (sourceRaceIds !== undefined) {
+    createData.sourceRaces = {
+      connect: sourceRaceIds.map((id) => ({ id })),
+    };
+  }
 
   const created = await withUserContext(userId, () =>
     prisma.race.create({
-      data: {
-        ...(raceData as Prisma.RaceUncheckedCreateInput),
-        policyQuestionsToRaces: {
-          create: (policyQuestionIds || []).map((id) => ({
-            policyQuestionId: id,
-          })),
-        },
-      },
+      data: createData,
     }),
   );
 
@@ -81,12 +88,22 @@ export async function updateRace(
   }
 
   const validated = await validateRacePayload(body);
-  const { policyQuestionIds, ...raceData } = validated;
+  const { policyQuestionIds, sourceRaceIds, ...raceData } = validated;
 
   const updated = await withUserContext(userId, async () => {
+    const updateData: Prisma.RaceUpdateInput = {
+      ...(raceData as Prisma.RaceUpdateInput),
+    };
+
+    if (sourceRaceIds !== undefined) {
+      updateData.sourceRaces = {
+        set: sourceRaceIds.map((id) => ({ id })),
+      };
+    }
+
     const race = await prisma.race.update({
       where: { id },
-      data: raceData as Prisma.RaceUpdateInput,
+      data: updateData,
     });
 
     if (policyQuestionIds !== undefined) {

@@ -8,7 +8,7 @@ import Button from "../../../../../components/Button.astro";
 import prisma from "../../../../../lib/prisma";
 import {
   DistrictType,
-  type RaceType,
+  type RaceScope,
 } from "../../../../../generated/prisma/browser";
 import { PartyCategories } from "../../../../../constants";
 
@@ -28,11 +28,11 @@ if (!election) {
   return Astro.redirect("/admin/elections");
 }
 
-// Get race types for dropdown
-const raceTypes = await prisma.raceType.findMany();
-const raceTypeOptions = raceTypes.map((rt: RaceType) => ({
-  value: rt.id.toString(),
-  label: rt.value,
+// Get race scopes for dropdown
+const raceScopes = await prisma.raceScope.findMany();
+const raceScopeOptions = raceScopes.map((rs: RaceScope) => ({
+  value: rs.id.toString(),
+  label: rs.value,
 }));
 
 // Get districts for dropdown
@@ -49,12 +49,18 @@ districts.sort((a, b) => {
   });
 });
 
-// Get unique district types for filter
-const districtTypes = Object.values(DistrictType); // Array.from(new Set(districts.map((d) => d.type)));
+const districtTypes = Object.values(DistrictType);
 const districtTypeOptions = districtTypes.map((type) => ({
   value: type,
   label: type.replace(/_/g, " "),
 }));
+
+// Get earlier elections for Source Races
+const earlierElections = await prisma.election.findMany({
+  where: { date: { lte: election.date }, deletedAt: null },
+  orderBy: { date: "desc" },
+  include: { races: { where: { deletedAt: null }, orderBy: { order: "asc" } } },
+});
 
 let error: string | null = null;
 
@@ -63,7 +69,8 @@ if (Astro.request.method === "POST") {
     const formData = await Astro.request.formData();
     const name = formData.get("name") as string;
     const shortName = formData.get("shortName") as string | null;
-    const raceTypeId = parseInt(formData.get("raceType") as string);
+    const raceScopeId = parseInt(formData.get("raceScope") as string);
+    const votingMethod = formData.get("votingMethod") as string;
     const description = formData.get("description") as string;
     const status = formData.get("status") as string;
     const slug = formData.get("slug") as string;
@@ -76,12 +83,14 @@ if (Astro.request.method === "POST") {
       name,
       shortName: shortName || undefined,
       partyCategory,
-      raceTypeId,
+      raceScopeId,
+      votingMethod,
       description,
       status,
       slug,
       order,
       numSelections: parseInt(formData.get("numSelections") as string) || 1,
+      sourceRaceIds: formData.getAll("sourceRaceIds") as string[],
       ...(districtId && { districtId }),
     });
 
@@ -136,9 +145,19 @@ if (Astro.request.method === "POST") {
     />
 
     <FormSelect
-      label="Race Type"
-      name="raceType"
-      options={raceTypeOptions}
+      label="Race Scope"
+      name="raceScope"
+      options={raceScopeOptions}
+      required
+    />
+
+    <FormSelect
+      label="Voting Method"
+      name="votingMethod"
+      options={[
+        { value: "STANDARD", label: "Standard (Candidates Competing)" },
+        { value: "RETENTION", label: "Retain or Replace (Judicial/Retention)" },
+      ]}
       required
     />
 
@@ -188,13 +207,7 @@ if (Astro.request.method === "POST") {
       required
     />
 
-    <FormInput
-      label="Order"
-      name="order"
-      type="number"
-      value="0"
-      required
-    />
+    <FormInput label="Order" name="order" type="number" value="0" required />
 
     <FormSelect
       label="Status"
@@ -211,6 +224,59 @@ if (Astro.request.method === "POST") {
       name="description"
       placeholder="Enter race description..."
     />
+
+    <div class="space-y-3">
+      <label class="block text-sm font-medium text-gray-700"
+        >Source Races (Optional)</label
+      >
+      <p class="text-xs text-gray-500">
+        Select races from previous elections that this race is based on.
+      </p>
+      <div
+        class="max-h-64 space-y-6 overflow-y-auto rounded-md border border-gray-300 bg-white p-4"
+      >
+        {
+          earlierElections.map((previousElection) => (
+            <div>
+              <h4 class="font-medium text-gray-900">
+                {previousElection.name} (
+                {new Date(previousElection.date).toLocaleDateString()})
+              </h4>
+              <div class="mt-2 space-y-2 pl-4">
+                {previousElection.races.map((race) => (
+                  <label class="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      name="sourceRaceIds"
+                      value={race.id}
+                      class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span class="text-sm text-gray-700">
+                      {race.name}{" "}
+                      {race.partyCategory !== "General Election"
+                        ? `(${race.partyCategory})`
+                        : ""}
+                    </span>
+                  </label>
+                ))}
+                {previousElection.races.length === 0 && (
+                  <span class="text-sm text-gray-400 italic">
+                    No races configured
+                  </span>
+                )}
+              </div>
+            </div>
+          ))
+        }
+        {
+          earlierElections.length === 0 && (
+            <span class="text-sm text-gray-500 italic">
+              No previous elections found
+            </span>
+          )
+        }
+      </div>
+    </div>
 
     <div class="flex justify-end gap-3 pt-4">
       <Button
