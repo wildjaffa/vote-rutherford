@@ -1,10 +1,14 @@
 import type { APIRoute } from "astro";
+import { env } from "../../lib/utils/environment";
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    console.log("Full Request Headers:", Object.fromEntries(request.headers.entries()));
+    console.log(
+      "Full Request Headers:",
+      Object.fromEntries(request.headers.entries()),
+    );
     const body = await request.text();
     console.log("Raw body received:", body);
     console.log("Body length:", body.length);
@@ -31,7 +35,18 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const Stripe = (await import("stripe")).default;
-    const stripe = new Stripe(import.meta.env.STRIPE_SECRET_KEY);
+    const stripeKey = env("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
+      console.error("Stripe secret key is not set");
+      return new Response(
+        JSON.stringify({ error: "Server configuration error" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+    const stripe = new Stripe(stripeKey);
     const session = await stripe.checkout.sessions.create({
       line_items: [
         {
