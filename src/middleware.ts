@@ -37,6 +37,7 @@ const cacheControl = defineMiddleware(async (context, next) => {
   if (
     !pathName.startsWith("/admin") &&
     !pathName.startsWith("/api/admin/") &&
+    !pathName.startsWith("/api/create-checkout-session") &&
     !pathName.startsWith("/api/auth/")
   ) {
     response.headers.set(

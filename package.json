@@ -12,7 +12,12 @@
     "dev:all": "npx concurrently \"npm run dev\" \"npm run worker:email\" \"npm run worker:district-import\"",
     "import:addresses": "tsx voter-data-parsing/parseVoterData.ts",
     "import:addresses:dry-run": "tsx voter-data-parsing/parseVoterData.ts --dry-run",
-    "import:addresses:verbose": "tsx voter-data-parsing/parseVoterData.ts --verbose"
+    "import:addresses:verbose": "tsx voter-data-parsing/parseVoterData.ts --verbose",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "overrides": {
     "esbuild": "0.27.3"
@@ -45,18 +50,22 @@
     "pg-boss": "^12.25.1",
     "pm2": "^5.4.3",
     "simple-icons-astro": "^16.1.0",
+    "stripe": "^17.5.0",
     "tsx": "^4.21.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.1.18",
+    "@testing-library/jest-dom": "^6.9.1",
     "@types/node": "^25.3.5",
     "@types/pg": "^8.20.0",
     "@typescript-eslint/parser": "^8.54.0",
+    "@vitest/coverage-v8": "^4.1.4",
     "eslint": "^9.39.2",
     "eslint-plugin-astro": "^1.5.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
+    "jsdom": "^29.0.2",
     "prettier": "^3.8.1",
     "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
@@ -65,6 +74,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0",
-    "vite-plugin-entry-shaking": "^0.5.1"
+    "vite-plugin-entry-shaking": "^0.5.1",
+    "vitest": "^4.1.4"
   }
 }
