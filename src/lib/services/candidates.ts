@@ -58,6 +58,7 @@ export async function createCandidate(
       qualifications,
       isIncumbent,
       isWinner,
+      optedOutCommunications,
     } = validated;
     const candidateData: Prisma.CandidateUncheckedCreateInput = {
       firstName,
@@ -71,6 +72,7 @@ export async function createCandidate(
       profileImageId: profileImageId ?? null,
       isIncumbent: isIncumbent ?? false,
       isWinner: isWinner ?? false,
+      optedOutCommunications: optedOutCommunications ?? false,
     };
     const newCandidate = await prisma.candidate.create({
       data: candidateData,
@@ -193,6 +195,7 @@ export async function updateCandidate(
     qualifications,
     isIncumbent,
     isWinner,
+    optedOutCommunications,
   } = validationData;
 
   const updated = await withUserContext(userId, async () => {
@@ -206,6 +209,7 @@ export async function updateCandidate(
       updatedAt: new Date(),
       isIncumbent: isIncumbent ?? false,
       isWinner: isWinner ?? false,
+      ...(optedOutCommunications !== undefined && { optedOutCommunications }),
     };
 
     if (profileImageId !== undefined) {
@@ -500,6 +504,7 @@ export async function partialUpdateCandidate(
     birthYear,
     isIncumbent,
     isWinner,
+    optedOutCommunications,
     slug,
   } = validation.data;
 
@@ -512,6 +517,8 @@ export async function partialUpdateCandidate(
   if (birthYear !== undefined) dataToUpdate.birthYear = birthYear || null;
   if (isIncumbent !== undefined) dataToUpdate.isIncumbent = isIncumbent;
   if (isWinner !== undefined) dataToUpdate.isWinner = isWinner;
+  if (optedOutCommunications !== undefined)
+    dataToUpdate.optedOutCommunications = optedOutCommunications;
   if (slug !== undefined) dataToUpdate.slug = slug;
 
   const updated = await withUserContext(userId, async () => {
@@ -621,6 +628,7 @@ export async function promoteCandidate(
         profileImageId: existingCandidate.profileImageId,
         isIncumbent: existingCandidate.isIncumbent,
         isWinner: false,
+        optedOutCommunications: existingCandidate.optedOutCommunications,
         historicalLinkId: candidateId,
         externalLinks: {
           create: existingCandidate.externalLinks.map(link => ({

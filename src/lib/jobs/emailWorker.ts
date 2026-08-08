@@ -20,6 +20,29 @@ async function processEmailJob(job: Job<SendEmailJobData>): Promise<void> {
   let success = false;
   let errorMessage: string | null = null;
 
+  if (candidateId) {
+    const candidate = await prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: { optedOutCommunications: true },
+    });
+    if (candidate?.optedOutCommunications) {
+      console.log(`[EmailWorker] Candidate ${candidateId} opted out of communications. Skipping email.`);
+      await prisma.emailOutreach.create({
+        data: {
+          candidateId,
+          contactId: null,
+          emailAddress,
+          subject,
+          body,
+          status: "FAILED",
+          errorMessage: "Candidate has opted out of communications",
+          sentAt: new Date(),
+        },
+      });
+      return;
+    }
+  }
+
   try {
     const provider = await getEmailProvider(userGoogleAccountId);
     success = await provider.sendEmail({

@@ -85,8 +85,8 @@ export const sendMassEmail = defineAction({
       .array(
         z.object({
           id: z.string().optional(),
-          email: z.string().email(),
-          variables: z.record(z.string()).optional(),
+          email: z.email(),
+          variables: z.record(z.string(), z.string()).optional(),
         }),
       )
       .min(1, "At least one target is required"),
@@ -114,8 +114,33 @@ export const sendMassEmail = defineAction({
       delayMs = Math.max(0, scheduledDate.getTime() - now.getTime());
     }
 
+    let eligibleTargets = input.targets;
+    if (input.targetType === "candidate") {
+      const candidateIds = input.targets
+        .map((t) => t.id)
+        .filter((id): id is string => Boolean(id));
+      if (candidateIds.length > 0) {
+        const prisma = await import("../lib/prisma").then((m) => m.default);
+        const optedOutCandidates = await prisma.candidate.findMany({
+          where: {
+            id: { in: candidateIds },
+            optedOutCommunications: true,
+          },
+          select: { id: true },
+        });
+        const optedOutSet = new Set(optedOutCandidates.map((c) => c.id));
+        eligibleTargets = input.targets.filter(
+          (t) => !t.id || !optedOutSet.has(t.id),
+        );
+      }
+    }
+
+    if (eligibleTargets.length === 0) {
+      return { success: true, count: 0 };
+    }
+
     // Build personalised job data for each recipient
-    const jobData = input.targets.map((target) => {
+    const jobData = eligibleTargets.map((target) => {
       let personalizedBody = input.bodyTemplate;
       if (target.variables) {
         for (const [key, value] of Object.entries(target.variables)) {
@@ -131,7 +156,8 @@ export const sendMassEmail = defineAction({
       }
 
       return {
-        candidateId: input.targetType === "candidate" ? (target.id ?? null) : null,
+        candidateId:
+          input.targetType === "candidate" ? (target.id ?? null) : null,
         contactId: input.targetType === "contact" ? (target.id ?? null) : null,
         emailAddress: target.email,
         subject: input.subject,
@@ -214,14 +240,16 @@ export const resendEmail = defineAction({
     }
 
     try {
-      await addEmailJobs([{
-        candidateId: outreach.candidateId,
-        contactId: outreach.contactId,
-        emailAddress: outreach.emailAddress,
-        subject: outreach.subject,
-        body: outreach.body,
-        userGoogleAccountId: input.userGoogleAccountId ?? "",
-      }]);
+      await addEmailJobs([
+        {
+          candidateId: outreach.candidateId,
+          contactId: outreach.contactId,
+          emailAddress: outreach.emailAddress,
+          subject: outreach.subject,
+          body: outreach.body,
+          userGoogleAccountId: input.userGoogleAccountId ?? "",
+        },
+      ]);
       return { success: true };
     } catch (err) {
       handleActionError(err, "Failed to enqueue resend job");

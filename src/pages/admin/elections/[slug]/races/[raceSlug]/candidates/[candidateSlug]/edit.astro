@@ -228,6 +228,7 @@ if (Astro.request.method === "POST") {
         profileImageId: (formData.get("profileImageId") as string) || undefined,
         isIncumbent: formData.get("isIncumbent") === "on",
         isWinner: formData.get("isWinner") === "on",
+        optedOutCommunications: formData.get("optedOutCommunications") === "on",
         slug: candidateSlug,
         externalLinks,
         policyResponses,
@@ -421,7 +422,7 @@ const profileImageUrl = convertKeyToPublicUrl(
         }))}
       />
 
-      <div class="mb-4 grid grid-cols-2 gap-4 border-b border-gray-200 pb-4">
+      <div class="mb-4 grid grid-cols-3 gap-4 border-b border-gray-200 pb-4">
         <FormInput
           label="Is Incumbent"
           name="isIncumbent"
@@ -433,6 +434,12 @@ const profileImageUrl = convertKeyToPublicUrl(
           name="isWinner"
           type="checkbox"
           checked={candidate.isWinner}
+        />
+        <FormInput
+          label="Opted Out of Communications"
+          name="optedOutCommunications"
+          type="checkbox"
+          checked={candidate.optedOutCommunications}
         />
       </div>
 

@@ -123,6 +123,7 @@ if (Astro.request.method === "POST") {
       profileImageId: (formData.get("profileImageId") as string) || undefined,
       isIncumbent: formData.get("isIncumbent") === "on",
       isWinner: formData.get("isWinner") === "on",
+      optedOutCommunications: formData.get("optedOutCommunications") === "on",
       slug: formData.get("slug") as string,
       externalLinks,
       policyResponses,
@@ -225,9 +226,10 @@ if (Astro.request.method === "POST") {
 
     <FormCandidatePolicyResponseInput questions={questions} />
 
-    <div class="grid grid-cols-2 gap-4 border-b border-gray-200 pb-4 mb-4">
+    <div class="grid grid-cols-3 gap-4 border-b border-gray-200 pb-4 mb-4">
       <FormInput label="Is Incumbent" name="isIncumbent" type="checkbox" />
       <FormInput label="Is Winner" name="isWinner" type="checkbox" />
+      <FormInput label="Opted Out of Communications" name="optedOutCommunications" type="checkbox" />
     </div>
 
     <FormProfileImageInput />

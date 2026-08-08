@@ -98,6 +98,7 @@ model Candidate {
   email             String?
   isIncumbent       Boolean               @default(false)
   isWinner          Boolean               @default(false)
+  optedOutCommunications Boolean           @default(false)
   profileImage      BlobStorageReference? @relation("CandidateProfileImage", fields: [profileImageId], references: [id])
   profileImageId    String?               
   historicalLink    Candidate?            @relation("HistoricalLink", fields: [historicalLinkId], references: [id])
