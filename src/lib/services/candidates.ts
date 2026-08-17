@@ -593,6 +593,10 @@ export async function promoteCandidate(
       race: { include: { election: true } },
       externalLinks: true,
       qualifications: true,
+      policyResponses: {
+        where: { deletedAt: null },
+        include: { policyQuestion: true, clarifications: { where: { deletedAt: null } } },
+      },
     },
   });
 
@@ -614,6 +618,31 @@ export async function promoteCandidate(
   if (!hasSourcePermission || !hasTargetPermission) {
     throw makeError("Unauthorized", 403);
   }
+
+  const targetQuestions = await prisma.policyQuestion.findMany({
+    where: { electionId: targetRace.electionId, deletedAt: null },
+  });
+  const targetQuestionIdsByContent = new Map(targetQuestions.map((question) => [
+    `${question.questionText}\u0000${question.descriptionText}`, question.id,
+  ]));
+  const policyResponses = existingCandidate.policyResponses.flatMap((response) => {
+    const policyQuestionId = targetQuestionIdsByContent.get(
+      `${response.policyQuestion.questionText}\u0000${response.policyQuestion.descriptionText}`,
+    );
+    return policyQuestionId ? [{
+      policyQuestionId,
+      requestSentAt: response.requestSentAt,
+      responseReceivedAt: response.responseReceivedAt,
+      response: response.response,
+      responseRedacted: response.responseRedacted,
+      source: response.source,
+      clarifications: {
+        create: response.clarifications.map((c) => ({
+          clarification: c.clarification,
+        })),
+      },
+    }] : [];
+  });
 
   const newCandidate = await withUserContext(userId, async () => {
     return prisma.candidate.create({
@@ -643,6 +672,9 @@ export async function promoteCandidate(
             qualification_url: qual.qualification_url,
             qualificationTypeId: qual.qualificationTypeId,
           })),
+        },
+        policyResponses: {
+          create: policyResponses,
         },
       },
     });

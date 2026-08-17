@@ -39,7 +39,13 @@ export async function createRace(
     throw makeError("Election not found", 404);
   }
 
-  const { policyQuestionIds, sourceRaceIds, ...raceData } = validated;
+  const {
+    policyQuestionIds,
+    sourceRaceIds,
+    copyPolicyQuestionsFromSources,
+    promoteWinningCandidatesFromSources,
+    ...raceData
+  } = validated;
 
   const createData: Prisma.RaceUncheckedCreateInput = {
     ...(raceData as Prisma.RaceUncheckedCreateInput),
@@ -60,6 +66,60 @@ export async function createRace(
       data: createData,
     }),
   );
+
+  if (copyPolicyQuestionsFromSources && sourceRaceIds?.length) {
+    await withUserContext(userId, async () => {
+      const sourceRaces = await prisma.race.findMany({
+        where: { id: { in: sourceRaceIds }, deletedAt: null },
+        include: { policyQuestionsToRaces: { where: { deletedAt: null }, include: { policyQuestion: true } } },
+      });
+      const existingQuestions = await prisma.policyQuestion.findMany({
+        where: { electionId: created.electionId, deletedAt: null },
+      });
+      const questionIdsByContent = new Map(existingQuestions.map((question) => [
+        `${question.questionText}\u0000${question.descriptionText}`, question.id,
+      ]));
+      const questionIds = new Set<string>();
+      for (const sourceRace of sourceRaces) {
+        for (const { policyQuestion } of sourceRace.policyQuestionsToRaces) {
+          const key = `${policyQuestion.questionText}\u0000${policyQuestion.descriptionText}`;
+          let questionId = questionIdsByContent.get(key);
+          if (!questionId) {
+            const copied = await prisma.policyQuestion.create({ data: {
+              electionId: created.electionId,
+              questionText: policyQuestion.questionText,
+              descriptionText: policyQuestion.descriptionText,
+              order: policyQuestion.order,
+            }});
+            questionId = copied.id;
+            questionIdsByContent.set(key, questionId);
+          }
+          questionIds.add(questionId);
+        }
+      }
+      if (questionIds.size) {
+        await prisma.policyQuestionToRace.createMany({
+          data: [...questionIds].map((policyQuestionId) => ({
+            raceId: created.id, policyQuestionId,
+          })),
+        });
+      }
+    });
+  }
+
+  if (promoteWinningCandidatesFromSources && sourceRaceIds?.length) {
+    const winners = await prisma.candidate.findMany({
+      where: {
+        raceId: { in: sourceRaceIds },
+        isWinner: true,
+        deletedAt: null,
+      },
+    });
+    const { promoteCandidate } = await import("./candidates");
+    for (const winner of winners) {
+      await promoteCandidate(winner.id, created.id, userId);
+    }
+  }
 
   void purgeCloudflareCache([
     `/elections/${election.slug}`,
@@ -88,7 +148,7 @@ export async function updateRace(
   }
 
   const validated = await validateRacePayload(body);
-  const { policyQuestionIds, sourceRaceIds, ...raceData } = validated;
+  const { policyQuestionIds, sourceRaceIds, copyPolicyQuestionsFromSources, promoteWinningCandidatesFromSources, ...raceData } = validated;
 
   const updated = await withUserContext(userId, async () => {
     const updateData: Prisma.RaceUpdateInput = {
@@ -119,6 +179,77 @@ export async function updateRace(
             policyQuestionId: pqId,
           })),
         });
+      }
+    }
+
+    if (copyPolicyQuestionsFromSources && sourceRaceIds?.length) {
+      const sourceRaces = await prisma.race.findMany({
+        where: { id: { in: sourceRaceIds }, deletedAt: null },
+        include: { policyQuestionsToRaces: { where: { deletedAt: null }, include: { policyQuestion: true } } },
+      });
+      const existingQuestions = await prisma.policyQuestion.findMany({
+        where: { electionId: race.electionId, deletedAt: null },
+      });
+      const questionIdsByContent = new Map(existingQuestions.map((question) => [
+        `${question.questionText}\u0000${question.descriptionText}`, question.id,
+      ]));
+      const questionIds = new Set<string>();
+      for (const sourceRace of sourceRaces) {
+        for (const { policyQuestion } of sourceRace.policyQuestionsToRaces) {
+          const key = `${policyQuestion.questionText}\u0000${policyQuestion.descriptionText}`;
+          let questionId = questionIdsByContent.get(key);
+          if (!questionId) {
+            const copied = await prisma.policyQuestion.create({ data: {
+              electionId: race.electionId,
+              questionText: policyQuestion.questionText,
+              descriptionText: policyQuestion.descriptionText,
+              order: policyQuestion.order,
+            }});
+            questionId = copied.id;
+            questionIdsByContent.set(key, questionId);
+          }
+          questionIds.add(questionId);
+        }
+      }
+      if (questionIds.size) {
+        // Find existing links for this race to avoid duplication
+        const existingLinks = await prisma.policyQuestionToRace.findMany({
+          where: { raceId: race.id },
+        });
+        const existingLinkedQuestionIds = new Set(existingLinks.map(l => l.policyQuestionId));
+        const newQuestionIdsToLink = [...questionIds].filter(id => !existingLinkedQuestionIds.has(id));
+        
+        if (newQuestionIdsToLink.length > 0) {
+          await prisma.policyQuestionToRace.createMany({
+            data: newQuestionIdsToLink.map((policyQuestionId) => ({
+              raceId: race.id, policyQuestionId,
+            })),
+          });
+        }
+      }
+    }
+
+    if (promoteWinningCandidatesFromSources && sourceRaceIds?.length) {
+      const winners = await prisma.candidate.findMany({
+        where: {
+          raceId: { in: sourceRaceIds },
+          isWinner: true,
+          deletedAt: null,
+        },
+      });
+      const { promoteCandidate } = await import("./candidates");
+      for (const winner of winners) {
+        // Avoid duplicate promotions if candidate already promoted into this race
+        const existingPromoted = await prisma.candidate.findFirst({
+          where: {
+            raceId: race.id,
+            historicalLinkId: winner.id,
+            deletedAt: null,
+          },
+        });
+        if (!existingPromoted) {
+          await promoteCandidate(winner.id, race.id, userId);
+        }
       }
     }
 

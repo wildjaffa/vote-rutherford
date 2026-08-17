@@ -72,9 +72,13 @@ const districtTypeOptions = districtTypes.map((type) => ({
   label: type.replace(/_/g, " "),
 }));
 
-// Get earlier elections for Source Races
+// Get earlier elections for Source Races (excluding current election)
 const earlierElections = await prisma.election.findMany({
-  where: { date: { lte: election.date }, deletedAt: null },
+  where: {
+    id: { not: election.id },
+    date: { lte: election.date },
+    deletedAt: null,
+  },
   orderBy: { date: "desc" },
   include: { races: { where: { deletedAt: null }, orderBy: { order: "asc" } } },
 });
@@ -116,6 +120,10 @@ if (Astro.request.method === "POST") {
       order,
       numSelections: parseInt(formData.get("numSelections") as string) || 1,
       sourceRaceIds: formData.getAll("sourceRaceIds") as string[],
+      copyPolicyQuestionsFromSources:
+        formData.get("copyPolicyQuestionsFromSources") === "on",
+      promoteWinningCandidatesFromSources:
+        formData.get("promoteWinningCandidatesFromSources") === "on",
       ...(districtId && { districtId }),
       policyQuestionIds,
     });
@@ -363,6 +371,30 @@ if (Astro.request.method === "POST") {
             )
           }
         </div>
+      </div>
+
+      <div class="space-y-2">
+        <label class="flex items-start gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            name="copyPolicyQuestionsFromSources"
+            class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span>
+            Copy questions from the selected source races into this race's election and assign them to this race.
+          </span>
+        </label>
+
+        <label class="flex items-start gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            name="promoteWinningCandidatesFromSources"
+            class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span>
+            Auto-promote winning candidates from the selected source races into this race.
+          </span>
+        </label>
       </div>
 
       <div class="flex justify-end gap-3 border-t border-gray-200 pt-4">
