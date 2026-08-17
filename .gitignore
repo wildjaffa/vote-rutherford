@@ -29,3 +29,4 @@ pnpm-debug.log*
 *.db-info
 *.db-shm
 *.db-wal
+valhalla_data/*

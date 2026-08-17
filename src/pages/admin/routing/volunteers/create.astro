@@ -1,0 +1,318 @@
+---
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import FormInput from "../../../../components/forms/FormInput.astro";
+import { actions } from "astro:actions";
+import Button from "../../../../components/Button.astro";
+
+export const prerender = false;
+
+let error: string | null = null;
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const result = await Astro.callAction(actions.createVolunteer, formData);
+
+    if (result.error) {
+      error = "Failed to create volunteer: " + result.error.message;
+    } else {
+      return Astro.redirect("/admin/routing");
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to create volunteer";
+  }
+}
+---
+
+<AdminLayout
+  title="Add Volunteer"
+  breadcrumbs={[
+    { label: "Routing", href: "/admin/routing" },
+    { label: "Add Volunteer", href: "/admin/routing/volunteers/create" },
+  ]}
+>
+  <form method="POST" class="max-w-xl space-y-0">
+    {
+      error && (
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+          <p class="text-sm font-medium text-red-800">{error}</p>
+        </div>
+      )
+    }
+
+    <div class="grid grid-cols-2 gap-4">
+      <FormInput
+        label="First Name"
+        name="firstName"
+        type="text"
+        placeholder="Optional"
+      />
+      <FormInput
+        label="Last Name"
+        name="lastName"
+        type="text"
+        placeholder="Optional"
+      />
+    </div>
+
+    <FormInput
+      label="Email"
+      name="email"
+      type="email"
+      required
+      placeholder="volunteer@example.com"
+    />
+
+    <div class="mb-4">
+      <label class="mb-1 block text-sm font-medium text-gray-700">
+        Volunteer Date(s)
+      </label>
+      <p class="mb-1 text-xs text-gray-500">
+        Dates this volunteer can run a route. Leave blank if they are available
+        any day.
+      </p>
+      <div id="dates-container" class="space-y-2">
+        <input
+          type="date"
+          class="date-input w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+        />
+      </div>
+      <input type="hidden" name="volunteerDates" id="volunteer-dates-hidden" />
+      <button
+        type="button"
+        id="add-date-btn"
+        class="mt-2 text-sm text-blue-600 hover:underline"
+        >+ Add another date</button
+      >
+    </div>
+
+    <div class="mb-4">
+      <label
+        class="mb-1 block text-sm font-medium text-gray-700"
+        for="start-address-input"
+      >
+        Starting Address <span class="text-red-500">*</span>
+      </label>
+      <p class="mb-1 text-xs text-gray-500">
+        Where the volunteer begins their route (e.g. home or work). Searches
+        county 911 addresses; for outside-county, type the full address.
+      </p>
+      <input
+        id="start-address-input"
+        type="text"
+        autocomplete="off"
+        placeholder="Start typing an address..."
+        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+      />
+      <input type="hidden" name="startAddress" id="start-address-value" />
+      <input
+        type="hidden"
+        name="startVoterAddressId"
+        id="start-voter-address-id"
+      />
+      <input type="hidden" name="startLatitude" id="start-lat-value" />
+      <input type="hidden" name="startLongitude" id="start-lon-value" />
+      <div id="start-suggestions" class="relative"></div>
+    </div>
+
+    <div class="mb-4">
+      <label
+        class="mb-1 block text-sm font-medium text-gray-700"
+        for="end-address-input"
+      >
+        Ending Address <span class="text-red-500">*</span>
+      </label>
+      <p class="mb-1 text-xs text-gray-500">
+        Where the volunteer ends their route (e.g. home after work).
+      </p>
+      <input
+        id="end-address-input"
+        type="text"
+        autocomplete="off"
+        placeholder="Start typing an address..."
+        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+      />
+      <input type="hidden" name="endAddress" id="end-address-value" />
+      <input type="hidden" name="endVoterAddressId" id="end-voter-address-id" />
+      <input type="hidden" name="endLatitude" id="end-lat-value" />
+      <input type="hidden" name="endLongitude" id="end-lon-value" />
+      <div id="end-suggestions" class="relative"></div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div class="mb-4">
+        <label
+          class="mb-1 block text-sm font-medium text-gray-700"
+          for="maxDistance"
+        >
+          Max Distance (miles, optional)
+        </label>
+        <input
+          id="maxDistance"
+          name="maxDistance"
+          type="number"
+          min="0"
+          step="0.5"
+          placeholder="e.g. 25"
+          class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+        />
+      </div>
+      <div class="mb-4">
+        <label
+          class="mb-1 block text-sm font-medium text-gray-700"
+          for="maxTime"
+        >
+          Max Time (minutes, optional)
+        </label>
+        <input
+          id="maxTime"
+          name="maxTime"
+          type="number"
+          min="0"
+          step="5"
+          placeholder="e.g. 60"
+          class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+        />
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3 pt-4">
+      <Button variant="secondary" href="/admin/routing">Cancel</Button>
+      <Button type="submit">Add Volunteer</Button>
+    </div>
+  </form>
+</AdminLayout>
+
+<script>
+  // --- Date picker logic ---
+  const datesContainer = document.getElementById("dates-container")!;
+  const datesHidden = document.getElementById(
+    "volunteer-dates-hidden",
+  ) as HTMLInputElement;
+  const addDateBtn = document.getElementById("add-date-btn")!;
+
+  function syncDates() {
+    const inputs =
+      datesContainer.querySelectorAll<HTMLInputElement>(".date-input");
+    datesHidden.value = Array.from(inputs)
+      .map((i) => i.value)
+      .filter(Boolean)
+      .join(",");
+  }
+
+  datesContainer.addEventListener("change", syncDates);
+
+  addDateBtn.addEventListener("click", () => {
+    const input = document.createElement("input");
+    input.type = "date";
+    input.className =
+      "date-input w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+    datesContainer.appendChild(input);
+    input.addEventListener("change", syncDates);
+  });
+
+  // --- Address autocomplete factory ---
+  function setupAddressAutocomplete(
+    inputId: string,
+    addressHiddenId: string,
+    voterAddressIdHiddenId: string,
+    latHiddenId: string,
+    lonHiddenId: string,
+    suggestionsId: string,
+  ) {
+    const input = document.getElementById(inputId) as HTMLInputElement;
+    const addressHidden = document.getElementById(
+      addressHiddenId,
+    ) as HTMLInputElement;
+    const voterAddressIdHidden = document.getElementById(
+      voterAddressIdHiddenId,
+    ) as HTMLInputElement;
+    const latHidden = document.getElementById(latHiddenId) as HTMLInputElement;
+    const lonHidden = document.getElementById(lonHiddenId) as HTMLInputElement;
+    const suggestions = document.getElementById(suggestionsId)!;
+
+    let timer: ReturnType<typeof setTimeout>;
+
+    function clearResolved() {
+      voterAddressIdHidden.value = "";
+      latHidden.value = "";
+      lonHidden.value = "";
+    }
+
+    function showSuggestions(
+      results: { id: string; address: string; city: string; zip: string }[],
+    ) {
+      suggestions.innerHTML = "";
+      if (!results.length) return;
+      const list = document.createElement("ul");
+      list.className =
+        "absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto";
+      results.forEach((r) => {
+        const li = document.createElement("li");
+        li.className = "cursor-pointer px-3 py-2 text-sm hover:bg-blue-50";
+        const label = `${r.address}${r.city ? ", " + r.city : ""}${r.zip ? " " + r.zip : ""}`;
+        li.textContent = label;
+        li.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          input.value = label;
+          addressHidden.value = r.address;
+          voterAddressIdHidden.value = r.id;
+          latHidden.value = "";
+          lonHidden.value = "";
+          suggestions.innerHTML = "";
+        });
+        list.appendChild(li);
+      });
+      suggestions.appendChild(list);
+    }
+
+    input.addEventListener("input", () => {
+      const q = input.value.trim();
+      addressHidden.value = q;
+      clearResolved();
+      clearTimeout(timer);
+      if (q.length < 3) {
+        suggestions.innerHTML = "";
+        return;
+      }
+      timer = setTimeout(async () => {
+        try {
+          const res = await fetch(
+            `/api/addresses/lookup?q=${encodeURIComponent(q)}&limit=8`,
+          );
+          const data = await res.json();
+          showSuggestions(data.results || []);
+        } catch {
+          suggestions.innerHTML = "";
+        }
+      }, 250);
+    });
+
+    input.addEventListener("blur", () => {
+      // Keep the street-only value from a Meili selection; only sync free-text entry.
+      if (input.value.trim() && !voterAddressIdHidden.value) {
+        addressHidden.value = input.value.trim();
+      }
+      setTimeout(() => {
+        suggestions.innerHTML = "";
+      }, 200);
+    });
+  }
+
+  setupAddressAutocomplete(
+    "start-address-input",
+    "start-address-value",
+    "start-voter-address-id",
+    "start-lat-value",
+    "start-lon-value",
+    "start-suggestions",
+  );
+  setupAddressAutocomplete(
+    "end-address-input",
+    "end-address-value",
+    "end-voter-address-id",
+    "end-lat-value",
+    "end-lon-value",
+    "end-suggestions",
+  );
+</script>

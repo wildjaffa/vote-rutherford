@@ -16,6 +16,14 @@ import {
   getDistrictImportStatus,
   confirmDistrictImport,
 } from "./districtImport";
+import {
+  createSite,
+  updateSite,
+  deleteSite,
+  createVolunteer,
+  updateVolunteer,
+  deleteVolunteer,
+} from "./routing";
 
 export const server = {
   createCandidate,
@@ -39,4 +47,10 @@ export const server = {
   startDistrictImport,
   getDistrictImportStatus,
   confirmDistrictImport,
+  createSite,
+  updateSite,
+  deleteSite,
+  createVolunteer,
+  updateVolunteer,
+  deleteVolunteer,
 };

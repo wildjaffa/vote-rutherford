@@ -1,7 +1,7 @@
 ---
 import Layout from "./Layout.astro";
 import Button from "../components/Button.astro";
-import { House, LogOut, Vote } from "../lib/icons";
+import { House, LogOut, MapPin, Route, Vote } from "../lib/icons";
 
 interface Props {
   title: string;
@@ -111,6 +111,30 @@ const { title, breadcrumbs = [] } = Astro.props;
                 class="hover:bg-secondary flex items-center rounded-lg px-4 py-2 text-gray-700 transition-colors hover:text-white"
               >
                 Import Data
+              </a>
+            </li>
+          </ul>
+
+          <h2 class="mt-6 mb-4 text-lg font-semibold text-gray-900">
+            Volunteer Routing
+          </h2>
+          <ul class="space-y-2">
+            <li>
+              <a
+                href="/admin/routing"
+                class="hover:bg-secondary flex items-center rounded-lg px-4 py-2 text-gray-700 transition-colors hover:text-white"
+              >
+                <MapPin size="18" stroke-width={2} class="mr-3" />
+                Manage Routing
+              </a>
+            </li>
+            <li>
+              <a
+                href="/admin/routing/plan"
+                class="hover:bg-secondary flex items-center rounded-lg px-4 py-2 text-gray-700 transition-colors hover:text-white"
+              >
+                <Route size="18" stroke-width={2} class="mr-3" />
+                Plan Routes
               </a>
             </li>
           </ul>

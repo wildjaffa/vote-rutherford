@@ -1,0 +1,166 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { Plus, Route } from "../../../lib/icons";
+import prisma from "../../../lib/prisma";
+
+export const prerender = false;
+
+const volunteers = await prisma.volunteer.findMany({
+  where: { deletedAt: null },
+  orderBy: { createdAt: "desc" },
+});
+
+const sites = await prisma.site.findMany({
+  where: { deletedAt: null },
+  include: { voterAddress: true },
+  orderBy: { createdAt: "desc" },
+});
+
+function formatVolunteerDates(dates: Date[]): string {
+  if (dates.length === 0) return "Any day";
+  return dates
+    .map((d) => d.toISOString().slice(0, 10))
+    .sort()
+    .join(", ");
+}
+---
+
+<AdminLayout title="Volunteer Routing">
+  <div class="space-y-10">
+
+    <section class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Plan sign routes</h2>
+          <p class="mt-1 max-w-2xl text-sm text-gray-600">
+            Pick an election and early voting or election day, then calculate
+            drop-off (day before) and pick-up (evening of) routes for every
+            available volunteer.
+          </p>
+        </div>
+        <a
+          href="/admin/routing/plan"
+          class="bg-secondary hover:bg-secondary/90 focus:ring-secondary inline-flex items-center rounded-lg px-4 py-2 text-white transition-colors focus:ring-2 focus:ring-offset-2"
+        >
+          <Route size="18" stroke-width={2} class="mr-2" />
+          Plan Routes
+        </a>
+      </div>
+    </section>
+
+    <!-- Sites Section -->
+    <section>
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold text-gray-900">Sign Sites</h2>
+        <a
+          href="/admin/routing/sites/create"
+          class="bg-secondary hover:bg-secondary/90 focus:ring-secondary inline-flex items-center rounded-lg px-4 py-2 text-white transition-colors focus:ring-2 focus:ring-offset-2"
+        >
+          <Plus size="18" stroke-width={2} class="mr-2" />
+          New Site
+        </a>
+      </div>
+
+      {
+        sites.length > 0 ? (
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="border-b border-gray-200">
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Type</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Address</th>
+                  <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sites.map((site) => (
+                  <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">{site.name}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">
+                      <span class={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${site.type === "EARLY_VOTING" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
+                        {site.type === "EARLY_VOTING" ? "Early Voting" : "Day Of Voting"}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-600">{site.voterAddress?.address}</td>
+                    <td class="px-4 py-3 text-right">
+                      <a
+                        href={`/admin/routing/sites/${site.id}/edit`}
+                        class="inline-flex items-center rounded-md bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-200"
+                      >
+                        Edit
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div class="py-12 text-center">
+            <p class="text-gray-500">No sign sites yet. Create one to get started!</p>
+          </div>
+        )
+      }
+    </section>
+
+    <!-- Volunteers Section -->
+    <section>
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold text-gray-900">Volunteers</h2>
+        <a
+          href="/admin/routing/volunteers/create"
+          class="bg-secondary hover:bg-secondary/90 focus:ring-secondary inline-flex items-center rounded-lg px-4 py-2 text-white transition-colors focus:ring-2 focus:ring-offset-2"
+        >
+          <Plus size="18" stroke-width={2} class="mr-2" />
+          New Volunteer
+        </a>
+      </div>
+
+      {
+        volunteers.length > 0 ? (
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="border-b border-gray-200">
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Available</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Start Address</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">End Address</th>
+                  <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {volunteers.map((v) => (
+                  <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
+                      {v.firstName} {v.lastName}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-600">{v.email}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">{formatVolunteerDates(v.volunteerDates)}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">{v.startAddress}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">{v.endAddress}</td>
+                    <td class="px-4 py-3 text-right">
+                      <a
+                        href={`/admin/routing/volunteers/${v.id}/edit`}
+                        class="inline-flex items-center rounded-md bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-200"
+                      >
+                        Edit
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div class="py-12 text-center">
+            <p class="text-gray-500">No volunteers yet. Create one to get started!</p>
+          </div>
+        )
+      }
+    </section>
+
+  </div>
+</AdminLayout>

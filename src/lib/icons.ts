@@ -31,6 +31,7 @@ import {
   Mail,
   MessageSquare,
   MapPin,
+  Route,
 } from "@lucide/astro";
 
 import {
@@ -76,6 +77,7 @@ export {
   Mail,
   MessageSquare,
   MapPin,
+  Route,
 };
 
 export const qualificationTypeToIcon: Record<string, AstroComponent> = {

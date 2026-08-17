@@ -1,3 +1,5 @@
+/// <reference types="astro/client" />
+
 interface ImportMetaEnv {
   readonly DATABASE_URL: string;
   readonly R2_ENDPOINT?: string;
@@ -13,4 +15,11 @@ interface ImportMetaEnv {
 
 interface ImportMeta {
   readonly env: ImportMetaEnv;
+}
+
+declare namespace App {
+  interface Locals {
+    /** Set by auth middleware for /admin and /api/admin routes. */
+    user?: import("firebase-admin/auth").UserRecord;
+  }
 }

@@ -1,11 +1,10 @@
 import type { APIRoute } from "astro";
-import { parse } from "cookie";
 import { deleteCandidate } from "../../../../../lib/services/candidates";
-import { getSessionUser } from "../../../../../firebase/server";
+import { requireLocalUser } from "../../../../../lib/permissions";
 
 export const prerender = false;
 
-export const DELETE: APIRoute = async ({ params, request }) => {
+export const DELETE: APIRoute = async ({ params, locals }) => {
   const { id } = params;
   if (!id) {
     return new Response(JSON.stringify({ error: "Candidate ID required" }), {
@@ -14,15 +13,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     });
   }
 
-  const cookies = parse(request.headers.get("cookie") || "");
-  const sessionCookie = cookies["__session"];
-  const user = await getSessionUser(sessionCookie);
-  if (!user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 403,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+  const user = requireLocalUser(locals);
 
   try {
     await deleteCandidate(id, user.uid);
