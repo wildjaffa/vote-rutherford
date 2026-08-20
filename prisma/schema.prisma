@@ -55,6 +55,8 @@ model Race {
   raceScope   RaceScope @relation(fields: [raceScopeId], references: [id])
   raceScopeId Int
   votingMethod String   @default("STANDARD")
+  approveLabel String?
+  denyLabel    String?
   district    District? @relation(fields: [districtId], references: [id])
   districtId  String?
   numSelections Int @default(1)

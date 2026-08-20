@@ -102,6 +102,8 @@ if (Astro.request.method === "POST") {
     const districtId = formData.get("districtId") as string | null;
     const partyCategory = formData.get("partyCategory") as string;
     const order = parseInt(formData.get("order") as string) || 0;
+    const approveLabel = formData.get("approveLabel") as string | null;
+    const denyLabel = formData.get("denyLabel") as string | null;
 
     const policyQuestionIds = formData.getAll(
       "policy-question-ids",
@@ -114,6 +116,8 @@ if (Astro.request.method === "POST") {
       partyCategory,
       raceScopeId,
       votingMethod,
+      approveLabel: approveLabel || undefined,
+      denyLabel: denyLabel || undefined,
       description: description || undefined,
       status: status,
       slug,
@@ -235,8 +239,25 @@ if (Astro.request.method === "POST") {
         options={[
           { value: "STANDARD", label: "Standard (Candidates Competing)" },
           { value: "RETENTION", label: "Retain or Replace (Judicial/Retention)" },
+          { value: "INITIATIVE", label: "Ballot Initiative / Referendum (Approve vs Deny)" },
         ]}
         value={race.votingMethod}
+      />
+
+      <FormInput
+        label="Approve Option Label / Meaning (Optional)"
+        name="approveLabel"
+        type="text"
+        value={race.approveLabel ?? ""}
+        placeholder="e.g. For the Amendment (Expands tax relief)"
+      />
+
+      <FormInput
+        label="Deny Option Label / Meaning (Optional)"
+        name="denyLabel"
+        type="text"
+        value={race.denyLabel ?? ""}
+        placeholder="e.g. Against the Amendment (Keeps current rules)"
       />
 
       <FormSelect

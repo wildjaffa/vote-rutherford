@@ -115,6 +115,16 @@ if (Astro.request.method === "POST") {
       )
     }
 
+    {
+      race.votingMethod === "INITIATIVE" && (
+        <div class="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <p class="text-sm font-medium text-blue-900">
+            This race is configured as a <strong>Ballot Initiative / Referendum</strong>. Voters select Approve or Deny instead of voting for individual candidates.
+          </p>
+        </div>
+      )
+    }
+
     <!-- Candidates Table -->
     {
       race.candidates.length > 0 ? (

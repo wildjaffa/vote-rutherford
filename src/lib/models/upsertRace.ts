@@ -8,6 +8,8 @@ export const upsertRaceSchema = z.object({
   shortName: z.string().optional().nullable(),
   raceScopeId: z.number().min(0, "Race scope is required"),
   votingMethod: z.string().default("STANDARD"),
+  approveLabel: z.string().optional().nullable(),
+  denyLabel: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   status: z.string().min(1, "Status is required"),
   slug: z.string().min(1, "Slug is required"),

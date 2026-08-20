@@ -190,6 +190,8 @@ const clientRaces = races.map((r) => ({
   name: r.name,
   shortName: r.shortName,
   votingMethod: r.votingMethod,
+  approveLabel: r.approveLabel,
+  denyLabel: r.denyLabel,
   typeLabel:
     raceScopeLabels[r.raceScope.id] || (r.raceScope.value as string) || "Other",
   candidates: r.candidates.map((c) => ({
@@ -390,6 +392,8 @@ const clientRaces = races.map((r) => ({
     shortName: string | null;
     typeLabel: string;
     votingMethod: string;
+    approveLabel: string | null;
+    denyLabel: string | null;
     candidates: ClientCandidate[];
   }
 
@@ -490,7 +494,24 @@ const clientRaces = races.map((r) => ({
         if (!selectedIds || selectedIds.length === 0) continue;
 
         let selectedCandidates: ClientCandidate[] = [];
-        if (race.votingMethod === "RETENTION") {
+        if (race.votingMethod === "INITIATIVE") {
+          const matchedId = selectedIds.find(
+            (selId) => selId.endsWith("_approve") || selId.endsWith("_deny"),
+          );
+          if (matchedId) {
+            const isApprove = matchedId.endsWith("_approve");
+            const labelText = isApprove
+              ? race.approveLabel || "For / Approve"
+              : race.denyLabel || "Against / Deny";
+            selectedCandidates = [
+              {
+                id: 0,
+                name: labelText,
+                party: null,
+              },
+            ];
+          }
+        } else if (race.votingMethod === "RETENTION") {
           selectedCandidates = race.candidates
             .map((c) => {
               const matchedId = selectedIds.find((selId) => selId.startsWith(String(c.id)));
