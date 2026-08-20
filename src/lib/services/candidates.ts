@@ -650,6 +650,7 @@ export async function promoteCandidate(
         firstName: existingCandidate.firstName,
         middleName: existingCandidate.middleName,
         lastName: existingCandidate.lastName,
+        slug: existingCandidate.slug,
         raceId: targetRaceId,
         email: existingCandidate.email,
         partyAffiliation: existingCandidate.partyAffiliation,
