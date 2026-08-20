@@ -6,18 +6,18 @@ export const prerender = false;
 export const GET: APIRoute = async (context) => {
   const baseUrl = context.site?.toString().replace(/\/$/, "") ?? "https://govoterutherford.com";
 
-  // Fetch everything needed for the sitemap
+  // Fetch everything needed for the sitemap with election dates and archive status
   const [elections, races, candidates] = await Promise.all([
     prisma.election.findMany({
-      where: { deletedAt: null, archivedAt: null },
-      select: { slug: true, updatedAt: true },
+      where: { deletedAt: null },
+      select: { slug: true, date: true, archivedAt: true, updatedAt: true },
     }),
     prisma.race.findMany({
       where: { deletedAt: null },
       select: {
         slug: true,
         updatedAt: true,
-        election: { select: { slug: true } },
+        election: { select: { slug: true, date: true, archivedAt: true } },
       },
     }),
     prisma.candidate.findMany({
@@ -28,12 +28,21 @@ export const GET: APIRoute = async (context) => {
         race: {
           select: {
             slug: true,
-            election: { select: { slug: true } },
+            election: { select: { slug: true, date: true, archivedAt: true } },
           },
         },
       },
     }),
   ]);
+
+  const now = new Date();
+  // Normalize today's date to midnight UTC/local start of day for comparison
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Determine current election based on today's date (on or after start of today)
+  const isCurrentElection = (election: { date: Date }) => {
+    return new Date(election.date) >= today;
+  };
 
   const staticPages = [
     { url: "/", priority: "1.0", changefreq: "monthly" },
@@ -67,8 +76,8 @@ export const GET: APIRoute = async (context) => {
   <url>
     <loc>${baseUrl}/elections/${election.slug}</loc>
     <lastmod>${election.updatedAt.toISOString()}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <changefreq>${isCurrentElection(election) ? "weekly" : "monthly"}</changefreq>
+    <priority>${isCurrentElection(election) ? "0.9" : "0.4"}</priority>
   </url>`,
     )
     .join("")}
@@ -80,8 +89,8 @@ export const GET: APIRoute = async (context) => {
   <url>
     <loc>${baseUrl}/elections/${race.election.slug}/${race.slug}</loc>
     <lastmod>${race.updatedAt.toISOString()}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <changefreq>${isCurrentElection(race.election) ? "weekly" : "monthly"}</changefreq>
+    <priority>${isCurrentElection(race.election) ? "0.8" : "0.3"}</priority>
   </url>`,
     )
     .join("")}
@@ -93,8 +102,8 @@ export const GET: APIRoute = async (context) => {
   <url>
     <loc>${baseUrl}/elections/${candidate.race.election.slug}/${candidate.race.slug}/${candidate.slug}</loc>
     <lastmod>${candidate.updatedAt.toISOString()}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <changefreq>${isCurrentElection(candidate.race.election) ? "weekly" : "monthly"}</changefreq>
+    <priority>${isCurrentElection(candidate.race.election) ? "0.7" : "0.3"}</priority>
   </url>`,
     )
     .join("")}
