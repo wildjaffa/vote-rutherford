@@ -216,7 +216,10 @@ if (Astro.request.method === "POST") {
             clarifications,
           };
         })
-        .filter((r) => r.responseText.trim() || r.clarifications?.length);
+        .filter(
+        (r) =>
+          r.responseText.trim() || r.source?.trim() || r.clarifications?.length,
+      );
 
       const result = await Astro.callAction(actions.updateCandidate, {
         id: candidate.id,

@@ -89,6 +89,7 @@ if (Astro.request.method === "POST") {
       "response-question-id",
     ) as string[];
     const responseTexts = formData.getAll("response-text") as string[];
+    const responseSources = formData.getAll("response-source") as string[];
 
     const policyResponses = responseQuestionIds
       .map((questionId, i) => {
@@ -109,10 +110,14 @@ if (Astro.request.method === "POST") {
         return {
           questionId,
           responseText: responseTexts[i] || "",
+          source: responseSources[i] || null,
           clarifications,
         };
       })
-      .filter((r) => r.responseText.trim() || r.clarifications?.length);
+      .filter(
+        (r) =>
+          r.responseText.trim() || r.source?.trim() || r.clarifications?.length,
+      );
 
     const result = await Astro.callAction(actions.createCandidate, {
       firstName: formData.get("firstName") as string,
