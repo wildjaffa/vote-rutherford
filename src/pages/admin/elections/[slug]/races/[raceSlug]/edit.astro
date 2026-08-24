@@ -102,8 +102,8 @@ if (Astro.request.method === "POST") {
     const districtId = formData.get("districtId") as string | null;
     const partyCategory = formData.get("partyCategory") as string;
     const order = parseInt(formData.get("order") as string) || 0;
-    const approveLabel = formData.get("approveLabel") as string | null;
-    const denyLabel = formData.get("denyLabel") as string | null;
+    const approvalDescription = formData.get("approvalDescription") as string | null;
+    const disapprovalDescription = formData.get("disapprovalDescription") as string | null;
 
     const policyQuestionIds = formData.getAll(
       "policy-question-ids",
@@ -116,8 +116,8 @@ if (Astro.request.method === "POST") {
       partyCategory,
       raceScopeId,
       votingMethod,
-      approveLabel: approveLabel || undefined,
-      denyLabel: denyLabel || undefined,
+      approvalDescription: approvalDescription || undefined,
+      disapprovalDescription: disapprovalDescription || undefined,
       description: description || undefined,
       status: status,
       slug,
@@ -244,21 +244,21 @@ if (Astro.request.method === "POST") {
         value={race.votingMethod}
       />
 
-      <FormInput
-        label="Approve Option Label / Meaning (Optional)"
-        name="approveLabel"
-        type="text"
-        value={race.approveLabel ?? ""}
-        placeholder="e.g. For the Amendment (Expands tax relief)"
-      />
+      <div id="initiative-fields" class="space-y-6 hidden">
+        <FormTextarea
+          label="Approval Description (Optional)"
+          name="approvalDescription"
+          value={race.approvalDescription ?? ""}
+          placeholder="Explain what a YES / APPROVE vote means in plain language..."
+        />
 
-      <FormInput
-        label="Deny Option Label / Meaning (Optional)"
-        name="denyLabel"
-        type="text"
-        value={race.denyLabel ?? ""}
-        placeholder="e.g. Against the Amendment (Keeps current rules)"
-      />
+        <FormTextarea
+          label="Disapproval Description (Optional)"
+          name="disapprovalDescription"
+          value={race.disapprovalDescription ?? ""}
+          placeholder="Explain what a NO / DENY vote means in plain language..."
+        />
+      </div>
 
       <FormSelect
         label="District Type (Optional)"
@@ -503,5 +503,25 @@ if (Astro.request.method === "POST") {
         });
       });
     }
+  }
+
+  const votingMethodSelect = document.querySelector(
+    'select[name="votingMethod"]',
+  ) as HTMLSelectElement;
+  const initiativeFields = document.getElementById("initiative-fields");
+
+  function toggleInitiativeFields() {
+    if (votingMethodSelect && initiativeFields) {
+      if (votingMethodSelect.value === "INITIATIVE") {
+        initiativeFields.classList.remove("hidden");
+      } else {
+        initiativeFields.classList.add("hidden");
+      }
+    }
+  }
+
+  if (votingMethodSelect) {
+    votingMethodSelect.addEventListener("change", toggleInitiativeFields);
+    toggleInitiativeFields();
   }
 </script>

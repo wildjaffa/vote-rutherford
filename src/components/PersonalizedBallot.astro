@@ -500,9 +500,7 @@ const clientRaces = races.map((r) => ({
           );
           if (matchedId) {
             const isApprove = matchedId.endsWith("_approve");
-            const labelText = isApprove
-              ? race.approveLabel || "For / Approve"
-              : race.denyLabel || "Against / Deny";
+            const labelText = isApprove ? "For / Approve" : "Against / Deny";
             selectedCandidates = [
               {
                 id: 0,
