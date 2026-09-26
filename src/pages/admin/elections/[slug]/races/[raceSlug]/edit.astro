@@ -103,10 +103,18 @@ if (Astro.request.method === "POST") {
     const districtId = formData.get("districtId") as string | null;
     const partyCategory = formData.get("partyCategory") as string;
     const order = parseInt(formData.get("order") as string) || 0;
-    const approvalDescription = formData.get("approvalDescription") as string | null;
-    const disapprovalDescription = formData.get("disapprovalDescription") as string | null;
-    const initiativeDetails = formData.get("initiativeDetails") as string | null;
-    const initiativeSummary = formData.get("initiativeSummary") as string | null;
+    const approvalDescription = formData.get("approvalDescription") as
+      | string
+      | null;
+    const disapprovalDescription = formData.get("disapprovalDescription") as
+      | string
+      | null;
+    const initiativeDetails = formData.get("initiativeDetails") as
+      | string
+      | null;
+    const initiativeSummary = formData.get("initiativeSummary") as
+      | string
+      | null;
 
     const policyQuestionIds = formData.getAll(
       "policy-question-ids",
@@ -204,7 +212,7 @@ if (Astro.request.method === "POST") {
         >
           <path
             d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-1a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v1h-3zM4.75 12.094A5.973 5.973 0 004 15v1H1v-1a3 3 0 013.75-2.906z"
-          />
+          ></path>
         </svg>
         Manage Candidates
       </a>
@@ -247,13 +255,19 @@ if (Astro.request.method === "POST") {
         name="votingMethod"
         options={[
           { value: "STANDARD", label: "Standard (Candidates Competing)" },
-          { value: "RETENTION", label: "Retain or Replace (Judicial/Retention)" },
-          { value: "INITIATIVE", label: "Ballot Initiative / Referendum (Approve vs Deny)" },
+          {
+            value: "RETENTION",
+            label: "Retain or Replace (Judicial/Retention)",
+          },
+          {
+            value: "INITIATIVE",
+            label: "Ballot Initiative / Referendum (Approve vs Deny)",
+          },
         ]}
         value={race.votingMethod}
       />
 
-      <div id="initiative-fields" class="space-y-6 hidden">
+      <div id="initiative-fields" class="hidden space-y-6">
         <FormTextarea
           label="Plain-Language Summary (Optional, 1-2 sentences)"
           name="initiativeSummary"
@@ -428,7 +442,8 @@ if (Astro.request.method === "POST") {
             class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
           <span>
-            Copy questions from the selected source races into this race's election and assign them to this race.
+            Copy questions from the selected source races into this race's
+            election and assign them to this race.
           </span>
         </label>
 
@@ -439,7 +454,8 @@ if (Astro.request.method === "POST") {
             class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
           <span>
-            Auto-promote winning candidates from the selected source races into this race.
+            Auto-promote winning candidates from the selected source races into
+            this race.
           </span>
         </label>
       </div>

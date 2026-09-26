@@ -82,10 +82,18 @@ if (Astro.request.method === "POST") {
     const districtId = formData.get("districtId") as string | null;
     const partyCategory = formData.get("partyCategory") as string;
     const order = parseInt(formData.get("order") as string) || 0;
-    const approvalDescription = formData.get("approvalDescription") as string | null;
-    const disapprovalDescription = formData.get("disapprovalDescription") as string | null;
-    const initiativeDetails = formData.get("initiativeDetails") as string | null;
-    const initiativeSummary = formData.get("initiativeSummary") as string | null;
+    const approvalDescription = formData.get("approvalDescription") as
+      | string
+      | null;
+    const disapprovalDescription = formData.get("disapprovalDescription") as
+      | string
+      | null;
+    const initiativeDetails = formData.get("initiativeDetails") as
+      | string
+      | null;
+    const initiativeSummary = formData.get("initiativeSummary") as
+      | string
+      | null;
 
     const result = await Astro.callAction(actions.createRace, {
       electionId: election.id,
@@ -174,12 +182,15 @@ if (Astro.request.method === "POST") {
       options={[
         { value: "STANDARD", label: "Standard (Candidates Competing)" },
         { value: "RETENTION", label: "Retain or Replace (Judicial/Retention)" },
-        { value: "INITIATIVE", label: "Ballot Initiative / Referendum (Approve vs Deny)" },
+        {
+          value: "INITIATIVE",
+          label: "Ballot Initiative / Referendum (Approve vs Deny)",
+        },
       ]}
       required
     />
 
-    <div id="initiative-fields" class="space-y-6 hidden">
+    <div id="initiative-fields" class="hidden space-y-6">
       <FormTextarea
         label="Plain-Language Summary (Optional, 1-2 sentences)"
         name="initiativeSummary"
@@ -333,8 +344,8 @@ if (Astro.request.method === "POST") {
           class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         />
         <span>
-          Copy questions from the selected source races. Winners' matching answers
-          are copied when they are promoted.
+          Copy questions from the selected source races. Winners' matching
+          answers are copied when they are promoted.
         </span>
       </label>
 
@@ -345,7 +356,8 @@ if (Astro.request.method === "POST") {
           class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         />
         <span>
-          Auto-promote winning candidates from the selected source races into this new race.
+          Auto-promote winning candidates from the selected source races into
+          this new race.
         </span>
       </label>
     </div>

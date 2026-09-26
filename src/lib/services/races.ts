@@ -71,26 +71,36 @@ export async function createRace(
     await withUserContext(userId, async () => {
       const sourceRaces = await prisma.race.findMany({
         where: { id: { in: sourceRaceIds }, deletedAt: null },
-        include: { policyQuestionsToRaces: { where: { deletedAt: null }, include: { policyQuestion: true } } },
+        include: {
+          policyQuestionsToRaces: {
+            where: { deletedAt: null },
+            include: { policyQuestion: true },
+          },
+        },
       });
       const existingQuestions = await prisma.policyQuestion.findMany({
         where: { electionId: created.electionId, deletedAt: null },
       });
-      const questionIdsByContent = new Map(existingQuestions.map((question) => [
-        `${question.questionText}\u0000${question.descriptionText}`, question.id,
-      ]));
+      const questionIdsByContent = new Map(
+        existingQuestions.map((question) => [
+          `${question.questionText}\u0000${question.descriptionText}`,
+          question.id,
+        ]),
+      );
       const questionIds = new Set<string>();
       for (const sourceRace of sourceRaces) {
         for (const { policyQuestion } of sourceRace.policyQuestionsToRaces) {
           const key = `${policyQuestion.questionText}\u0000${policyQuestion.descriptionText}`;
           let questionId = questionIdsByContent.get(key);
           if (!questionId) {
-            const copied = await prisma.policyQuestion.create({ data: {
-              electionId: created.electionId,
-              questionText: policyQuestion.questionText,
-              descriptionText: policyQuestion.descriptionText,
-              order: policyQuestion.order,
-            }});
+            const copied = await prisma.policyQuestion.create({
+              data: {
+                electionId: created.electionId,
+                questionText: policyQuestion.questionText,
+                descriptionText: policyQuestion.descriptionText,
+                order: policyQuestion.order,
+              },
+            });
             questionId = copied.id;
             questionIdsByContent.set(key, questionId);
           }
@@ -100,7 +110,8 @@ export async function createRace(
       if (questionIds.size) {
         await prisma.policyQuestionToRace.createMany({
           data: [...questionIds].map((policyQuestionId) => ({
-            raceId: created.id, policyQuestionId,
+            raceId: created.id,
+            policyQuestionId,
           })),
         });
       }
@@ -200,26 +211,36 @@ export async function updateRace(
     if (copyPolicyQuestionsFromSources && sourceRaceIds?.length) {
       const sourceRaces = await prisma.race.findMany({
         where: { id: { in: sourceRaceIds }, deletedAt: null },
-        include: { policyQuestionsToRaces: { where: { deletedAt: null }, include: { policyQuestion: true } } },
+        include: {
+          policyQuestionsToRaces: {
+            where: { deletedAt: null },
+            include: { policyQuestion: true },
+          },
+        },
       });
       const existingQuestions = await prisma.policyQuestion.findMany({
         where: { electionId: race.electionId, deletedAt: null },
       });
-      const questionIdsByContent = new Map(existingQuestions.map((question) => [
-        `${question.questionText}\u0000${question.descriptionText}`, question.id,
-      ]));
+      const questionIdsByContent = new Map(
+        existingQuestions.map((question) => [
+          `${question.questionText}\u0000${question.descriptionText}`,
+          question.id,
+        ]),
+      );
       const questionIds = new Set<string>();
       for (const sourceRace of sourceRaces) {
         for (const { policyQuestion } of sourceRace.policyQuestionsToRaces) {
           const key = `${policyQuestion.questionText}\u0000${policyQuestion.descriptionText}`;
           let questionId = questionIdsByContent.get(key);
           if (!questionId) {
-            const copied = await prisma.policyQuestion.create({ data: {
-              electionId: race.electionId,
-              questionText: policyQuestion.questionText,
-              descriptionText: policyQuestion.descriptionText,
-              order: policyQuestion.order,
-            }});
+            const copied = await prisma.policyQuestion.create({
+              data: {
+                electionId: race.electionId,
+                questionText: policyQuestion.questionText,
+                descriptionText: policyQuestion.descriptionText,
+                order: policyQuestion.order,
+              },
+            });
             questionId = copied.id;
             questionIdsByContent.set(key, questionId);
           }
@@ -231,13 +252,18 @@ export async function updateRace(
         const existingLinks = await prisma.policyQuestionToRace.findMany({
           where: { raceId: race.id },
         });
-        const existingLinkedQuestionIds = new Set(existingLinks.map(l => l.policyQuestionId));
-        const newQuestionIdsToLink = [...questionIds].filter(id => !existingLinkedQuestionIds.has(id));
-        
+        const existingLinkedQuestionIds = new Set(
+          existingLinks.map((l) => l.policyQuestionId),
+        );
+        const newQuestionIdsToLink = [...questionIds].filter(
+          (id) => !existingLinkedQuestionIds.has(id),
+        );
+
         if (newQuestionIdsToLink.length > 0) {
           await prisma.policyQuestionToRace.createMany({
             data: newQuestionIdsToLink.map((policyQuestionId) => ({
-              raceId: race.id, policyQuestionId,
+              raceId: race.id,
+              policyQuestionId,
             })),
           });
         }
@@ -276,7 +302,9 @@ export async function updateRace(
     `/elections/${existing.election.slug}/${existing.slug}`,
   ];
   if (updated.slug !== existing.slug) {
-    endpointsToPurge.push(`/elections/${existing.election.slug}/${updated.slug}`);
+    endpointsToPurge.push(
+      `/elections/${existing.election.slug}/${updated.slug}`,
+    );
   }
   void purgeCloudflareCache(endpointsToPurge);
 
@@ -302,11 +330,11 @@ export async function reorderRaces(
     }
   });
 
-  const election = await prisma.election.findUnique({ where: { id: electionId } });
+  const election = await prisma.election.findUnique({
+    where: { id: electionId },
+  });
   if (election) {
-    void purgeCloudflareCache([
-      `/elections/${election.slug}`,
-    ]);
+    void purgeCloudflareCache([`/elections/${election.slug}`]);
   }
 }
 
