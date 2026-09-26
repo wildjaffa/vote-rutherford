@@ -10,6 +10,8 @@ export const upsertRaceSchema = z.object({
   votingMethod: z.string().default("STANDARD"),
   approvalDescription: z.string().optional().nullable(),
   disapprovalDescription: z.string().optional().nullable(),
+  initiativeDetails: z.string().optional().nullable(),
+  initiativeSummary: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   status: z.string().min(1, "Status is required"),
   slug: z.string().min(1, "Slug is required"),

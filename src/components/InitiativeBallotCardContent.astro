@@ -1,0 +1,136 @@
+---
+import { ArrowRight, Calendar, Square, SquareCheck } from "../lib/icons";
+
+interface Props {
+  raceId: string;
+  name: string;
+  summary?: string | null;
+  officialText?: string | null;
+  approvalDescription?: string | null;
+  disapprovalDescription?: string | null;
+  electionDate: Date | string;
+  detailsHref?: string;
+  preview?: boolean;
+}
+
+const {
+  raceId,
+  name,
+  summary,
+  officialText,
+  approvalDescription,
+  disapprovalDescription,
+  electionDate,
+  detailsHref,
+  preview = false,
+} = Astro.props;
+
+const formattedDate = new Date(electionDate).toLocaleDateString("en-US", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+const hasMoreInfo = Boolean(
+  officialText || approvalDescription || disapprovalDescription,
+);
+---
+
+<div class="flex flex-1 flex-col pt-4">
+  <h3
+    class="m-0 mb-2 text-xl font-bold text-gray-900"
+    data-preview-field={preview ? "name" : undefined}
+  >
+    {name || "Race title"}
+  </h3>
+  <p
+    class="m-0 mb-3 leading-relaxed text-gray-600"
+    data-preview-field={preview ? "summary" : undefined}
+  >
+    {summary || "This measure asks voters to approve or reject a proposed change."}
+  </p>
+  <div class="grow"></div>
+
+  <p class="mb-3">
+    <Calendar size="18" stroke-width={2} class="text-secondary mr-1 inline" />
+    {formattedDate}
+  </p>
+
+  <div class="candidates-list mt-auto flex flex-col gap-2">
+    <div class="initiative-options flex flex-col gap-2">
+      {[
+        { choice: "approve", label: "For / Approve" },
+        { choice: "deny", label: "Against / Deny" },
+      ].map((option) => (
+        <button
+          type="button"
+          class="candidate-row focus:ring-secondary/50 flex w-full items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 focus:ring-2 focus:outline-none"
+          data-candidate-id={`${raceId}_${option.choice}`}
+          data-base-candidate-id={raceId}
+          data-choice={option.choice}
+          aria-disabled={preview ? "true" : undefined}
+          tabindex={preview ? -1 : undefined}
+        >
+          <span class="font-medium text-gray-900">{option.label}</span>
+          <span class="checkbox-container text-gray-400" aria-hidden="true">
+            <span class="unselected-icon"><Square class="h-5 w-5" /></span>
+            <span class="selected-icon text-secondary hidden"><SquareCheck class="h-5 w-5" /></span>
+          </span>
+        </button>
+      ))}
+
+      <div
+        class="mt-1 border-t border-gray-200 pt-2 text-sm text-gray-600"
+        data-preview-section="more"
+        class:list={{ hidden: preview && !hasMoreInfo }}
+      >
+        <p class="mb-1 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+          More about this measure
+        </p>
+        <details
+          class="py-1"
+          data-preview-section="official"
+          class:list={{ hidden: preview && !officialText }}
+        >
+          <summary class="cursor-pointer font-medium text-secondary">
+            Read full official ballot language
+          </summary>
+          <p
+            class="mt-2 whitespace-pre-wrap leading-relaxed"
+            data-preview-field={preview ? "officialText" : undefined}
+          >{officialText}</p>
+        </details>
+        <details
+          class="py-1"
+          data-preview-section="voteMeanings"
+          class:list={{ hidden: preview && !approvalDescription && !disapprovalDescription }}
+        >
+          <summary class="cursor-pointer font-medium text-secondary">
+            What does each vote mean?
+          </summary>
+          <div class="mt-2 space-y-2 leading-relaxed">
+            <p
+              data-preview-section="approval"
+              class:list={{ hidden: preview && !approvalDescription }}
+            ><strong>For / Approve:</strong> <span data-preview-field={preview ? "approval" : undefined}>{approvalDescription}</span></p>
+            <p
+              data-preview-section="disapproval"
+              class:list={{ hidden: preview && !disapprovalDescription }}
+            ><strong>Against / Deny:</strong> <span data-preview-field={preview ? "disapproval" : undefined}>{disapprovalDescription}</span></p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    {detailsHref ? (
+      <a href={detailsHref} class="text-secondary hover:text-primary font-medium">
+        View Details<ArrowRight size="16" stroke-width={2} class="ml-1 inline" />
+      </a>
+    ) : (
+      <span class="text-secondary font-medium">
+        View Details<ArrowRight size="16" stroke-width={2} class="ml-1 inline" />
+      </span>
+    )}
+  </div>
+</div>

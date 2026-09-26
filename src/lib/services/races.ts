@@ -148,12 +148,27 @@ export async function updateRace(
   }
 
   const validated = await validateRacePayload(body);
-  const { policyQuestionIds, sourceRaceIds, copyPolicyQuestionsFromSources, promoteWinningCandidatesFromSources, ...raceData } = validated;
+  const {
+    policyQuestionIds,
+    sourceRaceIds,
+    copyPolicyQuestionsFromSources,
+    promoteWinningCandidatesFromSources,
+    raceScopeId,
+    districtId,
+    ...raceData
+  } = validated;
 
   const updated = await withUserContext(userId, async () => {
     const updateData: Prisma.RaceUpdateInput = {
       ...(raceData as Prisma.RaceUpdateInput),
+      raceScope: { connect: { id: raceScopeId } },
     };
+
+    if (districtId !== undefined) {
+      updateData.district = districtId
+        ? { connect: { id: districtId } }
+        : { disconnect: true };
+    }
 
     if (sourceRaceIds !== undefined) {
       updateData.sourceRaces = {

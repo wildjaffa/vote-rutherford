@@ -2,6 +2,7 @@
 import { PartyCategories } from "../constants";
 import RaceScope from "../enums/raceScopeEnum";
 import type { Candidate, Election, Race } from "../generated/prisma/browser";
+import InitiativeBallotCardContent from "./InitiativeBallotCardContent.astro";
 import { Users, SquareCheck, Square, ArrowRight, Calendar } from "../lib/icons";
 
 interface Props {
@@ -25,22 +26,6 @@ const getRaceScopeLabel = (raceScopeId: number): string => {
 
 const typeLabel = getRaceScopeLabel(race.raceScopeId);
 
-// Pre-calculate initiative options if applicable
-const initiativeOptions =
-  race.votingMethod === "INITIATIVE"
-    ? [
-        {
-          id: `${race.id}_approve`,
-          label: "For / Approve",
-          choice: "approve",
-        },
-        {
-          id: `${race.id}_deny`,
-          label: "Against / Deny",
-          choice: "deny",
-        },
-      ]
-    : [];
 ---
 
 <div
@@ -71,72 +56,46 @@ const initiativeOptions =
       {typeLabel}
     </span>
   </div>
-  <div class="flex flex-1 flex-col pt-4">
-    <h3
-      class="group-hover:text-secondary m-0 mb-2 text-xl font-bold text-gray-900"
-    >
-      {race.name}
-    </h3>
-    <p class="m-0 mb-3 leading-relaxed text-gray-600">{race.description}</p>
-    <div class="grow"></div>
-
-    <p class="mb-3">
-      <Calendar
-        size="18"
-        stroke-width={2}
-        class="text-secondary mr-1 inline"
-      />{
-        new Date(election.date).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      }
-      {
-        race.votingMethod === "STANDARD" && (
-          <>
-            <Users size="16" stroke-width={2} class="text-secondary ml-2 inline" />
-            {candidates.length} Candidates
-            {race.numSelections > 1 && (
-              <>
-                <span class="mx-2">•</span>
-                Select up to{" "}
-                <span class="num-selections">{race.numSelections}</span>
-              </>
-            )}
-          </>
-        )
-      }
-    </p>
-
-    <div class="candidates-list mt-auto flex flex-col gap-2">
-      {
-        race.votingMethod === "INITIATIVE" && (
-          <div class="initiative-options flex flex-col gap-2">
-            {initiativeOptions.map((option) => (
-              <button
-                class="candidate-row focus:ring-secondary/50 flex w-full items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 focus:ring-2 focus:outline-none"
-                data-candidate-id={option.id}
-                data-base-candidate-id={race.id}
-                data-choice={option.choice}
-              >
-                <div>
-                  <span class="font-medium text-gray-900">{option.label}</span>
-                </div>
-                <div class="checkbox-container text-gray-400">
-                  <span class="unselected-icon">
-                    <Square class="h-5 w-5" />
-                  </span>
-                  <span class="selected-icon text-secondary hidden">
-                    <SquareCheck class="h-5 w-5" />
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )
-      }
-
+  {
+    race.votingMethod === "INITIATIVE" ? (
+      <InitiativeBallotCardContent
+        raceId={race.id}
+        name={race.name}
+        summary={race.initiativeSummary}
+        officialText={race.description}
+        approvalDescription={race.approvalDescription}
+        disapprovalDescription={race.disapprovalDescription}
+        electionDate={election.date}
+        detailsHref={`/elections/${election.slug}/${race.slug}`}
+      />
+    ) : (
+      <div class="flex flex-1 flex-col pt-4">
+        <h3 class="group-hover:text-secondary m-0 mb-2 text-xl font-bold text-gray-900">
+          {race.name}
+        </h3>
+        <p class="m-0 mb-3 leading-relaxed text-gray-600">{race.description}</p>
+        <div class="grow"></div>
+        <p class="mb-3">
+          <Calendar size="18" stroke-width={2} class="text-secondary mr-1 inline" />
+          {new Date(election.date).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
+          {race.votingMethod === "STANDARD" && (
+            <>
+              <Users size="16" stroke-width={2} class="text-secondary ml-2 inline" />
+              {candidates.length} {candidates.length === 1 ? "Candidate" : "Candidates"}
+              {race.numSelections > 1 && (
+                <>
+                  <span class="mx-2">•</span>
+                  Select up to <span class="num-selections">{race.numSelections}</span>
+                </>
+              )}
+            </>
+          )}
+        </p>
+        <div class="candidates-list mt-auto flex flex-col gap-2">
       {
         race.votingMethod === "RETENTION" &&
           candidates.map((candidate, idx) => (
@@ -221,20 +180,15 @@ const initiativeOptions =
             </button>
           ))
       }
-    </div>
-
-    <div class="mt-4">
-      <a
-        href={`/elections/${election.slug}/${race.slug}`}
-        class="text-secondary hover:text-primary font-medium"
-        >View Details<ArrowRight
-          size="16"
-          stroke-width={2}
-          class="ml-1 inline"
-        /></a
-      >
-    </div>
-  </div>
+        </div>
+        <div class="mt-4">
+          <a href={`/elections/${election.slug}/${race.slug}`} class="text-secondary hover:text-primary font-medium">
+            View Details<ArrowRight size="16" stroke-width={2} class="ml-1 inline" />
+          </a>
+        </div>
+      </div>
+    )
+  }
 </div>
 
 <script>

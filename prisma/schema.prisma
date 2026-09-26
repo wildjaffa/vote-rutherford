@@ -57,6 +57,8 @@ model Race {
   votingMethod  String    @default("STANDARD")
   approvalDescription String?
   disapprovalDescription String?
+  initiativeDetails String?
+  initiativeSummary String?
   district      District? @relation(fields: [districtId], references: [id])
   districtId    String?
   numSelections Int       @default(1)

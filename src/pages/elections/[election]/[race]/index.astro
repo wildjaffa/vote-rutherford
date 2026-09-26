@@ -5,6 +5,8 @@ import prisma from "../../../../lib/prisma";
 import BackOption from "../../../../components/BackOption.astro";
 import CandidateProfilePicture from "../../../../components/CandidateProfilePicture.astro";
 import PlaceholderCandidateCard from "../../../../components/PlaceholderCandidateCard.astro";
+import MarkdownIt from "markdown-it";
+import { Square, SquareCheck } from "../../../../lib/icons";
 
 export const prerender = false;
 
@@ -48,6 +50,16 @@ const raceData = await prisma.race.findFirst({
 if (raceData === null) {
   return Astro.redirect("/404");
 }
+
+const initiativeMarkdown = new MarkdownIt({
+  html: false,
+  linkify: true,
+  breaks: true,
+});
+initiativeMarkdown.disable("image");
+const initiativeDetailsHtml = raceData.initiativeDetails
+  ? initiativeMarkdown.render(raceData.initiativeDetails)
+  : "";
 
 const questions = raceData.election.policyQuestions;
 const { candidates, sourceRaces } = raceData;
@@ -93,7 +105,12 @@ const noIncumbent = candidates.filter((c) => c.isIncumbent).length === 0;
   <main class="container mx-auto flex-1 px-4 py-8">
     <div class="mb-12">
       <h1 class="mb-4 text-4xl font-bold text-gray-900">{raceData.name}</h1>
-      <p class="max-w-3xl text-xl text-gray-600">{raceData.description}</p>
+      <p class="max-w-3xl text-xl text-gray-600">
+        {raceData.votingMethod === "INITIATIVE"
+          ? raceData.initiativeSummary ||
+            "This measure asks voters to approve or reject a proposed change."
+          : raceData.description}
+      </p>
       {
         raceData.numSelections > 1 && (
           <p class="mt-4 inline-block rounded-lg bg-blue-50 px-4 py-2 text-blue-800">
@@ -109,20 +126,59 @@ const noIncumbent = candidates.filter((c) => c.isIncumbent).length === 0;
         raceData.votingMethod === "INITIATIVE" ? (
           <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <h2 class="mb-4 text-2xl font-semibold text-gray-900">Ballot Measure Details</h2>
+            {initiativeDetailsHtml && (
+              <div class="initiative-markdown mb-6 max-w-4xl text-gray-800" set:html={initiativeDetailsHtml} />
+            )}
+            {raceData.description && (
+              <details class="mb-6 border-y border-gray-200 py-3">
+                <summary class="cursor-pointer font-semibold text-secondary">
+                  Read full official ballot language
+                </summary>
+                <p class="mt-3 max-w-4xl whitespace-pre-wrap leading-relaxed text-gray-800">
+                  {raceData.description}
+                </p>
+              </details>
+            )}
+            <h3 class="mb-3 text-lg font-semibold text-gray-900">Choose your vote</h3>
             <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div class="rounded-lg bg-green-50 p-4 border border-green-200">
-                <h3 class="text-lg font-bold text-green-900 mb-1">A "YES / APPROVE" Vote Means:</h3>
-                <p class="text-green-800 text-sm leading-relaxed">
-                  {raceData.approvalDescription || "Approve or support this measure."}
-                </p>
-              </div>
-              <div class="rounded-lg bg-red-50 p-4 border border-red-200">
-                <h3 class="text-lg font-bold text-red-900 mb-1">A "NO / DENY" Vote Means:</h3>
-                <p class="text-red-800 text-sm leading-relaxed">
-                  {raceData.disapprovalDescription || "Deny or oppose this measure."}
-                </p>
-              </div>
+              <button
+                type="button"
+                class="initiative-vote-choice flex w-full items-start justify-between gap-4 rounded-lg border border-green-200 bg-green-50 p-4 text-left transition-colors hover:bg-green-100 focus:ring-2 focus:ring-green-700 focus:outline-none"
+                data-choice="approve"
+                data-candidate-id={`${raceData.id}_approve`}
+                aria-pressed="false"
+              >
+                <span>
+                  <span class="mb-1 block text-lg font-bold text-green-900">A "YES / APPROVE" Vote Means:</span>
+                  <span class="block text-sm leading-relaxed text-green-800">
+                    {raceData.approvalDescription || "Approve or support this measure."}
+                  </span>
+                </span>
+                <span class="shrink-0 text-green-800" aria-hidden="true">
+                  <span class="unselected-icon"><Square class="h-6 w-6" /></span>
+                  <span class="selected-icon hidden"><SquareCheck class="h-6 w-6" /></span>
+                </span>
+              </button>
+              <button
+                type="button"
+                class="initiative-vote-choice flex w-full items-start justify-between gap-4 rounded-lg border border-red-200 bg-red-50 p-4 text-left transition-colors hover:bg-red-100 focus:ring-2 focus:ring-red-700 focus:outline-none"
+                data-choice="deny"
+                data-candidate-id={`${raceData.id}_deny`}
+                aria-pressed="false"
+              >
+                <span>
+                  <span class="mb-1 block text-lg font-bold text-red-900">A "NO / DENY" Vote Means:</span>
+                  <span class="block text-sm leading-relaxed text-red-800">
+                    {raceData.disapprovalDescription || "Deny or oppose this measure."}
+                  </span>
+                </span>
+                <span class="shrink-0 text-red-800" aria-hidden="true">
+                  <span class="unselected-icon"><Square class="h-6 w-6" /></span>
+                  <span class="selected-icon hidden"><SquareCheck class="h-6 w-6" /></span>
+                </span>
+              </button>
             </div>
+            <p id="initiative-choice-status" class="mt-3 text-sm text-gray-600" aria-live="polite"></p>
           </div>
         ) : (
           <>
@@ -357,7 +413,133 @@ const noIncumbent = candidates.filter((c) => c.isIncumbent).length === 0;
   refresh();
 </script>
 
+<script>
+  const initInitiativeVoteChoices = () => {
+    const buttons = document.querySelectorAll<HTMLButtonElement>(
+      ".initiative-vote-choice",
+    );
+    if (buttons.length === 0) return;
+    if (buttons[0]?.dataset.voteChoiceInitialized === "true") return;
+    if (buttons[0]) buttons[0].dataset.voteChoiceInitialized = "true";
+
+    const storageKey = "vote_plan_selections";
+    const firstId = buttons[0]?.dataset.candidateId;
+    const raceId = firstId?.replace(/_(approve|deny)$/, "");
+    const status = document.getElementById("initiative-choice-status");
+    if (!raceId) return;
+
+    const readSelections = (): Record<string, string[]> => {
+      try {
+        return JSON.parse(localStorage.getItem(storageKey) || "{}");
+      } catch {
+        return {};
+      }
+    };
+
+    const render = () => {
+      const selectedIds = readSelections()[raceId] || [];
+      buttons.forEach((button) => {
+        const selected = selectedIds.includes(button.dataset.candidateId || "");
+        button.setAttribute("aria-pressed", String(selected));
+        button.classList.toggle("ring-2", selected);
+        button.classList.toggle("ring-offset-2", selected);
+        button.classList.toggle(
+          "ring-green-700",
+          selected && button.dataset.choice === "approve",
+        );
+        button.classList.toggle(
+          "ring-red-700",
+          selected && button.dataset.choice === "deny",
+        );
+        button.querySelector(".unselected-icon")?.classList.toggle("hidden", selected);
+        button.querySelector(".selected-icon")?.classList.toggle("hidden", !selected);
+      });
+
+      const selectedChoice = Array.from(buttons).find((button) =>
+        selectedIds.includes(button.dataset.candidateId || ""),
+      )?.dataset.choice;
+      if (status) {
+        status.textContent = selectedChoice
+          ? `Your vote plan: ${selectedChoice === "approve" ? "For / Approve" : "Against / Deny"}.`
+          : "No vote selected yet.";
+      }
+    };
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const candidateId = button.dataset.candidateId;
+        const choice = button.dataset.choice;
+        if (!candidateId || !choice) return;
+
+        const selections = readSelections();
+        const selectedIds = selections[raceId] || [];
+        if (selectedIds.includes(candidateId)) {
+          selections[raceId] = selectedIds.filter((id) => id !== candidateId);
+        } else {
+          const oppositeChoice = choice === "approve" ? "deny" : "approve";
+          const oppositeId = `${raceId}_${oppositeChoice}`;
+          selections[raceId] = [
+            ...selectedIds.filter((id) => id !== oppositeId),
+            candidateId,
+          ];
+        }
+
+        localStorage.setItem(storageKey, JSON.stringify(selections));
+        render();
+      });
+    });
+
+    window.addEventListener("storage", (event) => {
+      if (event.key === storageKey) render();
+    });
+
+    render();
+  };
+
+  initInitiativeVoteChoices();
+  document.addEventListener("astro:page-load", initInitiativeVoteChoices);
+</script>
+
 <style>
+  :global(.initiative-markdown h2) {
+    margin: 1.5rem 0 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  :global(.initiative-markdown h3) {
+    margin: 1.25rem 0 0.5rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  :global(.initiative-markdown p) {
+    margin: 0.5rem 0;
+    line-height: 1.6;
+  }
+
+  :global(.initiative-markdown ul),
+  :global(.initiative-markdown ol) {
+    margin: 0.5rem 0 0.75rem;
+    padding-left: 1.5rem;
+  }
+
+  :global(.initiative-markdown ul) {
+    list-style: disc;
+  }
+
+  :global(.initiative-markdown ol) {
+    list-style: decimal;
+  }
+
+  :global(.initiative-markdown a) {
+    color: #b42332;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
   }

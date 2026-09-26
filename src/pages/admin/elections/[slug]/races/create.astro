@@ -2,6 +2,7 @@
 import AdminLayout from "../../../../../layouts/AdminLayout.astro";
 import FormInput from "../../../../../components/forms/FormInput.astro";
 import FormTextarea from "../../../../../components/forms/FormTextarea.astro";
+import InitiativePreview from "../../../../../components/InitiativePreview.astro";
 import FormSelect from "../../../../../components/forms/FormSelect.astro";
 import { actions } from "astro:actions";
 import Button from "../../../../../components/Button.astro";
@@ -83,6 +84,8 @@ if (Astro.request.method === "POST") {
     const order = parseInt(formData.get("order") as string) || 0;
     const approvalDescription = formData.get("approvalDescription") as string | null;
     const disapprovalDescription = formData.get("disapprovalDescription") as string | null;
+    const initiativeDetails = formData.get("initiativeDetails") as string | null;
+    const initiativeSummary = formData.get("initiativeSummary") as string | null;
 
     const result = await Astro.callAction(actions.createRace, {
       electionId: election.id,
@@ -93,6 +96,8 @@ if (Astro.request.method === "POST") {
       votingMethod,
       approvalDescription: approvalDescription || undefined,
       disapprovalDescription: disapprovalDescription || undefined,
+      initiativeDetails: initiativeDetails || undefined,
+      initiativeSummary: initiativeSummary || undefined,
       description,
       status,
       slug,
@@ -176,6 +181,13 @@ if (Astro.request.method === "POST") {
 
     <div id="initiative-fields" class="space-y-6 hidden">
       <FormTextarea
+        label="Plain-Language Summary (Optional, 1-2 sentences)"
+        name="initiativeSummary"
+        rows={2}
+        placeholder="Give a neutral, high-level summary of what the measure is about. Do not paraphrase the official legal text here."
+      />
+
+      <FormTextarea
         label="Approval Description (Optional)"
         name="approvalDescription"
         placeholder="Explain what a YES / APPROVE vote means in plain language..."
@@ -185,6 +197,12 @@ if (Astro.request.method === "POST") {
         label="Disapproval Description (Optional)"
         name="disapprovalDescription"
         placeholder="Explain what a NO / DENY vote means in plain language..."
+      />
+
+      <FormTextarea
+        label="Initiative Details (Markdown, Optional)"
+        name="initiativeDetails"
+        placeholder={"## How things work now\nDescribe current law...\n\n## What the amendment would do\nDescribe the proposed change...\n\n## Supporters and opponents\nSummarize the main arguments..."}
       />
     </div>
 
@@ -247,10 +265,12 @@ if (Astro.request.method === "POST") {
     />
 
     <FormTextarea
-      label="Description"
+      label="Description (official ballot language for initiatives)"
       name="description"
-      placeholder="Enter race description..."
+      placeholder="Describe the race. For initiatives, paste the complete official ballot wording exactly as published."
     />
+
+    <InitiativePreview electionDate={election.date} />
 
     <div class="space-y-3">
       <label class="block text-sm font-medium text-gray-700"

@@ -3,6 +3,7 @@ import { actions } from "astro:actions";
 import DeleteButton from "../../../../../../components/forms/DeleteButton.astro";
 import FormSelect from "../../../../../../components/forms/FormSelect.astro";
 import FormTextarea from "../../../../../../components/forms/FormTextarea.astro";
+import InitiativePreview from "../../../../../../components/InitiativePreview.astro";
 import AdminLayout from "../../../../../../layouts/AdminLayout.astro";
 import Button from "../../../../../../components/Button.astro";
 import prisma from "../../../../../../lib/prisma";
@@ -104,6 +105,8 @@ if (Astro.request.method === "POST") {
     const order = parseInt(formData.get("order") as string) || 0;
     const approvalDescription = formData.get("approvalDescription") as string | null;
     const disapprovalDescription = formData.get("disapprovalDescription") as string | null;
+    const initiativeDetails = formData.get("initiativeDetails") as string | null;
+    const initiativeSummary = formData.get("initiativeSummary") as string | null;
 
     const policyQuestionIds = formData.getAll(
       "policy-question-ids",
@@ -118,6 +121,8 @@ if (Astro.request.method === "POST") {
       votingMethod,
       approvalDescription: approvalDescription || undefined,
       disapprovalDescription: disapprovalDescription || undefined,
+      initiativeDetails: initiativeDetails || null,
+      initiativeSummary: initiativeSummary || null,
       description: description || undefined,
       status: status,
       slug,
@@ -132,7 +137,9 @@ if (Astro.request.method === "POST") {
       policyQuestionIds,
     });
 
-    if (result.data) {
+    if (result.error) {
+      error = result.error.message;
+    } else if (result.data) {
       success = "Race updated successfully";
       race = (await prisma.race.findFirst({
         where: { slug: raceSlug, election: { slug: electionSlug } },
@@ -148,6 +155,8 @@ if (Astro.request.method === "POST") {
         },
       }))!;
       currentSourceRaceIds = new Set(race.sourceRaces.map((sr) => sr.id));
+    } else {
+      error = "Failed to update race";
     }
   } catch (err) {
     error = err instanceof Error ? err.message : "Failed to update race";
@@ -246,6 +255,14 @@ if (Astro.request.method === "POST") {
 
       <div id="initiative-fields" class="space-y-6 hidden">
         <FormTextarea
+          label="Plain-Language Summary (Optional, 1-2 sentences)"
+          name="initiativeSummary"
+          value={race.initiativeSummary ?? ""}
+          rows={2}
+          placeholder="Give a neutral, high-level summary of what the measure is about. Do not paraphrase the official legal text here."
+        />
+
+        <FormTextarea
           label="Approval Description (Optional)"
           name="approvalDescription"
           value={race.approvalDescription ?? ""}
@@ -257,6 +274,13 @@ if (Astro.request.method === "POST") {
           name="disapprovalDescription"
           value={race.disapprovalDescription ?? ""}
           placeholder="Explain what a NO / DENY vote means in plain language..."
+        />
+
+        <FormTextarea
+          label="Initiative Details (Markdown, Optional)"
+          name="initiativeDetails"
+          value={race.initiativeDetails ?? ""}
+          placeholder={"## How things work now\nDescribe current law...\n\n## What the amendment would do\nDescribe the proposed change...\n\n## Supporters and opponents\nSummarize the main arguments..."}
         />
       </div>
 
@@ -327,11 +351,13 @@ if (Astro.request.method === "POST") {
       />
 
       <FormTextarea
-        label="Description"
+        label="Description (official ballot language for initiatives)"
         name="description"
         value={race.description}
-        placeholder="Enter race description..."
+        placeholder="Describe the race. For initiatives, paste the complete official ballot wording exactly as published."
       />
+
+      <InitiativePreview electionDate={election.date} />
 
       <FormPolicyQuestionSelect
         allQuestions={election.policyQuestions}
