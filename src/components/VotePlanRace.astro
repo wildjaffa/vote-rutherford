@@ -28,7 +28,7 @@ const typeLabel = getRaceScopeLabel(race.raceScopeId);
 ---
 
 <div
-  class="group vote-plan-race flex h-full transform-gpu flex-col overflow-hidden rounded-lg border border-gray-200 bg-white p-6 shadow transition-transform hover:-translate-y-1 hover:shadow-lg"
+  class="group vote-plan-race flex h-full max-h-none min-h-0 transform-gpu flex-col overflow-hidden rounded-lg border border-gray-200 bg-white p-6 shadow transition-transform hover:-translate-y-1 hover:shadow-lg lg:max-h-[44rem] lg:min-h-0"
   data-race-id={race.id}
   data-num-selections={race.numSelections}
   data-party-category={race.partyCategory}
@@ -68,125 +68,128 @@ const typeLabel = getRaceScopeLabel(race.raceScopeId);
         detailsHref={`/elections/${election.slug}/${race.slug}`}
       />
     ) : (
-      <div class="flex flex-1 flex-col pt-4">
+      <div class="flex flex-1 flex-col pt-4 lg:min-h-0">
         <h3 class="group-hover:text-secondary m-0 mb-2 text-xl font-bold text-gray-900">
           {race.name}
         </h3>
         <p class="m-0 mb-3 leading-relaxed text-gray-600">{race.description}</p>
-        <div class="grow" />
-        <p class="mb-3">
-          <Calendar
-            size="18"
-            stroke-width={2}
-            class="text-secondary mr-1 inline"
-          />
-          {new Date(election.date).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-          {race.votingMethod === "STANDARD" && (
-            <>
-              <Users
-                size="16"
-                stroke-width={2}
-                class="text-secondary ml-2 inline"
-              />
-              {candidates.length}{" "}
-              {candidates.length === 1 ? "Candidate" : "Candidates"}
-              {race.numSelections > 1 && (
-                <>
-                  <span class="mx-2">•</span>
-                  Select up to{" "}
-                  <span class="num-selections">{race.numSelections}</span>
-                </>
-              )}
-            </>
-          )}
-        </p>
-        <div class="candidates-list mt-auto flex flex-col gap-2">
-          {race.votingMethod === "RETENTION" &&
-            candidates.map((candidate, idx) => (
+        <div class="mt-auto flex flex-col lg:min-h-0">
+          <p class="mb-3 shrink-0">
+            <Calendar
+              size="18"
+              stroke-width={2}
+              class="text-secondary mr-1 inline"
+            />
+            {new Date(election.date).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+            {race.votingMethod === "STANDARD" && (
               <>
-                {idx > 0 && (
-                  <div class="retention-divider flex items-center gap-3 py-1">
-                    <div class="h-px flex-1 bg-gray-200" />
-                    <span class="text-[10px] font-bold tracking-widest text-gray-400 uppercase" />
-                    <div class="h-px flex-1 bg-gray-200" />
-                  </div>
+                <Users
+                  size="16"
+                  stroke-width={2}
+                  class="text-secondary ml-2 inline"
+                />
+                {candidates.length}{" "}
+                {candidates.length === 1 ? "Candidate" : "Candidates"}
+                {race.numSelections > 1 && (
+                  <>
+                    <span class="mx-2">•</span>
+                    Select up to{" "}
+                    <span class="num-selections">{race.numSelections}</span>
+                  </>
                 )}
-                <div class="retention-candidate-group flex flex-col gap-2">
-                  <p class="font-medium text-gray-900">
-                    {candidate.firstName} {candidate.lastName}
-                  </p>
-                  {[
-                    {
-                      id: `${candidate.id}_retain`,
-                      label: "Retain",
-                      candidateId: candidate.id,
-                      choice: "retain",
-                    },
-                    {
-                      id: `${candidate.id}_replace`,
-                      label: "Replace",
-                      candidateId: candidate.id,
-                      choice: "replace",
-                    },
-                  ].map((option) => (
-                    <button
-                      class="candidate-row focus:ring-secondary/50 flex w-full items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 focus:ring-2 focus:outline-none"
-                      data-candidate-id={option.id}
-                      data-base-candidate-id={option.candidateId}
-                      data-choice={option.choice}
-                    >
-                      <div>
-                        <span class="font-medium text-gray-500">
-                          {option.label}
-                        </span>
-                      </div>
-                      <div class="checkbox-container text-gray-400">
-                        <span class="unselected-icon">
-                          <Square class="h-5 w-5" />
-                        </span>
-                        <span class="selected-icon text-secondary hidden">
-                          <SquareCheck class="h-5 w-5" />
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
               </>
-            ))}
+            )}
+          </p>
+          <div class="candidate-list-frame relative flex min-h-0 flex-col">
+            <div class="candidates-list flex flex-1 flex-col gap-2 overflow-visible lg:min-h-0 lg:overflow-y-auto">
+              {race.votingMethod === "RETENTION" &&
+                candidates.map((candidate, idx) => (
+                  <>
+                    {idx > 0 && (
+                      <div class="retention-divider flex items-center gap-3 py-1">
+                        <div class="h-px flex-1 bg-gray-200" />
+                        <span class="text-[10px] font-bold tracking-widest text-gray-400 uppercase" />
+                        <div class="h-px flex-1 bg-gray-200" />
+                      </div>
+                    )}
+                    <div class="retention-candidate-group flex flex-col gap-2">
+                      <p class="font-medium text-gray-900">
+                        {candidate.firstName} {candidate.lastName}
+                      </p>
+                      {[
+                        {
+                          id: `${candidate.id}_retain`,
+                          label: "Retain",
+                          candidateId: candidate.id,
+                          choice: "retain",
+                        },
+                        {
+                          id: `${candidate.id}_replace`,
+                          label: "Replace",
+                          candidateId: candidate.id,
+                          choice: "replace",
+                        },
+                      ].map((option) => (
+                        <button
+                          class="candidate-row focus:ring-secondary/50 flex w-full items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 focus:ring-2 focus:outline-none"
+                          data-candidate-id={option.id}
+                          data-base-candidate-id={option.candidateId}
+                          data-choice={option.choice}
+                        >
+                          <div>
+                            <span class="font-medium text-gray-500">
+                              {option.label}
+                            </span>
+                          </div>
+                          <div class="checkbox-container text-gray-400">
+                            <span class="unselected-icon">
+                              <Square class="h-5 w-5" />
+                            </span>
+                            <span class="selected-icon text-secondary hidden">
+                              <SquareCheck class="h-5 w-5" />
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ))}
 
-          {race.votingMethod === "STANDARD" &&
-            candidates.map((candidate) => (
-              <button
-                class="candidate-row focus:ring-secondary/50 flex w-full items-center justify-between rounded-md border border-gray-200 p-3 text-left transition-colors hover:bg-gray-50 focus:ring-2 focus:outline-none"
-                data-candidate-id={candidate.id}
-              >
-                <div>
-                  <span class="font-medium text-gray-900">
-                    {candidate.firstName} {candidate.middleName}{" "}
-                    {candidate.lastName}
-                  </span>
-                  {candidate.partyAffiliation && (
-                    <span class="ml-2 text-sm text-gray-500">
-                      ({candidate.partyAffiliation})
-                    </span>
-                  )}
-                </div>
-                <div class="checkbox-container text-gray-400">
-                  <span class="unselected-icon">
-                    <Square class="h-6 w-6" />
-                  </span>
-                  <span class="selected-icon text-secondary hidden">
-                    <SquareCheck class="h-6 w-6" />
-                  </span>
-                </div>
-              </button>
-            ))}
+              {race.votingMethod === "STANDARD" &&
+                candidates.map((candidate) => (
+                  <button
+                    class="candidate-row focus:ring-secondary/50 flex w-full items-center justify-between rounded-md border border-gray-200 p-3 text-left transition-colors hover:bg-gray-50 focus:ring-2 focus:outline-none"
+                    data-candidate-id={candidate.id}
+                  >
+                    <div>
+                      <span class="font-medium text-gray-900">
+                        {candidate.firstName} {candidate.middleName}{" "}
+                        {candidate.lastName}
+                      </span>
+                      {candidate.partyAffiliation && (
+                        <span class="ml-2 text-sm text-gray-500">
+                          ({candidate.partyAffiliation})
+                        </span>
+                      )}
+                    </div>
+                    <div class="checkbox-container text-gray-400">
+                      <span class="unselected-icon">
+                        <Square class="h-6 w-6" />
+                      </span>
+                      <span class="selected-icon text-secondary hidden">
+                        <SquareCheck class="h-6 w-6" />
+                      </span>
+                    </div>
+                  </button>
+                ))}
+            </div>
+          </div>
         </div>
-        <div class="mt-4">
+        <div class="mt-4 shrink-0">
           <a
             href={`/elections/${election.slug}/${race.slug}`}
             class="text-secondary hover:text-primary font-medium"
@@ -205,6 +208,38 @@ const typeLabel = getRaceScopeLabel(race.raceScopeId);
   function initVotePlan() {
     const races = document.querySelectorAll(".vote-plan-race");
     const filterBtns = document.querySelectorAll(".primary-filter-btn");
+
+    const listFrames = document.querySelectorAll<HTMLElement>(
+      ".candidate-list-frame",
+    );
+    const updateListFades = () => {
+      const isDesktop = window.matchMedia("(min-width: 64rem)").matches;
+      listFrames.forEach((frame) => {
+        const list = frame.querySelector<HTMLElement>(".candidates-list");
+        frame.classList.toggle(
+          "has-overflow",
+          Boolean(
+            isDesktop &&
+            list &&
+            getComputedStyle(list).overflowY === "auto" &&
+            list.scrollTop + list.clientHeight < list.scrollHeight - 1,
+          ),
+        );
+      });
+    };
+    const listResizeObserver = new ResizeObserver(updateListFades);
+    listFrames.forEach((frame) => {
+      listResizeObserver.observe(frame);
+      const list = frame.querySelector<HTMLElement>(".candidates-list");
+      if (list) {
+        list.addEventListener("scroll", updateListFades, { passive: true });
+      }
+      frame
+        .querySelectorAll<HTMLElement>("*")
+        .forEach((element) => listResizeObserver.observe(element));
+    });
+    window.addEventListener("resize", updateListFades);
+    updateListFades();
 
     // Default structure for vote plan in localStorage
     const STORAGE_KEY = "vote_plan_selections";
@@ -395,3 +430,19 @@ const typeLabel = getRaceScopeLabel(race.raceScopeId);
   // so the DOM is ready, or the server island has just been injected.
   initVotePlan();
 </script>
+
+<style is:global>
+  @media (min-width: 64rem) {
+    .candidate-list-frame.has-overflow::after {
+      position: absolute;
+      z-index: 1;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 2rem;
+      background: linear-gradient(to bottom, transparent, white);
+      content: "";
+      pointer-events: none;
+    }
+  }
+</style>
