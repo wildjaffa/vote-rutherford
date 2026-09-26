@@ -6,6 +6,8 @@ import { isServiceError } from "../lib/services/utils";
  * This ensures consistent error handling across all actions.
  */
 export function handleActionError(err: unknown, defaultMessage: string): never {
+  if (err instanceof ActionError) throw err;
+
   const isForbidden = isServiceError(err) && err.code === 403;
 
   throw new ActionError({

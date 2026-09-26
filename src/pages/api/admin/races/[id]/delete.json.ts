@@ -1,11 +1,10 @@
 import type { APIRoute } from "astro";
-import { parse } from "cookie";
 import { deleteRace } from "../../../../../lib/services/races";
-import { getSessionUser } from "../../../../../firebase/server";
+import { requireLocalUser } from "../../../../../lib/permissions";
 
 export const prerender = false;
 
-export const DELETE: APIRoute = async ({ params, request }) => {
+export const DELETE: APIRoute = async ({ params, locals }) => {
   try {
     const { id } = params;
 
@@ -16,15 +15,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       });
     }
 
-    const cookies = parse(request.headers.get("cookie") || "");
-    const sessionCookie = cookies["__session"];
-    const user = await getSessionUser(sessionCookie);
-    if (!user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    const user = requireLocalUser(locals);
 
     try {
       await deleteRace(id, user.uid);

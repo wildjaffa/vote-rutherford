@@ -3,6 +3,7 @@ import { actions } from "astro:actions";
 import DeleteButton from "../../../../../../components/forms/DeleteButton.astro";
 import FormSelect from "../../../../../../components/forms/FormSelect.astro";
 import FormTextarea from "../../../../../../components/forms/FormTextarea.astro";
+import InitiativePreview from "../../../../../../components/InitiativePreview.astro";
 import AdminLayout from "../../../../../../layouts/AdminLayout.astro";
 import Button from "../../../../../../components/Button.astro";
 import prisma from "../../../../../../lib/prisma";
@@ -102,6 +103,18 @@ if (Astro.request.method === "POST") {
     const districtId = formData.get("districtId") as string | null;
     const partyCategory = formData.get("partyCategory") as string;
     const order = parseInt(formData.get("order") as string) || 0;
+    const approvalDescription = formData.get("approvalDescription") as
+      | string
+      | null;
+    const disapprovalDescription = formData.get("disapprovalDescription") as
+      | string
+      | null;
+    const initiativeDetails = formData.get("initiativeDetails") as
+      | string
+      | null;
+    const initiativeSummary = formData.get("initiativeSummary") as
+      | string
+      | null;
 
     const policyQuestionIds = formData.getAll(
       "policy-question-ids",
@@ -114,6 +127,10 @@ if (Astro.request.method === "POST") {
       partyCategory,
       raceScopeId,
       votingMethod,
+      approvalDescription: approvalDescription || undefined,
+      disapprovalDescription: disapprovalDescription || undefined,
+      initiativeDetails: initiativeDetails || null,
+      initiativeSummary: initiativeSummary || null,
       description: description || undefined,
       status: status,
       slug,
@@ -128,7 +145,9 @@ if (Astro.request.method === "POST") {
       policyQuestionIds,
     });
 
-    if (result.data) {
+    if (result.error) {
+      error = result.error.message;
+    } else if (result.data) {
       success = "Race updated successfully";
       race = (await prisma.race.findFirst({
         where: { slug: raceSlug, election: { slug: electionSlug } },
@@ -144,6 +163,8 @@ if (Astro.request.method === "POST") {
         },
       }))!;
       currentSourceRaceIds = new Set(race.sourceRaces.map((sr) => sr.id));
+    } else {
+      error = "Failed to update race";
     }
   } catch (err) {
     error = err instanceof Error ? err.message : "Failed to update race";
@@ -191,7 +212,7 @@ if (Astro.request.method === "POST") {
         >
           <path
             d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-1a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v1h-3zM4.75 12.094A5.973 5.973 0 004 15v1H1v-1a3 3 0 013.75-2.906z"
-          />
+          ></path>
         </svg>
         Manage Candidates
       </a>
@@ -234,10 +255,48 @@ if (Astro.request.method === "POST") {
         name="votingMethod"
         options={[
           { value: "STANDARD", label: "Standard (Candidates Competing)" },
-          { value: "RETENTION", label: "Retain or Replace (Judicial/Retention)" },
+          {
+            value: "RETENTION",
+            label: "Retain or Replace (Judicial/Retention)",
+          },
+          {
+            value: "INITIATIVE",
+            label: "Ballot Initiative / Referendum (Approve vs Deny)",
+          },
         ]}
         value={race.votingMethod}
       />
+
+      <div id="initiative-fields" class="hidden space-y-6">
+        <FormTextarea
+          label="Plain-Language Summary (Optional, 1-2 sentences)"
+          name="initiativeSummary"
+          value={race.initiativeSummary ?? ""}
+          rows={2}
+          placeholder="Give a neutral, high-level summary of what the measure is about. Do not paraphrase the official legal text here."
+        />
+
+        <FormTextarea
+          label="Approval Description (Optional)"
+          name="approvalDescription"
+          value={race.approvalDescription ?? ""}
+          placeholder="Explain what a YES / APPROVE vote means in plain language..."
+        />
+
+        <FormTextarea
+          label="Disapproval Description (Optional)"
+          name="disapprovalDescription"
+          value={race.disapprovalDescription ?? ""}
+          placeholder="Explain what a NO / DENY vote means in plain language..."
+        />
+
+        <FormTextarea
+          label="Initiative Details (Markdown, Optional)"
+          name="initiativeDetails"
+          value={race.initiativeDetails ?? ""}
+          placeholder={"## How things work now\nDescribe current law...\n\n## What the amendment would do\nDescribe the proposed change...\n\n## Supporters and opponents\nSummarize the main arguments..."}
+        />
+      </div>
 
       <FormSelect
         label="District Type (Optional)"
@@ -306,11 +365,13 @@ if (Astro.request.method === "POST") {
       />
 
       <FormTextarea
-        label="Description"
+        label="Description (official ballot language for initiatives)"
         name="description"
         value={race.description}
-        placeholder="Enter race description..."
+        placeholder="Describe the race. For initiatives, paste the complete official ballot wording exactly as published."
       />
+
+      <InitiativePreview electionDate={election.date} />
 
       <FormPolicyQuestionSelect
         allQuestions={election.policyQuestions}
@@ -381,7 +442,8 @@ if (Astro.request.method === "POST") {
             class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
           <span>
-            Copy questions from the selected source races into this race's election and assign them to this race.
+            Copy questions from the selected source races into this race's
+            election and assign them to this race.
           </span>
         </label>
 
@@ -392,7 +454,8 @@ if (Astro.request.method === "POST") {
             class="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
           <span>
-            Auto-promote winning candidates from the selected source races into this race.
+            Auto-promote winning candidates from the selected source races into
+            this race.
           </span>
         </label>
       </div>
@@ -482,5 +545,25 @@ if (Astro.request.method === "POST") {
         });
       });
     }
+  }
+
+  const votingMethodSelect = document.querySelector(
+    'select[name="votingMethod"]',
+  ) as HTMLSelectElement;
+  const initiativeFields = document.getElementById("initiative-fields");
+
+  function toggleInitiativeFields() {
+    if (votingMethodSelect && initiativeFields) {
+      if (votingMethodSelect.value === "INITIATIVE") {
+        initiativeFields.classList.remove("hidden");
+      } else {
+        initiativeFields.classList.add("hidden");
+      }
+    }
+  }
+
+  if (votingMethodSelect) {
+    votingMethodSelect.addEventListener("change", toggleInitiativeFields);
+    toggleInitiativeFields();
   }
 </script>

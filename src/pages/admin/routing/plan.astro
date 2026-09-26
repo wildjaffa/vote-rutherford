@@ -1,0 +1,491 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Button from "../../../components/Button.astro";
+import prisma from "../../../lib/prisma";
+import {
+  formatCalendarDate,
+  loadSignLogisticsPreview,
+  type SignLogisticsPreview,
+  type VotingPeriod,
+} from "../../../lib/services/signLogistics";
+
+export const prerender = false;
+
+const elections = await prisma.election.findMany({
+  where: { deletedAt: null, archivedAt: null },
+  orderBy: { date: "desc" },
+  select: {
+    id: true,
+    name: true,
+    date: true,
+    earlyVotingStart: true,
+    earlyVotingEnd: true,
+  },
+});
+
+const url = new URL(Astro.request.url);
+const requestedElectionId = url.searchParams.get("electionId");
+const selectedElection =
+  elections.find((e) => e.id === requestedElectionId) ?? elections[0] ?? null;
+
+const hasEarlyVoting = Boolean(
+  selectedElection?.earlyVotingStart && selectedElection?.earlyVotingEnd,
+);
+
+const requestedPeriod = url.searchParams.get("period");
+const period: VotingPeriod =
+  requestedPeriod === "DAY_OF_VOTING" || !hasEarlyVoting
+    ? "DAY_OF_VOTING"
+    : "EARLY_VOTING";
+
+let preview: SignLogisticsPreview | null = null;
+let previewError: string | null = null;
+
+if (selectedElection) {
+  try {
+    preview = await loadSignLogisticsPreview(selectedElection.id, period);
+  } catch (err) {
+    previewError =
+      err instanceof Error ? err.message : "Could not load routing preview";
+  }
+}
+
+function namesList(
+  items: { displayName?: string; name?: string }[],
+  limit = 8,
+): string {
+  const names = items.map((i) => i.displayName ?? i.name ?? "").filter(Boolean);
+  if (names.length === 0) return "None";
+  if (names.length <= limit) return names.join(", ");
+  return `${names.slice(0, limit).join(", ")} +${names.length - limit} more`;
+}
+---
+
+<AdminLayout
+  title="Plan Sign Routes"
+  breadcrumbs={[
+    { label: "Routing", href: "/admin/routing" },
+    { label: "Plan Routes", href: "/admin/routing/plan" },
+  ]}
+>
+  <div class="space-y-8">
+    <div>
+      <p class="max-w-3xl text-sm text-gray-600">
+        Calculate multi-volunteer routes for sign drop-off (the day before
+        voting) and pick-up (the evening voting ends). Sites and volunteers stay
+        independent of a specific election — this page just uses the election
+        calendar to pick the dates.
+      </p>
+    </div>
+
+    {
+      elections.length === 0 ? (
+        <div class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <p class="text-sm text-amber-900">
+            No elections found.{" "}
+            <a href="/admin/elections/create" class="font-medium underline">
+              Create an election
+            </a>{" "}
+            first.
+          </p>
+        </div>
+      ) : (
+        <form method="GET" id="plan-filters" class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label
+                for="electionId"
+                class="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Election
+              </label>
+              <select
+                id="electionId"
+                name="electionId"
+                class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+              >
+                {elections.map((election) => (
+                  <option
+                    value={election.id}
+                    selected={election.id === selectedElection?.id}
+                  >
+                    {election.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <span class="mb-1 block text-sm font-medium text-gray-700">
+                Voting period
+              </span>
+              <div class="flex overflow-hidden rounded-md border border-gray-300">
+                <label
+                  class:list={[
+                    "flex flex-1 cursor-pointer items-center justify-center px-3 py-2 text-sm",
+                    period === "EARLY_VOTING"
+                      ? "bg-secondary text-white"
+                      : "bg-white text-gray-700 hover:bg-gray-50",
+                    !hasEarlyVoting && "cursor-not-allowed opacity-50",
+                  ]}
+                >
+                  <input
+                    type="radio"
+                    name="period"
+                    value="EARLY_VOTING"
+                    class="sr-only"
+                    checked={period === "EARLY_VOTING"}
+                    disabled={!hasEarlyVoting}
+                  />
+                  Early Voting
+                </label>
+                <label
+                  class:list={[
+                    "flex flex-1 cursor-pointer items-center justify-center border-l border-gray-300 px-3 py-2 text-sm",
+                    period === "DAY_OF_VOTING"
+                      ? "bg-secondary text-white"
+                      : "bg-white text-gray-700 hover:bg-gray-50",
+                  ]}
+                >
+                  <input
+                    type="radio"
+                    name="period"
+                    value="DAY_OF_VOTING"
+                    class="sr-only"
+                    checked={period === "DAY_OF_VOTING"}
+                  />
+                  Election Day
+                </label>
+              </div>
+              {
+                !hasEarlyVoting && (
+                  <p class="mt-1 text-xs text-gray-500">
+                    This election has no early voting dates.
+                  </p>
+                )
+              }
+            </div>
+          </div>
+        </form>
+      )
+    }
+
+    {
+      previewError && (
+        <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p class="text-sm font-medium text-red-800">{previewError}</p>
+        </div>
+      )
+    }
+
+    {
+      preview && (
+        <div class="space-y-4">
+          <p class="text-sm text-gray-700">
+            {period === "EARLY_VOTING" ? (
+              <>
+                Early voting is{" "}
+                <strong>{formatCalendarDate(preview.schedule.votingStartDate)}</strong>
+                {" – "}
+                <strong>{formatCalendarDate(preview.schedule.votingEndDate)}</strong>
+                . Drop signs the day before it starts; pick them up the evening
+                it ends.
+              </>
+            ) : (
+              <>
+                Election Day is{" "}
+                <strong>{formatCalendarDate(preview.schedule.votingStartDate)}</strong>
+                . Drop signs the day before; pick them up that evening.
+              </>
+            )}
+          </p>
+
+          <div class="grid gap-6 lg:grid-cols-2">
+            <section
+              class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm"
+              data-task-panel="DROP_OFF"
+            >
+              <h2 class="text-lg font-semibold text-gray-900">Sign drop-off</h2>
+              <p class="mt-1 text-sm text-gray-600">
+                {formatCalendarDate(preview.schedule.dropOffDate)}
+                <span class="text-gray-400"> · day before</span>
+              </p>
+              <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div class="rounded-md bg-gray-50 p-3">
+                  <dt class="text-xs font-medium tracking-wide text-gray-500 uppercase">
+                    Sites
+                  </dt>
+                  <dd class="mt-1 text-xl font-semibold text-gray-900">
+                    {preview.sites.length}
+                  </dd>
+                </div>
+                <div class="rounded-md bg-gray-50 p-3">
+                  <dt class="text-xs font-medium tracking-wide text-gray-500 uppercase">
+                    Volunteers
+                  </dt>
+                  <dd class="mt-1 text-xl font-semibold text-gray-900">
+                    {preview.dropOffVolunteers.length}
+                  </dd>
+                </div>
+              </dl>
+              <p class="mt-3 text-xs text-gray-500">
+                <span class="font-medium text-gray-700">Volunteers: </span>
+                {namesList(preview.dropOffVolunteers)}
+              </p>
+              <p class="mt-1 text-xs text-gray-500">
+                <span class="font-medium text-gray-700">Sites: </span>
+                {namesList(preview.sites)}
+              </p>
+              <div class="mt-4">
+                <Button
+                  type="button"
+                  class="calculate-btn"
+                  data-election-id={preview.election.id}
+                  data-period={period}
+                  data-task="DROP_OFF"
+                  disabled={
+                    preview.sites.length === 0 ||
+                    preview.dropOffVolunteers.length === 0
+                  }
+                >
+                  Calculate drop-off routes
+                </Button>
+              </div>
+              {
+                preview.sites.length === 0 && (
+                  <p class="mt-2 text-xs text-amber-700">
+                    Add {period === "EARLY_VOTING" ? "early voting" : "election day"}{" "}
+                    sites first.
+                  </p>
+                )
+              }
+              {
+                preview.dropOffVolunteers.length === 0 &&
+                  preview.sites.length > 0 && (
+                    <p class="mt-2 text-xs text-amber-700">
+                      No volunteers are available on this date. Add it to their
+                      volunteer dates, or leave dates blank.
+                    </p>
+                  )
+              }
+              <div class="task-result mt-4" hidden></div>
+            </section>
+
+            <section
+              class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm"
+              data-task-panel="PICK_UP"
+            >
+              <h2 class="text-lg font-semibold text-gray-900">Sign pick-up</h2>
+              <p class="mt-1 text-sm text-gray-600">
+                {formatCalendarDate(preview.schedule.pickUpDate)}
+                <span class="text-gray-400"> · evening of</span>
+              </p>
+              <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div class="rounded-md bg-gray-50 p-3">
+                  <dt class="text-xs font-medium tracking-wide text-gray-500 uppercase">
+                    Sites
+                  </dt>
+                  <dd class="mt-1 text-xl font-semibold text-gray-900">
+                    {preview.sites.length}
+                  </dd>
+                </div>
+                <div class="rounded-md bg-gray-50 p-3">
+                  <dt class="text-xs font-medium tracking-wide text-gray-500 uppercase">
+                    Volunteers
+                  </dt>
+                  <dd class="mt-1 text-xl font-semibold text-gray-900">
+                    {preview.pickUpVolunteers.length}
+                  </dd>
+                </div>
+              </dl>
+              <p class="mt-3 text-xs text-gray-500">
+                <span class="font-medium text-gray-700">Volunteers: </span>
+                {namesList(preview.pickUpVolunteers)}
+              </p>
+              <p class="mt-1 text-xs text-gray-500">
+                <span class="font-medium text-gray-700">Sites: </span>
+                {namesList(preview.sites)}
+              </p>
+              <div class="mt-4">
+                <Button
+                  type="button"
+                  class="calculate-btn"
+                  data-election-id={preview.election.id}
+                  data-period={period}
+                  data-task="PICK_UP"
+                  disabled={
+                    preview.sites.length === 0 ||
+                    preview.pickUpVolunteers.length === 0
+                  }
+                >
+                  Calculate pick-up routes
+                </Button>
+              </div>
+              {
+                preview.sites.length === 0 && (
+                  <p class="mt-2 text-xs text-amber-700">
+                    Add {period === "EARLY_VOTING" ? "early voting" : "election day"}{" "}
+                    sites first.
+                  </p>
+                )
+              }
+              {
+                preview.pickUpVolunteers.length === 0 &&
+                  preview.sites.length > 0 && (
+                    <p class="mt-2 text-xs text-amber-700">
+                      No volunteers are available on this date. Add it to their
+                      volunteer dates, or leave dates blank.
+                    </p>
+                  )
+              }
+              <div class="task-result mt-4" hidden></div>
+            </section>
+          </div>
+        </div>
+      )
+    }
+  </div>
+</AdminLayout>
+
+<script>
+  type RouteStop = {
+    type: "start" | "job" | "end";
+    siteName?: string;
+    address?: string;
+  };
+
+  type VolunteerRoute = {
+    volunteer: { displayName: string; email: string };
+    distanceLabel: string;
+    durationLabel: string;
+    stops: RouteStop[];
+  };
+
+  type SignRoutePlan = {
+    dateLabel: string;
+    summary: {
+      assignedSites: number;
+      siteCount: number;
+      unassignedSites: number;
+      unusedVolunteers: number;
+      totalDistanceLabel: string;
+      totalDurationLabel: string;
+    };
+    routes: VolunteerRoute[];
+    unusedVolunteers: { displayName: string }[];
+    unassignedSites: { name: string; address: string }[];
+  };
+
+  function escapeHtml(value: string): string {
+    return value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;");
+  }
+
+  function stopLabel(stop: RouteStop): string {
+    if (stop.type === "start") {
+      return `Start — ${stop.address ?? "start address"}`;
+    }
+    if (stop.type === "end") {
+      return `End — ${stop.address ?? "end address"}`;
+    }
+    return `${stop.siteName ?? "Site"}${stop.address ? ` — ${stop.address}` : ""}`;
+  }
+
+  function renderPlan(plan: SignRoutePlan): string {
+    const unassigned =
+      plan.unassignedSites.length > 0
+        ? `<div class="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+            <p class="font-medium">${plan.unassignedSites.length} site(s) could not be assigned</p>
+            <ul class="mt-1 list-disc pl-4">
+              ${plan.unassignedSites.map((s) => `<li>${escapeHtml(s.name)} — ${escapeHtml(s.address)}</li>`).join("")}
+            </ul>
+          </div>`
+        : "";
+
+    const unused =
+      plan.unusedVolunteers.length > 0
+        ? `<p class="mt-3 text-xs text-gray-500">Not needed for this run: ${escapeHtml(
+            plan.unusedVolunteers.map((v) => v.displayName).join(", "),
+          )}</p>`
+        : "";
+
+    const routes =
+      plan.routes.length === 0
+        ? `<p class="text-sm text-gray-500">No routes returned.</p>`
+        : plan.routes
+            .map(
+              (route) => `
+        <article class="rounded-md border border-gray-100 p-3">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h3 class="text-sm font-semibold text-gray-900">${escapeHtml(route.volunteer.displayName)}</h3>
+              <p class="text-xs text-gray-500">${escapeHtml(route.volunteer.email)}</p>
+            </div>
+            <p class="shrink-0 text-xs text-gray-600">${escapeHtml(route.distanceLabel)} · ${escapeHtml(route.durationLabel)}</p>
+          </div>
+          <ol class="mt-2 list-decimal space-y-1 pl-5 text-xs text-gray-700">
+            ${route.stops.map((stop) => `<li>${escapeHtml(stopLabel(stop))}</li>`).join("")}
+          </ol>
+        </article>`,
+            )
+            .join("");
+
+    return `
+      <div class="border-t border-gray-100 pt-4">
+        <p class="text-sm font-medium text-gray-900">
+          ${plan.summary.assignedSites} of ${plan.summary.siteCount} sites assigned
+          · ${escapeHtml(plan.summary.totalDistanceLabel)}
+          · ${escapeHtml(plan.summary.totalDurationLabel)}
+        </p>
+        ${unassigned}
+        <div class="mt-3 space-y-3">${routes}</div>
+        ${unused}
+      </div>`;
+  }
+
+  const filterForm = document.getElementById("plan-filters");
+  if (filterForm instanceof HTMLFormElement) {
+    filterForm.addEventListener("change", () => filterForm.submit());
+  }
+
+  document.querySelectorAll<HTMLButtonElement>(".calculate-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const panel = btn.closest("[data-task-panel]");
+      const resultEl = panel?.querySelector<HTMLElement>(".task-result");
+      if (!resultEl) return;
+
+      const electionId = btn.dataset.electionId;
+      const period = btn.dataset.period;
+      const task = btn.dataset.task;
+      if (!electionId || !period || !task) return;
+
+      btn.disabled = true;
+      const original = btn.textContent;
+      btn.textContent = "Calculating…";
+      resultEl.hidden = false;
+      resultEl.innerHTML = `<p class="text-sm text-gray-500">Calculating routes…</p>`;
+
+      try {
+        const res = await fetch("/api/admin/routing/calculate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ electionId, period, task }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          resultEl.innerHTML = `<div class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">${escapeHtml(data.error || "Failed to calculate routes")}</div>`;
+          return;
+        }
+        resultEl.innerHTML = renderPlan(data as SignRoutePlan);
+      } catch {
+        resultEl.innerHTML = `<div class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">Failed to calculate routes.</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    });
+  });
+</script>

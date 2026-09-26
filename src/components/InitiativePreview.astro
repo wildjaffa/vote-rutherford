@@ -1,0 +1,243 @@
+---
+import InitiativeBallotCardContent from "./InitiativeBallotCardContent.astro";
+
+interface Props {
+  electionDate: Date;
+}
+
+const { electionDate } = Astro.props;
+---
+
+<section
+  id="initiative-preview"
+  class="hidden rounded-lg border border-gray-300 bg-gray-50 p-5"
+  aria-live="polite"
+>
+  <div class="mb-4">
+    <h3 class="text-lg font-semibold text-gray-900">Voter Preview</h3>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <article class="rounded-md border border-gray-200 bg-white p-4">
+      <p
+        class="mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase"
+      >
+        Personalized ballot card
+      </p>
+      <InitiativeBallotCardContent
+        raceId="initiative-preview"
+        name=""
+        summary=""
+        officialText=""
+        approvalDescription=""
+        disapprovalDescription=""
+        electionDate={electionDate}
+        preview={true}
+      />
+    </article>
+
+    <article class="rounded-md border border-gray-200 bg-white p-4">
+      <p
+        class="mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase"
+      >
+        Race detail page
+      </p>
+      <h4 class="mb-3 text-lg font-bold text-gray-900">
+        Ballot Measure Details
+      </h4>
+      <p
+        id="initiative-preview-detail-summary"
+        class="mb-4 text-sm leading-relaxed text-gray-700"
+      >
+        Plain-language summary
+      </p>
+      <details
+        id="initiative-preview-detail-official"
+        class="mb-4 border-y border-gray-200 py-2 text-sm text-gray-600"
+      >
+        <summary class="text-secondary cursor-pointer font-medium">
+          Read full official ballot language
+        </summary>
+        <p
+          id="initiative-preview-detail-official-text"
+          class="mt-2 leading-relaxed whitespace-pre-wrap"
+        >
+        </p>
+      </details>
+      <div
+        id="initiative-preview-details"
+        class="initiative-preview-markdown mb-5 text-sm text-gray-800"
+      >
+        <p class="text-gray-500">Full explainer preview appears here.</p>
+      </div>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div class="rounded-md border border-green-200 bg-green-50 p-3">
+          <h5 class="mb-1 font-semibold text-green-900">
+            A YES / APPROVE vote means
+          </h5>
+          <p
+            id="initiative-preview-detail-approval"
+            class="text-sm leading-relaxed text-green-800"
+          >
+          </p>
+        </div>
+        <div class="rounded-md border border-red-200 bg-red-50 p-3">
+          <h5 class="mb-1 font-semibold text-red-900">
+            A NO / DENY vote means
+          </h5>
+          <p
+            id="initiative-preview-detail-disapproval"
+            class="text-sm leading-relaxed text-red-800"
+          >
+          </p>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<script>
+  import MarkdownIt from "markdown-it";
+
+  const markdown = new MarkdownIt({ html: false, linkify: true, breaks: true });
+  markdown.disable("image");
+
+  const preview = document.getElementById("initiative-preview");
+  const votingMethod = document.querySelector<HTMLSelectElement>(
+    'select[name="votingMethod"]',
+  );
+  const fields = {
+    name: document.querySelector<HTMLInputElement>('input[name="name"]'),
+    description: document.querySelector<HTMLTextAreaElement>(
+      'textarea[name="description"]',
+    ),
+    initiativeSummary: document.querySelector<HTMLTextAreaElement>(
+      'textarea[name="initiativeSummary"]',
+    ),
+    approval: document.querySelector<HTMLTextAreaElement>(
+      'textarea[name="approvalDescription"]',
+    ),
+    disapproval: document.querySelector<HTMLTextAreaElement>(
+      'textarea[name="disapprovalDescription"]',
+    ),
+    details: document.querySelector<HTMLTextAreaElement>(
+      'textarea[name="initiativeDetails"]',
+    ),
+  };
+
+  const setPreviewText = (field: string, value: string) => {
+    const element = preview?.querySelector<HTMLElement>(
+      `[data-preview-field="${field}"]`,
+    );
+    if (element) element.textContent = value;
+  };
+
+  const setPreviewSectionVisible = (section: string, visible: boolean) => {
+    preview
+      ?.querySelector(`[data-preview-section="${section}"]`)
+      ?.classList.toggle("hidden", !visible);
+  };
+
+  const updatePreview = () => {
+    if (!preview || !votingMethod) return;
+    preview.classList.toggle("hidden", votingMethod.value !== "INITIATIVE");
+
+    const name = fields.name?.value.trim() || "Race title";
+    const initiativeSummary =
+      fields.initiativeSummary?.value.trim() ||
+      "This measure asks voters to approve or reject a proposed change.";
+    const approval = fields.approval?.value.trim() || "";
+    const disapproval = fields.disapproval?.value.trim() || "";
+    const details = fields.details?.value.trim() || "";
+    const officialText = fields.description?.value.trim() || "";
+
+    setPreviewText("name", name);
+    setPreviewText("summary", initiativeSummary);
+    setPreviewText("officialText", officialText);
+    setPreviewText("approval", approval);
+    setPreviewText("disapproval", disapproval);
+    document
+      .getElementById("initiative-preview-detail-official")
+      ?.classList.toggle("hidden", !officialText);
+    setPreviewSectionVisible(
+      "more",
+      Boolean(officialText || approval || disapproval),
+    );
+    setPreviewSectionVisible("official", Boolean(officialText));
+    setPreviewSectionVisible("voteMeanings", Boolean(approval || disapproval));
+    setPreviewSectionVisible("approval", Boolean(approval));
+    setPreviewSectionVisible("disapproval", Boolean(disapproval));
+
+    const detailsElement = document.getElementById(
+      "initiative-preview-details",
+    );
+    if (detailsElement) {
+      detailsElement.innerHTML = details
+        ? markdown.render(details)
+        : '<p class="text-gray-500">Full explainer preview appears here.</p>';
+    }
+
+    const detailSummary = document.getElementById(
+      "initiative-preview-detail-summary",
+    );
+    if (detailSummary) detailSummary.textContent = initiativeSummary;
+    const detailOfficialText = document.getElementById(
+      "initiative-preview-detail-official-text",
+    );
+    if (detailOfficialText) detailOfficialText.textContent = officialText;
+    const detailApproval = document.getElementById(
+      "initiative-preview-detail-approval",
+    );
+    if (detailApproval)
+      detailApproval.textContent =
+        approval || "Approve or support this measure.";
+    const detailDisapproval = document.getElementById(
+      "initiative-preview-detail-disapproval",
+    );
+    if (detailDisapproval)
+      detailDisapproval.textContent =
+        disapproval || "Deny or oppose this measure.";
+  };
+
+  votingMethod?.addEventListener("change", updatePreview);
+  Object.values(fields).forEach((field) =>
+    field?.addEventListener("input", updatePreview),
+  );
+  updatePreview();
+</script>
+
+<style is:global>
+  .initiative-preview-markdown h2,
+  .initiative-preview-markdown h3 {
+    margin: 1rem 0 0.4rem;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .initiative-preview-markdown h2 {
+    font-size: 1.125rem;
+  }
+
+  .initiative-preview-markdown h3 {
+    font-size: 1rem;
+  }
+
+  .initiative-preview-markdown p {
+    margin: 0.4rem 0;
+    line-height: 1.6;
+  }
+
+  .initiative-preview-markdown ul,
+  .initiative-preview-markdown ol {
+    margin: 0.4rem 0 0.6rem;
+    padding-left: 1.25rem;
+  }
+
+  .initiative-preview-markdown ul {
+    list-style: disc;
+  }
+
+  .initiative-preview-markdown ol {
+    list-style: decimal;
+  }
+</style>

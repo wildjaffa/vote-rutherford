@@ -51,18 +51,20 @@ This application provides comprehensive information about elections, races, and 
 3. **Set Up PostgreSQL**
 
    Ensure PostgreSQL is running:
-   
+
    **Option A: Local PostgreSQL**
+
    ```bash
    # macOS with Homebrew
    brew install postgresql
    brew services start postgresql
-   
+
    # Linux
    sudo systemctl start postgresql
    ```
-   
+
    **Option B: Docker PostgreSQL**
+
    ```bash
    docker run -d --name postgres -p 5432:5432 \
      -e POSTGRES_PASSWORD=postgres \
@@ -77,7 +79,15 @@ This application provides comprehensive information about elections, races, and 
    npx prisma db seed  # optional: seed sample data
    ```
 
-5. **Start Redis**
+5. **Routing Setup (Optional)**
+
+   If you are testing volunteer routing, you need to provide OpenStreetMap data to Valhalla.
+   1. Download a `.osm.pbf` file for your region (e.g., from [Geofabrik](https://download.geofabrik.de/)).
+   2. Place the file in a new directory at the root of the project named `valhalla_data/`.
+
+   When you start docker-compose, Valhalla will automatically build the routing tiles from this file (this may take a few minutes on the first run).
+
+6. **Start Redis**
 
    If you don't already have Redis running locally, start it with Docker:
 
@@ -91,7 +101,7 @@ This application provides comprehensive information about elections, races, and 
    docker-compose up -d redis
    ```
 
-6. **Start Development Servers**
+7. **Start Development Servers**
 
    ```bash
    # Start the Astro development portal
@@ -99,12 +109,13 @@ This application provides comprehensive information about elections, races, and 
 
    # Start the email background worker (separate terminal)
    npx tsx src/lib/jobs/emailWorker.ts
-   
+
    # Start the district import worker (separate terminal)
    npx tsx src/lib/jobs/districtImportWorker.ts
    ```
 
    Or run all together:
+
    ```bash
    npm run dev:all
    ```

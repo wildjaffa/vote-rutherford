@@ -2,6 +2,7 @@
 import { PartyCategories } from "../constants";
 import RaceScope from "../enums/raceScopeEnum";
 import type { Candidate, Election, Race } from "../generated/prisma/browser";
+import InitiativeBallotCardContent from "./InitiativeBallotCardContent.astro";
 import { Users, SquareCheck, Square, ArrowRight, Calendar } from "../lib/icons";
 
 interface Props {
@@ -54,53 +55,63 @@ const typeLabel = getRaceScopeLabel(race.raceScopeId);
       {typeLabel}
     </span>
   </div>
-  <div class="flex flex-1 flex-col pt-4">
-    <h3
-      class="group-hover:text-secondary m-0 mb-2 text-xl font-bold text-gray-900"
-    >
-      {race.name}
-    </h3>
-    <p class="m-0 mb-3 leading-relaxed text-gray-600">{race.description}</p>
-    <div class="grow"></div>
-
-    <p class="mb-3">
-      <Calendar
-        size="18"
-        stroke-width={2}
-        class="text-secondary mr-1 inline"
-      />{
-        new Date(election.date).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      }
-      {
-        race.votingMethod !== "RETENTION" && (
-          <>
-            <Users size="16" stroke-width={2} class="text-secondary ml-2 inline" />
-            {candidates.length} Candidates
-            {race.numSelections > 1 && (
-              <>
-                <span class="mx-2">•</span>
-                Select up to{" "}
-                <span class="num-selections">{race.numSelections}</span>
-              </>
-            )}
-          </>
-        )
-      }
-    </p>
-
-    <div class="candidates-list mt-auto flex flex-col gap-2">
-      {
-        race.votingMethod === "RETENTION"
-          ? candidates.map((candidate, idx) => (
+  {
+    race.votingMethod === "INITIATIVE" ? (
+      <InitiativeBallotCardContent
+        raceId={race.id}
+        name={race.name}
+        summary={race.initiativeSummary}
+        officialText={race.description}
+        approvalDescription={race.approvalDescription}
+        disapprovalDescription={race.disapprovalDescription}
+        electionDate={election.date}
+        detailsHref={`/elections/${election.slug}/${race.slug}`}
+      />
+    ) : (
+      <div class="flex flex-1 flex-col pt-4">
+        <h3 class="group-hover:text-secondary m-0 mb-2 text-xl font-bold text-gray-900">
+          {race.name}
+        </h3>
+        <p class="m-0 mb-3 leading-relaxed text-gray-600">{race.description}</p>
+        <div class="grow" />
+        <p class="mb-3">
+          <Calendar
+            size="18"
+            stroke-width={2}
+            class="text-secondary mr-1 inline"
+          />
+          {new Date(election.date).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
+          {race.votingMethod === "STANDARD" && (
+            <>
+              <Users
+                size="16"
+                stroke-width={2}
+                class="text-secondary ml-2 inline"
+              />
+              {candidates.length}{" "}
+              {candidates.length === 1 ? "Candidate" : "Candidates"}
+              {race.numSelections > 1 && (
+                <>
+                  <span class="mx-2">•</span>
+                  Select up to{" "}
+                  <span class="num-selections">{race.numSelections}</span>
+                </>
+              )}
+            </>
+          )}
+        </p>
+        <div class="candidates-list mt-auto flex flex-col gap-2">
+          {race.votingMethod === "RETENTION" &&
+            candidates.map((candidate, idx) => (
               <>
                 {idx > 0 && (
                   <div class="retention-divider flex items-center gap-3 py-1">
                     <div class="h-px flex-1 bg-gray-200" />
-                    <span class="text-[10px] font-bold tracking-widest text-gray-400 uppercase"></span>
+                    <span class="text-[10px] font-bold tracking-widest text-gray-400 uppercase" />
                     <div class="h-px flex-1 bg-gray-200" />
                   </div>
                 )}
@@ -145,8 +156,10 @@ const typeLabel = getRaceScopeLabel(race.raceScopeId);
                   ))}
                 </div>
               </>
-            ))
-          : candidates.map((candidate) => (
+            ))}
+
+          {race.votingMethod === "STANDARD" &&
+            candidates.map((candidate) => (
               <button
                 class="candidate-row focus:ring-secondary/50 flex w-full items-center justify-between rounded-md border border-gray-200 p-3 text-left transition-colors hover:bg-gray-50 focus:ring-2 focus:outline-none"
                 data-candidate-id={candidate.id}
@@ -171,28 +184,25 @@ const typeLabel = getRaceScopeLabel(race.raceScopeId);
                   </span>
                 </div>
               </button>
-            ))
-      }
-    </div>
-
-    <div class="mt-4">
-      <a
-        href={`/elections/${election.slug}/${race.slug}`}
-        class="text-secondary hover:text-primary font-medium"
-        >View Details<ArrowRight
-          size="16"
-          stroke-width={2}
-          class="ml-1 inline"
-        /></a
-      >
-    </div>
-  </div>
+            ))}
+        </div>
+        <div class="mt-4">
+          <a
+            href={`/elections/${election.slug}/${race.slug}`}
+            class="text-secondary hover:text-primary font-medium"
+          >
+            View Details
+            <ArrowRight size="16" stroke-width={2} class="ml-1 inline" />
+          </a>
+        </div>
+      </div>
+    )
+  }
 </div>
 
 <script>
   // Function to initialize vote plan persistence logic
   function initVotePlan() {
-    console.log("initVotePlan");
     const races = document.querySelectorAll(".vote-plan-race");
     const filterBtns = document.querySelectorAll(".primary-filter-btn");
 
@@ -202,6 +212,14 @@ const typeLabel = getRaceScopeLabel(race.raceScopeId);
 
     const selections = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     let activeFilter = localStorage.getItem(FILTER_KEY); // null = no selection made yet
+
+    // Choice pairing lookup map for binary selections (Retention & Initiative)
+    const OPPOSITE_CHOICES: Record<string, string> = {
+      retain: "replace",
+      replace: "retain",
+      approve: "deny",
+      deny: "approve",
+    };
 
     const updateAllUI = () => {
       const effectiveFilter = activeFilter || "All";
@@ -296,16 +314,15 @@ const typeLabel = getRaceScopeLabel(race.raceScopeId);
           if (btn.hasAttribute("disabled")) return;
 
           const candidateId = btn.getAttribute("data-candidate-id");
-          console.log(candidateId);
           if (!selections[raceId]) selections[raceId] = [];
           const selectedCandidates = selections[raceId];
 
           const choice = btn.getAttribute("data-choice");
           const baseId = btn.getAttribute("data-base-candidate-id");
 
-          if (choice && baseId) {
-            // Retention behavior
-            const otherChoice = choice === "retain" ? "replace" : "retain";
+          if (choice && baseId && OPPOSITE_CHOICES[choice]) {
+            // Retention or Initiative behavior (binary either-or selection)
+            const otherChoice = OPPOSITE_CHOICES[choice];
             const otherId = `${baseId}_${otherChoice}`;
 
             if (selectedCandidates.includes(candidateId)) {
@@ -313,7 +330,7 @@ const typeLabel = getRaceScopeLabel(race.raceScopeId);
               const idx = selectedCandidates.indexOf(candidateId);
               selectedCandidates.splice(idx, 1);
             } else {
-              // Select, and remove other choice
+              // Select, and remove opposite choice
               const otherIdx = selectedCandidates.indexOf(otherId);
               if (otherIdx > -1) {
                 selectedCandidates.splice(otherIdx, 1);
@@ -335,7 +352,7 @@ const typeLabel = getRaceScopeLabel(race.raceScopeId);
                 // For single selection, behave like radio button (replace selection)
                 selections[raceId] = [candidateId];
               } else {
-                // Maximum reached in multi-select, maybe flash limit?
+                // Maximum reached in multi-select, flash limit indicator
                 const limitEl = raceEl.querySelector(".num-selections");
                 if (limitEl) {
                   limitEl.classList.add(

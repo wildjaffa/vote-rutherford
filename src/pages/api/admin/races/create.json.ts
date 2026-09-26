@@ -1,21 +1,11 @@
 import type { APIRoute } from "astro";
-import { parse } from "cookie";
 import { createRace } from "../../../../lib/services/races";
-import { getSessionUser } from "../../../../firebase/server";
+import { requireLocalUser } from "../../../../lib/permissions";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
-  const cookies = parse(request.headers.get("cookie") || "");
-  const sessionCookie = cookies["__session"];
-  const user = await getSessionUser(sessionCookie);
-  if (!user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 403,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
+export const POST: APIRoute = async ({ request, locals }) => {
+  const user = requireLocalUser(locals);
   const body = await request.json();
   try {
     const race = await createRace(body, user.uid);
@@ -32,7 +22,10 @@ export const POST: APIRoute = async ({ request }) => {
         error: err.message || "Failed to create race",
         details: err.details,
       }),
-      { status, headers: { "Content-Type": "application/json" } },
+      {
+        status,
+        headers: { "Content-Type": "application/json" },
+      },
     );
   }
 };

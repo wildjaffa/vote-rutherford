@@ -3,11 +3,10 @@ import { getSessionUser } from "./firebase/server";
 
 const authentication = defineMiddleware(async (context, next) => {
   const pathName = context.url.pathname;
-  // Check if the request is for an admin page
-  if (
-    (!pathName.startsWith("/admin") && !pathName.startsWith("/api/admin/")) ||
-    pathName === "/admin/signin"
-  ) {
+  const isAdminApi = pathName.startsWith("/api/admin/");
+  const isAdminPage = pathName.startsWith("/admin");
+
+  if ((!isAdminPage && !isAdminApi) || pathName === "/admin/signin") {
     return next();
   }
 
@@ -22,9 +21,16 @@ const authentication = defineMiddleware(async (context, next) => {
   }
 
   if (!user) {
+    if (isAdminApi) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     return context.redirect("/admin/signin");
   }
 
+  context.locals.user = user;
   return next();
 });
 

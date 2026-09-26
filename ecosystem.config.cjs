@@ -16,6 +16,7 @@ module.exports = {
       name: "email-worker",
       script: "./src/lib/jobs/emailWorker.ts",
       interpreter: "tsx", // Since tsx is in dependencies
+      interpreter_args: "--import dotenv/config",
       env: {
         NODE_ENV: "production",
       },
@@ -25,6 +26,7 @@ module.exports = {
       name: "district-import-worker",
       script: "./src/lib/jobs/districtImportWorker.ts",
       interpreter: "tsx",
+      interpreter_args: "--import dotenv/config",
       env: {
         NODE_ENV: "production",
       },

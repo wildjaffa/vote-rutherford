@@ -1,0 +1,228 @@
+---
+import AdminLayout from "../../../../../layouts/AdminLayout.astro";
+import FormInput from "../../../../../components/forms/FormInput.astro";
+import { actions } from "astro:actions";
+import Button from "../../../../../components/Button.astro";
+import prisma from "../../../../../lib/prisma";
+
+export const prerender = false;
+
+const { id } = Astro.params;
+const site = await prisma.site.findUnique({
+  where: { id },
+  include: { voterAddress: true },
+});
+
+if (!site || site.deletedAt) {
+  return new Response("Site not found", { status: 404 });
+}
+
+let error: string | null = null;
+let successMessage: string | null = null;
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+
+    if (formData.get("_method") === "DELETE") {
+      const result = await Astro.callAction(actions.deleteSite, { id: id! });
+      if (result.error) {
+        error = "Failed to delete site: " + result.error.message;
+      } else {
+        return Astro.redirect("/admin/routing");
+      }
+    } else {
+      formData.set("id", id!);
+      const result = await Astro.callAction(actions.updateSite, formData);
+      if (result.error) {
+        error = "Failed to update site: " + result.error.message;
+      } else {
+        successMessage = "Site updated successfully.";
+      }
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to process request";
+  }
+}
+---
+
+<AdminLayout
+  title={`Edit Site: ${site.name}`}
+  breadcrumbs={[
+    { label: "Routing", href: "/admin/routing" },
+    { label: site.name, href: `/admin/routing/sites/${id}/edit` },
+  ]}
+>
+  <div class="mb-4 flex justify-end">
+    <form
+      method="POST"
+      onsubmit="return confirm('Are you sure you want to delete this site?');"
+    >
+      <input type="hidden" name="_method" value="DELETE" />
+      <Button
+        type="submit"
+        class="rounded-md border border-red-600 bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700"
+        >Delete Site</Button
+      >
+    </form>
+  </div>
+
+  <form method="POST" class="max-w-xl">
+    {
+      error && (
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+          <p class="text-sm font-medium text-red-800">{error}</p>
+        </div>
+      )
+    }
+    {
+      successMessage && (
+        <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4">
+          <p class="text-sm font-medium text-green-800">{successMessage}</p>
+        </div>
+      )
+    }
+
+    <FormInput
+      label="Site Name"
+      name="name"
+      type="text"
+      required
+      value={site.name}
+    />
+
+    <div class="mb-4">
+      <label class="mb-1 block text-sm font-medium text-gray-700" for="type">
+        Site Type <span class="text-red-500">*</span>
+      </label>
+      <select
+        id="type"
+        name="type"
+        required
+        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+      >
+        <option value="EARLY_VOTING" selected={site.type === "EARLY_VOTING"}
+          >Early Voting</option
+        >
+        <option value="DAY_OF_VOTING" selected={site.type === "DAY_OF_VOTING"}
+          >Day of Voting</option
+        >
+      </select>
+    </div>
+
+    <div class="mb-4">
+      <label
+        class="mb-1 block text-sm font-medium text-gray-700"
+        for="address-input"
+      >
+        Address <span class="text-red-500">*</span>
+      </label>
+      <input
+        id="address-input"
+        type="text"
+        value={site.voterAddress?.address || ""}
+        autocomplete="off"
+        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+      />
+      <input
+        type="hidden"
+        name="address"
+        id="address-value"
+        value={site.voterAddress?.address || ""}
+      />
+      <input
+        type="hidden"
+        name="voterAddressId"
+        id="voter-address-id"
+        value={site.voterAddressId}
+      />
+      <div id="address-suggestions" class="relative"></div>
+      <p class="mt-1 text-xs text-gray-500">
+        Searches county 911 address database. For outside-county addresses, type
+        the full address.
+      </p>
+    </div>
+
+    <div class="flex justify-end gap-3 pt-4">
+      <Button variant="secondary" href="/admin/routing">Cancel</Button>
+      <Button type="submit">Save Changes</Button>
+    </div>
+  </form>
+</AdminLayout>
+
+<script>
+  const addressInput = document.getElementById(
+    "address-input",
+  ) as HTMLInputElement;
+  const addressValue = document.getElementById(
+    "address-value",
+  ) as HTMLInputElement;
+  const voterAddressIdValue = document.getElementById(
+    "voter-address-id",
+  ) as HTMLInputElement;
+  const suggestionsContainer = document.getElementById(
+    "address-suggestions",
+  ) as HTMLDivElement;
+
+  let debounceTimer: ReturnType<typeof setTimeout>;
+
+  function showSuggestions(
+    results: { id: string; address: string; city: string; zip: string }[],
+  ) {
+    suggestionsContainer.innerHTML = "";
+    if (!results.length) return;
+
+    const list = document.createElement("ul");
+    list.className =
+      "absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto";
+
+    results.forEach((r) => {
+      const li = document.createElement("li");
+      li.className = "cursor-pointer px-3 py-2 text-sm hover:bg-blue-50";
+      const label = `${r.address}${r.city ? ", " + r.city : ""}${r.zip ? " " + r.zip : ""}`;
+      li.textContent = label;
+      li.addEventListener("click", () => {
+        addressInput.value = label;
+        addressValue.value = r.address;
+        voterAddressIdValue.value = r.id;
+        suggestionsContainer.innerHTML = "";
+      });
+      list.appendChild(li);
+    });
+
+    suggestionsContainer.appendChild(list);
+  }
+
+  addressInput.addEventListener("input", () => {
+    const q = addressInput.value.trim();
+    addressValue.value = q;
+    voterAddressIdValue.value = "";
+
+    clearTimeout(debounceTimer);
+    if (q.length < 3) {
+      suggestionsContainer.innerHTML = "";
+      return;
+    }
+
+    debounceTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/addresses/lookup?q=${encodeURIComponent(q)}&limit=8`,
+        );
+        const data = await res.json();
+        showSuggestions(data.results || []);
+      } catch {
+        suggestionsContainer.innerHTML = "";
+      }
+    }, 250);
+  });
+
+  addressInput.addEventListener("blur", () => {
+    if (addressInput.value.trim() && !voterAddressIdValue.value) {
+      addressValue.value = addressInput.value.trim();
+    }
+    setTimeout(() => {
+      suggestionsContainer.innerHTML = "";
+    }, 200);
+  });
+</script>
