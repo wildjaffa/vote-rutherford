@@ -80,3 +80,16 @@ export async function getCurrentUserId(
   const user = await getSessionUser(sessionCookie);
   return user?.uid ?? "";
 }
+
+/**
+ * Returns the user set by auth middleware.
+ * Only call from /admin or /api/admin handlers — middleware guarantees auth there.
+ */
+export function requireLocalUser(locals: App.Locals) {
+  if (!locals.user) {
+    throw new Error(
+      "requireLocalUser: locals.user missing; request is outside authenticated admin middleware",
+    );
+  }
+  return locals.user;
+}

@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import { Worker, type Job, type ConnectionOptions } from "bullmq";
 import IORedis from "ioredis";
 import { Prisma } from "../../generated/prisma/client";
@@ -6,9 +8,7 @@ import {
   executeDistrictImport,
   analyzeDistrictImport,
 } from "../districtImport";
-
 import type { DistrictImportJobData } from "../types/districtImport";
-import "dotenv/config";
 
 const connection = new IORedis(
   process.env.REDIS_URL || "redis://localhost:6379",

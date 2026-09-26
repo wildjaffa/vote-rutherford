@@ -1,8 +1,9 @@
+import "dotenv/config";
+
 import { getEmailBoss, EMAIL_QUEUE_NAME } from "./emailQueue";
 import type { SendEmailJobData } from "./emailQueue";
 import { getEmailProvider } from "../services/email/EmailFactory";
 import prisma from "../prisma";
-import "dotenv/config";
 import type { Job } from "pg-boss";
 
 async function processEmailJob(job: Job<SendEmailJobData>): Promise<void> {

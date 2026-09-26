@@ -1,12 +1,13 @@
 import type { APIRoute } from "astro";
-import { parse } from "cookie";
 import prisma from "../../../../../lib/prisma";
-import { canManageDistricts } from "../../../../../lib/permissions";
-import { getSessionUser } from "../../../../../firebase/server";
+import {
+  canManageDistricts,
+  requireLocalUser,
+} from "../../../../../lib/permissions";
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params, request }) => {
+export const GET: APIRoute = async ({ params, locals }) => {
   const jobId = params.jobId;
 
   if (!jobId) {
@@ -17,11 +18,8 @@ export const GET: APIRoute = async ({ params, request }) => {
   }
 
   try {
-    // Check authentication (simplified for now)
-    const cookies = parse(request.headers.get("cookie") || "");
-    const sessionCookie = cookies["__session"];
-    const user = await getSessionUser(sessionCookie);
-    if (!user || !(await canManageDistricts(user.uid))) {
+    const user = requireLocalUser(locals);
+    if (!(await canManageDistricts(user.uid))) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 403,
         headers: { "Content-Type": "application/json" },
