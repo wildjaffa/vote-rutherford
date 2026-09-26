@@ -1,0 +1,196 @@
+---
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import FormInput from "../../../../components/forms/FormInput.astro";
+import { actions } from "astro:actions";
+import Button from "../../../../components/Button.astro";
+
+export const prerender = false;
+
+let error: string | null = null;
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const result = await Astro.callAction(actions.createSite, formData);
+
+    if (result.error) {
+      error = "Failed to create site: " + result.error.message;
+    } else {
+      return Astro.redirect("/admin/routing");
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to create site";
+  }
+}
+---
+
+<AdminLayout
+  title="Create Sign Site"
+  breadcrumbs={[
+    { label: "Routing", href: "/admin/routing" },
+    { label: "Create Site", href: "/admin/routing/sites/create" },
+  ]}
+>
+  <form method="POST" class="max-w-xl">
+    {
+      error && (
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+          <p class="text-sm font-medium text-red-800">{error}</p>
+        </div>
+      )
+    }
+
+    <FormInput
+      label="Site Name"
+      name="name"
+      type="text"
+      required
+      placeholder="e.g. Rutherford County Fairgrounds"
+    />
+
+    <div class="mb-4">
+      <label class="mb-1 block text-sm font-medium text-gray-700" for="type">
+        Site Type <span class="text-red-500">*</span>
+      </label>
+      <select
+        id="type"
+        name="type"
+        required
+        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+      >
+        <option value="">Select type...</option>
+        <option value="EARLY_VOTING">Early Voting</option>
+        <option value="DAY_OF_VOTING">Day of Voting</option>
+      </select>
+    </div>
+
+    <div class="mb-4">
+      <label
+        class="mb-1 block text-sm font-medium text-gray-700"
+        for="address-input"
+      >
+        Address <span class="text-red-500">*</span>
+      </label>
+      <input
+        id="address-input"
+        type="text"
+        placeholder="Start typing an address..."
+        autocomplete="off"
+        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+      />
+      <input type="hidden" name="address" id="address-value" />
+      <input type="hidden" name="voterAddressId" id="voter-address-id" />
+      <input type="hidden" name="latitude" id="latitude-value" />
+      <input type="hidden" name="longitude" id="longitude-value" />
+      <div id="address-suggestions" class="relative"></div>
+      <p class="mt-1 text-xs text-gray-500">
+        Searches county 911 address database. For outside-county addresses, type
+        the full address and press Enter.
+      </p>
+    </div>
+
+    <div class="flex justify-end gap-3 pt-4">
+      <Button variant="secondary" href="/admin/routing">Cancel</Button>
+      <Button type="submit" id="submit-btn" disabled>Create Site</Button>
+    </div>
+  </form>
+</AdminLayout>
+
+<script>
+  const addressInput = document.getElementById(
+    "address-input",
+  ) as HTMLInputElement;
+  const addressValue = document.getElementById(
+    "address-value",
+  ) as HTMLInputElement;
+  const voterAddressIdValue = document.getElementById(
+    "voter-address-id",
+  ) as HTMLInputElement;
+  const latValue = document.getElementById(
+    "latitude-value",
+  ) as HTMLInputElement;
+  const lonValue = document.getElementById(
+    "longitude-value",
+  ) as HTMLInputElement;
+  const suggestionsContainer = document.getElementById(
+    "address-suggestions",
+  ) as HTMLDivElement;
+  const submitBtn = document.getElementById("submit-btn") as HTMLButtonElement;
+
+  let debounceTimer: ReturnType<typeof setTimeout>;
+
+  function enableSubmit() {
+    submitBtn.removeAttribute("disabled");
+  }
+
+  function clearResolved() {
+    voterAddressIdValue.value = "";
+    latValue.value = "";
+    lonValue.value = "";
+  }
+
+  function showSuggestions(
+    results: { id: string; address: string; city: string; zip: string }[],
+  ) {
+    suggestionsContainer.innerHTML = "";
+    if (!results.length) return;
+
+    const list = document.createElement("ul");
+    list.className =
+      "absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto";
+
+    results.forEach((r) => {
+      const li = document.createElement("li");
+      li.className = "cursor-pointer px-3 py-2 text-sm hover:bg-blue-50";
+      const label = `${r.address}${r.city ? ", " + r.city : ""}${r.zip ? " " + r.zip : ""}`;
+      li.textContent = label;
+      li.addEventListener("click", () => {
+        addressInput.value = label;
+        addressValue.value = r.address;
+        voterAddressIdValue.value = r.id;
+        latValue.value = "";
+        lonValue.value = "";
+        suggestionsContainer.innerHTML = "";
+        enableSubmit();
+      });
+      list.appendChild(li);
+    });
+
+    suggestionsContainer.appendChild(list);
+  }
+
+  addressInput.addEventListener("input", () => {
+    const q = addressInput.value.trim();
+    addressValue.value = q;
+    clearResolved();
+
+    clearTimeout(debounceTimer);
+    if (q.length < 3) {
+      suggestionsContainer.innerHTML = "";
+      return;
+    }
+
+    debounceTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/addresses/lookup?q=${encodeURIComponent(q)}&limit=8`,
+        );
+        const data = await res.json();
+        showSuggestions(data.results || []);
+        if (q.length > 0) enableSubmit();
+      } catch {
+        suggestionsContainer.innerHTML = "";
+      }
+    }, 250);
+  });
+
+  addressInput.addEventListener("blur", () => {
+    if (addressInput.value.trim() && !voterAddressIdValue.value) {
+      addressValue.value = addressInput.value.trim();
+    }
+    if (addressInput.value.trim()) enableSubmit();
+    setTimeout(() => {
+      suggestionsContainer.innerHTML = "";
+    }, 200);
+  });
+</script>
