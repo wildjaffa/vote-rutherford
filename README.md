@@ -11,6 +11,7 @@ This application provides comprehensive information about elections, races, and 
 - **Candidate Outreach**: Automated email outreach system using BullMQ, Redis, and Google OAuth.
 - **Voter Address Search**: Advanced Full-Text Search (FTS5) for Rutherford County addresses, supporting thousands of records for precinct-based candidate filtering.
 - **Admin Portal**: Secure management interface for all election data, integrated with Firebase Authentication.
+- **Search Analytics**: Admin dashboard for persisted daily Google Search Console and Bing Webmaster performance metrics.
 - **Image Hosting**: Integration with Cloudflare R2 for candidate and election imagery.
 - **Performance**: Edge-ready caching with Cloudflare-compatible middleware and localized DB syncing via LibSQL (Turso).
 
@@ -48,6 +49,8 @@ This application provides comprehensive information about elections, races, and 
    DATABASE_URL="postgresql://user:password@localhost:5432/vote_rutherford_staging"
    ```
 
+   Set `SEARCH_ANALYTICS_ENCRYPTION_KEY` to a unique 32-byte key encoded as 64 hex characters. Generate one with `openssl rand -hex 32`. Keep it stable and back it up securely: Search Console refresh tokens and the Bing Webmaster API key are encrypted at rest with this key, and cannot be decrypted if it is lost.
+
 3. **Set Up PostgreSQL**
 
    Ensure PostgreSQL is running:
@@ -79,7 +82,15 @@ This application provides comprehensive information about elections, races, and 
    npx prisma db seed  # optional: seed sample data
    ```
 
-5. **Routing Setup (Optional)**
+   Apply the `add_search_analytics` migration to the intended database before starting the application.
+
+5. **Search analytics providers (optional)**
+
+   - Google: configure the existing `GMAIL_CLIENT_ID` and `GMAIL_CLIENT_SECRET` OAuth client with the callback URL `${PUBLIC_SITE_URL}/admin/analytics/google/callback`. The Google consent screen must allow the `webmasters.readonly` scope. Connect an account with access to the Search Console property from `/admin/analytics`.
+   - Bing: add and verify the site in Bing Webmaster Tools, generate a Webmaster API key, and save the verified site URL and key from `/admin/analytics`.
+   - Run `npm run worker:search-analytics` locally to schedule daily synchronization at 8:15 AM America/Chicago. PM2 starts this worker in production.
+
+6. **Routing Setup (Optional)**
 
    If you are testing volunteer routing, you need to provide OpenStreetMap data to Valhalla.
    1. Download a `.osm.pbf` file for your region (e.g., from [Geofabrik](https://download.geofabrik.de/)).
@@ -87,7 +98,7 @@ This application provides comprehensive information about elections, races, and 
 
    When you start docker-compose, Valhalla will automatically build the routing tiles from this file (this may take a few minutes on the first run).
 
-6. **Start Redis**
+7. **Start Redis**
 
    If you don't already have Redis running locally, start it with Docker:
 
@@ -101,7 +112,7 @@ This application provides comprehensive information about elections, races, and 
    docker-compose up -d redis
    ```
 
-7. **Start Development Servers**
+8. **Start Development Servers**
 
    ```bash
    # Start the Astro development portal
@@ -112,6 +123,9 @@ This application provides comprehensive information about elections, races, and 
 
    # Start the district import worker (separate terminal)
    npx tsx src/lib/jobs/districtImportWorker.ts
+
+   # Start the search analytics scheduler (separate terminal)
+   npm run worker:search-analytics
    ```
 
    Or run all together:
@@ -186,7 +200,7 @@ The application is designed to be deployed as a Docker container managed by PM2.
    ```
 
 2. **Run the container**:
-   Ensure environment variables for `DATABASE_URL`, `REDIS_URL`, and Cloudflare/Firebase credentials are provided.
+   Ensure environment variables for `DATABASE_URL`, `REDIS_URL`, `SEARCH_ANALYTICS_ENCRYPTION_KEY`, and Cloudflare/Firebase credentials are provided.
 
 3. **PM2 Management**:
    The container starts `entrypoint.sh` which launches PM2 using `ecosystem.config.cjs`. This manages:

@@ -1,0 +1,22 @@
+---
+import type { SearchAnalyticsConnection, SearchAnalyticsProvider } from "../../generated/prisma/client";
+
+interface Props {
+  connection: SearchAnalyticsConnection;
+  provider: SearchAnalyticsProvider;
+}
+
+const { connection, provider } = Astro.props;
+const syncedAt = connection.lastSyncedAt?.toLocaleString() ?? "Not synced yet";
+---
+
+<div class="flex flex-col gap-3 border-t border-gray-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
+  <p class="text-xs text-gray-500">Last refreshed: {syncedAt}</p>
+  <form method="POST">
+    <input type="hidden" name="action" value="disconnect" />
+    <input type="hidden" name="provider" value={provider} />
+    <button type="submit" class="text-xs font-medium text-red-700 hover:underline" onclick="return confirm('Disconnect this provider and delete its saved analytics?');">
+      Disconnect and delete data
+    </button>
+  </form>
+</div>

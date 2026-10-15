@@ -1,7 +1,14 @@
 ---
 import Layout from "./Layout.astro";
 import Button from "../components/Button.astro";
-import { House, LogOut, MapPin, Route, Vote } from "../lib/icons";
+import {
+  ChartNoAxesCombined,
+  House,
+  LogOut,
+  MapPin,
+  Route,
+  Vote,
+} from "../lib/icons";
 
 interface Props {
   title: string;
@@ -61,6 +68,15 @@ const { title, breadcrumbs = [] } = Astro.props;
               >
                 <Vote size="18" stroke-width={2} class="mr-3" />
                 Elections
+              </a>
+            </li>
+            <li>
+              <a
+                href="/admin/analytics"
+                class="hover:bg-secondary flex items-center rounded-lg px-4 py-2 text-gray-700 transition-colors hover:text-white"
+              >
+                <ChartNoAxesCombined size="18" stroke-width={2} class="mr-3" />
+                Search Analytics
               </a>
             </li>
           </ul>

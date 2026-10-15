@@ -1,0 +1,293 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import SearchMetricSummary from "../../../components/admin/SearchMetricSummary.astro";
+import SearchMetricTable from "../../../components/admin/SearchMetricTable.astro";
+import SearchProviderFooter from "../../../components/admin/SearchProviderFooter.astro";
+import prisma from "../../../lib/prisma";
+import {
+  decryptCredentials,
+  encryptCredentials,
+} from "../../../lib/services/searchAnalytics/credentials";
+import {
+  listGoogleSearchConsoleSites,
+  syncConnectedSearchAnalytics,
+  syncSearchAnalyticsConnection,
+} from "../../../lib/services/searchAnalytics";
+import {
+  SearchAnalyticsProvider,
+  type SearchAnalyticsConnection,
+  type SearchAnalyticsDailyMetric,
+} from "../../../generated/prisma/client";
+
+export const prerender = false;
+
+const googleProvider = SearchAnalyticsProvider.GOOGLE_SEARCH_CONSOLE;
+const bingProvider = SearchAnalyticsProvider.BING_WEBMASTER;
+
+if (Astro.request.method === "POST") {
+  const requestUrl = new URL(Astro.request.url);
+  const origin = Astro.request.headers.get("origin");
+  if (origin && new URL(origin).host !== requestUrl.host) {
+    return new Response("Cross-origin request rejected", { status: 403 });
+  }
+
+  const form = await Astro.request.formData();
+  const action = String(form.get("action") ?? "");
+
+  try {
+    if (action === "save-google-property") {
+      const connection = await prisma.searchAnalyticsConnection.findUnique({
+        where: { provider: googleProvider },
+      });
+      const siteUrl = String(form.get("siteUrl") ?? "");
+      if (!connection) return Astro.redirect("/admin/analytics?notice=google-not-connected");
+      const { refreshToken } = decryptCredentials<{ refreshToken: string }>(
+        connection.encryptedCredentials,
+      );
+      const sites = await listGoogleSearchConsoleSites(refreshToken);
+      if (!sites.some((site) => site.siteUrl === siteUrl)) {
+        return Astro.redirect("/admin/analytics?notice=google-property-unavailable");
+      }
+      const updated = await prisma.searchAnalyticsConnection.update({
+        where: { id: connection.id },
+        data: { siteUrl, lastSyncError: null },
+      });
+      await syncSearchAnalyticsConnection(updated);
+      return Astro.redirect("/admin/analytics?notice=google-property-saved");
+    }
+
+    if (action === "save-bing") {
+      const siteUrl = String(form.get("siteUrl") ?? "").trim();
+      const submittedKey = String(form.get("apiKey") ?? "").trim();
+      const previous = await prisma.searchAnalyticsConnection.findUnique({
+        where: { provider: bingProvider },
+      });
+      let apiKey = submittedKey;
+      if (!apiKey && previous) {
+        apiKey = decryptCredentials<{ apiKey: string }>(
+          previous.encryptedCredentials,
+        ).apiKey;
+      }
+      let parsedSite: URL;
+      try {
+        parsedSite = new URL(siteUrl);
+      } catch {
+        return Astro.redirect("/admin/analytics?notice=bing-site-invalid");
+      }
+      if (!apiKey || !["http:", "https:"].includes(parsedSite.protocol)) {
+        return Astro.redirect("/admin/analytics?notice=bing-credentials-required");
+      }
+
+      const connection = await prisma.searchAnalyticsConnection.upsert({
+        where: { provider: bingProvider },
+        create: {
+          provider: bingProvider,
+          siteUrl,
+          accountLabel: parsedSite.hostname,
+          encryptedCredentials: encryptCredentials({ apiKey }),
+        },
+        update: {
+          siteUrl,
+          accountLabel: parsedSite.hostname,
+          encryptedCredentials: encryptCredentials({ apiKey }),
+          lastSyncError: null,
+        },
+      });
+      await syncSearchAnalyticsConnection(connection);
+      return Astro.redirect("/admin/analytics?notice=bing-saved");
+    }
+
+    if (action === "refresh") {
+      await syncConnectedSearchAnalytics();
+      return Astro.redirect("/admin/analytics?notice=sync-complete");
+    }
+
+    if (action === "disconnect") {
+      const provider = String(form.get("provider") ?? "");
+      if (provider === googleProvider || provider === bingProvider) {
+        await prisma.searchAnalyticsConnection.deleteMany({
+          where: { provider },
+        });
+      }
+      return Astro.redirect("/admin/analytics?notice=disconnected");
+    }
+  } catch (error) {
+    console.error("Search analytics action failed", error);
+    return Astro.redirect("/admin/analytics?notice=sync-failed");
+  }
+}
+
+const url = new URL(Astro.request.url);
+const notice = url.searchParams.get("notice");
+const connections: SearchAnalyticsConnection[] =
+  await prisma.searchAnalyticsConnection.findMany();
+const googleConnection = connections.find((item) => item.provider === googleProvider) ?? null;
+const bingConnection = connections.find((item) => item.provider === bingProvider) ?? null;
+
+let googleSites: Array<{ siteUrl: string; permissionLevel: string }> = [];
+let googleSitesError = false;
+if (googleConnection) {
+  try {
+    const { refreshToken } = decryptCredentials<{ refreshToken: string }>(
+      googleConnection.encryptedCredentials,
+    );
+    googleSites = await listGoogleSearchConsoleSites(refreshToken);
+  } catch {
+    googleSitesError = true;
+  }
+}
+
+const startDate = new Date();
+startDate.setUTCHours(0, 0, 0, 0);
+startDate.setUTCDate(startDate.getUTCDate() - 34);
+const metrics: SearchAnalyticsDailyMetric[] =
+  await prisma.searchAnalyticsDailyMetric.findMany({
+    where: { date: { gte: startDate } },
+    orderBy: { date: "desc" },
+  });
+
+function providerMetrics(provider: SearchAnalyticsProvider) {
+  const rows = metrics.filter((row) => row.provider === provider);
+  const clicks = rows.reduce((sum, row) => sum + row.clicks, 0);
+  const impressions = rows.reduce((sum, row) => sum + row.impressions, 0);
+  const positionedRows = rows.filter((row) => row.averagePosition !== null);
+  const positionWeight = positionedRows.reduce(
+    (sum, row) => sum + row.impressions,
+    0,
+  );
+  const averagePosition = positionWeight
+    ? positionedRows.reduce(
+        (sum, row) => sum + (row.averagePosition ?? 0) * row.impressions,
+        0,
+      ) / positionWeight
+    : null;
+  return {
+    rows: rows.slice(0, 14),
+    clicks,
+    impressions,
+    ctr: impressions > 0 ? clicks / impressions : null,
+    averagePosition,
+  };
+}
+
+const googleMetrics = providerMetrics(googleProvider);
+const bingMetrics = providerMetrics(bingProvider);
+const notices: Record<string, string> = {
+  "google-connected": "Google Search Console connected. Select an accessible property to begin syncing.",
+  "google-property-saved": "Google property saved and its latest available data was synced.",
+  "google-not-connected": "Connect a Google account first.",
+  "google-property-unavailable": "That property is not available to the connected Google account.",
+  "bing-saved": "Bing Webmaster credentials saved and recent performance data was synced.",
+  "bing-site-invalid": "Enter a valid verified Bing Webmaster site URL.",
+  "bing-credentials-required": "Enter both a verified site URL and an API key.",
+  "sync-complete": "Refresh attempted. Review each provider status below for errors.",
+  "sync-failed": "A sync failed. Check the provider status below and server logs for details.",
+  disconnected: "Provider disconnected and its saved metrics were removed.",
+};
+---
+
+<AdminLayout title="Search Analytics">
+  <div class="space-y-8">
+    <div class="flex flex-col gap-4 border-b border-gray-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p class="text-sm text-gray-600">
+          Search performance from Google Search Console and Bing Webmaster Tools.
+          Provider metrics remain separate because their reporting definitions differ.
+        </p>
+        <p class="mt-1 text-xs text-gray-500">Google data is typically delayed by a few days. Each refresh replaces recent daily values.</p>
+      </div>
+      <form method="POST">
+        <input type="hidden" name="action" value="refresh" />
+        <button type="submit" class="bg-secondary hover:bg-secondary/90 inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-white">
+          Refresh connected sources
+        </button>
+      </form>
+    </div>
+
+    {notice && notices[notice] && (
+      <div class:list={[
+        "rounded-md border p-3 text-sm",
+        notice === "sync-failed" || notice.includes("invalid") || notice.includes("required") || notice.includes("unavailable")
+          ? "border-amber-200 bg-amber-50 text-amber-900"
+          : "border-green-200 bg-green-50 text-green-900",
+      ]} role="status">{notices[notice]}</div>
+    )}
+
+    <div class="grid gap-8 xl:grid-cols-2">
+      <section class="space-y-5 border-b border-gray-200 pb-8 xl:border-r xl:border-b-0 xl:pr-8 xl:pb-0">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Google Search Console</h3>
+            <p class="mt-1 text-sm text-gray-600">Clicks, impressions, click-through rate, and average position.</p>
+          </div>
+          {googleConnection ? (
+            <span class="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800">Connected</span>
+          ) : (
+            <a href="/admin/analytics/google/connect" class="bg-secondary hover:bg-secondary/90 rounded-md px-3 py-2 text-sm font-medium text-white">Connect Google</a>
+          )}
+        </div>
+
+        {googleConnection && (
+          <>
+            <p class="text-xs text-gray-500">Account: {googleConnection.accountLabel}</p>
+            {googleSitesError ? (
+              <p class="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Could not load properties. Reconnect Google or check the server encryption key.</p>
+            ) : (
+              <form method="POST" class="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <input type="hidden" name="action" value="save-google-property" />
+                <div class="min-w-0 flex-1">
+                  <label for="google-site" class="mb-1 block text-sm font-medium text-gray-700">Search Console property</label>
+                  <select id="google-site" name="siteUrl" required class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm">
+                    <option value="">Select a property</option>
+                    {googleSites.map((site) => (
+                      <option value={site.siteUrl} selected={site.siteUrl === googleConnection.siteUrl}>
+                        {site.siteUrl} ({site.permissionLevel})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button type="submit" class="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Save property</button>
+              </form>
+            )}
+            <SearchMetricSummary summary={googleMetrics} />
+            <SearchMetricTable rows={googleMetrics.rows} />
+            {googleConnection.lastSyncError && <p class="text-sm text-amber-800">Latest sync: {googleConnection.lastSyncError}</p>}
+            <SearchProviderFooter connection={googleConnection} provider={googleProvider} />
+          </>
+        )}
+      </section>
+
+      <section class="space-y-5">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Bing Webmaster Tools</h3>
+            <p class="mt-1 text-sm text-gray-600">Daily search clicks and impressions from the verified site.</p>
+          </div>
+          {bingConnection && <span class="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800">Connected</span>}
+        </div>
+
+        <form method="POST" class="space-y-3 border-b border-gray-200 pb-5">
+          <input type="hidden" name="action" value="save-bing" />
+          <div>
+            <label for="bing-site" class="mb-1 block text-sm font-medium text-gray-700">Verified site URL</label>
+            <input id="bing-site" name="siteUrl" type="url" required value={bingConnection?.siteUrl ?? ""} placeholder="https://govoterutherford.com/" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label for="bing-api-key" class="mb-1 block text-sm font-medium text-gray-700">Bing Webmaster API key</label>
+            <input id="bing-api-key" name="apiKey" type="password" autocomplete="new-password" required={!bingConnection} placeholder={bingConnection ? "Saved securely; leave blank to keep current key" : "Paste API key"} class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+          </div>
+          <button type="submit" class="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Save and sync Bing</button>
+        </form>
+
+        {bingConnection && (
+          <>
+            <SearchMetricSummary summary={bingMetrics} />
+            <SearchMetricTable rows={bingMetrics.rows} />
+            {bingConnection.lastSyncError && <p class="text-sm text-amber-800">Latest sync: {bingConnection.lastSyncError}</p>}
+            <SearchProviderFooter connection={bingConnection} provider={bingProvider} />
+          </>
+        )}
+      </section>
+    </div>
+  </div>
+</AdminLayout>

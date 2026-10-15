@@ -19,6 +19,11 @@ enum AuditAction {
   DELETE
 }
 
+enum SearchAnalyticsProvider {
+  GOOGLE_SEARCH_CONSOLE
+  BING_WEBMASTER
+}
+
 model Election {
   id               String                @id @default(uuid())
   name             String
@@ -295,6 +300,40 @@ model UserGoogleAccount {
 
   @@unique([userId, email])
   @@map("user_google_accounts")
+}
+
+model SearchAnalyticsConnection {
+  id                    String                  @id @default(uuid())
+  provider              SearchAnalyticsProvider @unique
+  siteUrl               String?
+  accountLabel          String?
+  encryptedCredentials String
+  lastSyncedAt          DateTime?
+  lastSyncError         String?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  dailyMetrics SearchAnalyticsDailyMetric[]
+
+  @@map("search_analytics_connections")
+}
+
+model SearchAnalyticsDailyMetric {
+  id             String                  @id @default(uuid())
+  provider       SearchAnalyticsProvider
+  date           DateTime                @db.Date
+  clicks         Int                     @default(0)
+  impressions    Int                     @default(0)
+  ctr            Float?
+  averagePosition Float?
+  connectionId   String
+  connection     SearchAnalyticsConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  @@unique([provider, date])
+  @@index([date])
+  @@map("search_analytics_daily_metrics")
 }
 
 model BlobStorageReference {

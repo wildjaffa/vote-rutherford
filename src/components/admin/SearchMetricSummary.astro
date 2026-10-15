@@ -1,0 +1,32 @@
+---
+interface Props {
+  summary: {
+    clicks: number;
+    impressions: number;
+    ctr: number | null;
+    averagePosition: number | null;
+  };
+}
+
+const { summary } = Astro.props;
+const numberFormat = new Intl.NumberFormat("en-US");
+---
+
+<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+  <div class="border-l-4 border-blue-500 bg-blue-50 px-3 py-2">
+    <p class="text-xs font-medium text-gray-600">Clicks</p>
+    <p class="mt-1 text-2xl font-semibold tabular-nums text-gray-900">{numberFormat.format(summary.clicks)}</p>
+  </div>
+  <div class="border-l-4 border-indigo-600 bg-indigo-50 px-3 py-2">
+    <p class="text-xs font-medium text-gray-600">Impressions</p>
+    <p class="mt-1 text-2xl font-semibold tabular-nums text-gray-900">{numberFormat.format(summary.impressions)}</p>
+  </div>
+  <div class="border-l-4 border-emerald-600 bg-emerald-50 px-3 py-2">
+    <p class="text-xs font-medium text-gray-600">Average CTR</p>
+    <p class="mt-1 text-2xl font-semibold tabular-nums text-gray-900">{summary.ctr === null ? "—" : `${(summary.ctr * 100).toFixed(1)}%`}</p>
+  </div>
+  <div class="border-l-4 border-amber-500 bg-amber-50 px-3 py-2">
+    <p class="text-xs font-medium text-gray-600">Average position</p>
+    <p class="mt-1 text-2xl font-semibold tabular-nums text-gray-900">{summary.averagePosition === null ? "—" : summary.averagePosition.toFixed(1)}</p>
+  </div>
+</div>

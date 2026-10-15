@@ -32,6 +32,7 @@ import {
   MessageSquare,
   MapPin,
   Route,
+  ChartNoAxesCombined,
 } from "@lucide/astro";
 
 import {
@@ -78,6 +79,7 @@ export {
   MessageSquare,
   MapPin,
   Route,
+  ChartNoAxesCombined,
 };
 
 export const qualificationTypeToIcon: Record<string, AstroComponent> = {

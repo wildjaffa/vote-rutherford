@@ -1,0 +1,40 @@
+---
+import type { SearchAnalyticsDailyMetric } from "../../generated/prisma/client";
+
+interface Props {
+  rows: SearchAnalyticsDailyMetric[];
+}
+
+const { rows } = Astro.props;
+const numberFormat = new Intl.NumberFormat("en-US");
+---
+
+<div class="overflow-x-auto">
+  <table class="w-full text-left text-sm">
+    <thead>
+      <tr class="border-b border-gray-200 text-xs font-semibold uppercase text-gray-500">
+        <th class="py-2 pr-3">Date</th>
+        <th class="px-3 py-2 text-right">Clicks</th>
+        <th class="px-3 py-2 text-right">Impressions</th>
+        <th class="px-3 py-2 text-right">CTR</th>
+        <th class="py-2 pl-3 text-right">Position</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((row) => (
+        <tr class="border-b border-gray-100 last:border-0">
+          <td class="whitespace-nowrap py-2 pr-3 text-gray-700">{row.date.toISOString().slice(0, 10)}</td>
+          <td class="px-3 py-2 text-right tabular-nums text-gray-900">{numberFormat.format(row.clicks)}</td>
+          <td class="px-3 py-2 text-right tabular-nums text-gray-900">{numberFormat.format(row.impressions)}</td>
+          <td class="px-3 py-2 text-right tabular-nums text-gray-700">{row.ctr === null ? "—" : `${(row.ctr * 100).toFixed(1)}%`}</td>
+          <td class="py-2 pl-3 text-right tabular-nums text-gray-700">{row.averagePosition === null ? "—" : row.averagePosition.toFixed(1)}</td>
+        </tr>
+      ))}
+      {rows.length === 0 && (
+        <tr>
+          <td colspan="5" class="py-6 text-center text-sm text-gray-500">No saved daily data yet. Connect the property and refresh.</td>
+        </tr>
+      )}
+    </tbody>
+  </table>
+</div>
