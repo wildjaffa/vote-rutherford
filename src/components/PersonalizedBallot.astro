@@ -427,6 +427,8 @@ const clientRaces = races.map((r) => ({
     candidates: ClientCandidate[];
   }
 
+  import { formatVoterAddress } from "../lib/utils/formatVoterAddress";
+
   const initBallot = () => {
     const summaryModal = document.getElementById("summary-modal");
     if (!summaryModal) {
@@ -456,10 +458,17 @@ const clientRaces = races.map((r) => ({
         const stored = localStorage.getItem("voterAddressDisplay");
         if (stored) {
           const data = JSON.parse(stored);
-          const parts = [data.normalizedAddress, data.city, data.zip].filter(
-            Boolean,
+          const address =
+            typeof data.address === "string"
+              ? data.address
+              : typeof data.normalizedAddress === "string"
+                ? data.normalizedAddress
+                : "";
+          addressText.textContent = formatVoterAddress(
+            address,
+            typeof data.city === "string" ? data.city : null,
+            typeof data.zip === "string" ? data.zip : null,
           );
-          addressText.textContent = parts.join(", ");
           addressContainer.style.display = "block";
         }
       } catch (e) {

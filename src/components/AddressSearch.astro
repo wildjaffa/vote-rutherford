@@ -100,7 +100,7 @@ const { class: className, subTitle } = Astro.props as Props;
       localStorage.setItem(
         "voterAddressDisplay",
         JSON.stringify({
-          normalizedAddress: result.address,
+          address: result.address,
           city: result.city,
           zip: result.zip,
         }),
