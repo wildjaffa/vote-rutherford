@@ -8,6 +8,30 @@ export interface AddressSearchResult {
   city: string;
   zip: string;
   districtGroupId: string | null;
+  suggestedEarlyVotingSite: SuggestedPollingSite | null;
+  suggestedDayOfVotingSite: SuggestedPollingSite | null;
+}
+
+export interface SuggestedPollingSite {
+  id: string;
+  name: string;
+  address: string;
+  city: string | null;
+  zip: string | null;
+}
+
+export interface AddressIndexDocument extends AddressSearchResult {
+  normalizedAddress: string;
+}
+
+export async function upsertAddressDocuments(
+  documents: AddressIndexDocument[],
+): Promise<void> {
+  if (documents.length === 0) return;
+  const task = meilisearchClient
+    .index("addresses")
+    .addDocuments(documents, { primaryKey: "id" });
+  await task.waitTask({ timeout: 120_000, interval: 500 });
 }
 
 const meilisearchClient = new MeiliSearch({
@@ -36,6 +60,10 @@ export async function searchAddresses(
       city: hit.city as string,
       zip: hit.zip as string,
       districtGroupId: hit.districtGroupId as string | null,
+      suggestedEarlyVotingSite:
+        (hit.suggestedEarlyVotingSite as SuggestedPollingSite | null) ?? null,
+      suggestedDayOfVotingSite:
+        (hit.suggestedDayOfVotingSite as SuggestedPollingSite | null) ?? null,
     }));
   } catch (error) {
     console.error("Meilisearch search failed:", error);

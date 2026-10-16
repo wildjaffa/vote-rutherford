@@ -8,7 +8,7 @@ import prisma from "../../../../../lib/prisma";
 export const prerender = false;
 
 const { id } = Astro.params;
-const site = await prisma.site.findUnique({
+let site = await prisma.site.findUnique({
   where: { id },
   include: { voterAddress: true },
 });
@@ -37,6 +37,14 @@ if (Astro.request.method === "POST") {
       if (result.error) {
         error = "Failed to update site: " + result.error.message;
       } else {
+        const refreshedSite = await prisma.site.findUnique({
+          where: { id },
+          include: { voterAddress: true },
+        });
+        if (!refreshedSite || refreshedSite.deletedAt) {
+          throw new Error("Updated site could not be reloaded");
+        }
+        site = refreshedSite;
         successMessage = "Site updated successfully.";
       }
     }
@@ -90,6 +98,21 @@ if (Astro.request.method === "POST") {
       required
       value={site.name}
     />
+
+    <div class="mb-4">
+      <label
+        class="mb-1 block text-sm font-medium text-gray-700"
+        for="description"
+      >
+        Description / Hours
+      </label>
+      <textarea
+        id="description"
+        name="description"
+        rows="3"
+        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+      >{site.description ?? ""}</textarea>
+    </div>
 
     <div class="mb-4">
       <label class="mb-1 block text-sm font-medium text-gray-700" for="type">

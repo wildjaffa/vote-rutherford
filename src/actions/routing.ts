@@ -4,10 +4,40 @@ import prisma from "../lib/prisma";
 import { geocodeAddress } from "../lib/services/geocoding";
 import { normalizeAddress } from "../lib/utils/addressNormalizer";
 import { handleActionError } from "./utils";
+import { enqueuePollingLocationCalculation } from "../lib/jobs/pollingLocationQueue";
+import { canManageDistricts, getCurrentUserId } from "../lib/permissions";
+
+export const calculateSuggestedPollingLocations = defineAction({
+  input: z.object({}),
+  handler: async (_, context) => {
+    const userId = await getCurrentUserId(
+      context.cookies.get("__session")?.value,
+    );
+
+    if (!(await canManageDistricts(userId))) {
+      throw new ActionError({
+        code: "FORBIDDEN",
+        message: "Insufficient permissions",
+      });
+    }
+
+    try {
+      const jobId = await enqueuePollingLocationCalculation();
+      return { success: true, jobId };
+    } catch (err) {
+      handleActionError(err, "Failed to queue polling location calculation");
+    }
+  },
+});
 
 const optionalString = z.preprocess(
   (val) => (typeof val === "string" && val.trim() ? val.trim() : undefined),
   z.string().optional(),
+);
+
+const optionalDescription = z.preprocess(
+  (val) => (typeof val === "string" && val.trim() ? val.trim() : null),
+  z.string().nullable().optional(),
 );
 
 const optionalNumber = z.preprocess((val) => {
@@ -170,6 +200,7 @@ export const createSite = defineAction({
   input: z.object({
     name: z.string().min(1, "Name is required"),
     type: z.enum(["EARLY_VOTING", "DAY_OF_VOTING"]),
+    description: optionalDescription,
     address: z.string().min(1, "Address is required"),
     voterAddressId: optionalString,
     latitude: optionalNumber,
@@ -188,6 +219,7 @@ export const createSite = defineAction({
         data: {
           name: input.name,
           type: input.type,
+          description: input.description ?? null,
           voterAddressId: voterAddress.id,
         },
       });
@@ -205,6 +237,7 @@ export const updateSite = defineAction({
     id: z.string(),
     name: z.string().min(1, "Name is required"),
     type: z.enum(["EARLY_VOTING", "DAY_OF_VOTING"]),
+    description: optionalDescription,
     address: z.string().min(1, "Address is required"),
     voterAddressId: optionalString,
     latitude: optionalNumber,
@@ -224,6 +257,7 @@ export const updateSite = defineAction({
         data: {
           name: input.name,
           type: input.type,
+          description: input.description ?? null,
           voterAddressId: voterAddress.id,
         },
       });

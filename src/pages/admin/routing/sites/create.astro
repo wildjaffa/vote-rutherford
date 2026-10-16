@@ -49,6 +49,22 @@ if (Astro.request.method === "POST") {
     />
 
     <div class="mb-4">
+      <label
+        class="mb-1 block text-sm font-medium text-gray-700"
+        for="description"
+      >
+        Description / Hours
+      </label>
+      <textarea
+        id="description"
+        name="description"
+        rows="3"
+        placeholder="Optional hours or other details for voters"
+        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+      ></textarea>
+    </div>
+
+    <div class="mb-4">
       <label class="mb-1 block text-sm font-medium text-gray-700" for="type">
         Site Type <span class="text-red-500">*</span>
       </label>

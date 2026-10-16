@@ -235,6 +235,45 @@ const clientRaces = races.map((r) => ({
     )
   }
   {
+    groupId && (
+      <div
+        id="suggested-locations-container"
+        class="border-secondary/20 bg-secondary/5 mb-8 rounded-lg border p-4"
+        style="display: none;"
+      >
+        <h2 class="text-primary mb-2 font-semibold">
+          Suggested Voting Locations
+        </h2>
+        <p
+          id="suggested-early-voting-row"
+          class="text-gray-700"
+          style="display: none;"
+        >
+          Early Voting:{" "}
+          <a
+            id="suggested-early-voting-link"
+            class="text-secondary hover:text-primary underline underline-offset-2"
+            target="_blank"
+            rel="noopener noreferrer"
+          />
+        </p>
+        <p
+          id="suggested-day-voting-row"
+          class="mt-1 text-gray-700"
+          style="display: none;"
+        >
+          Election Day:{" "}
+          <a
+            id="suggested-day-voting-link"
+            class="text-secondary hover:text-primary underline underline-offset-2"
+            target="_blank"
+            rel="noopener noreferrer"
+          />
+        </p>
+      </div>
+    )
+  }
+  {
     !groupId && (
       <p class="text-lg text-gray-600">
         Elections applicable to all residents of Rutherford County
@@ -365,12 +404,15 @@ const clientRaces = races.map((r) => ({
 >
   <div class="flex max-h-[85vh] flex-col">
     <div
-      class="bg-primary flex items-center justify-between border-b px-6 py-2 text-white"
+      class="bg-primary flex items-center justify-between border-b px-4 py-2 text-white sm:px-6"
     >
-      <h2 class="text-2xl font-bold">Your Ballot Summary</h2>
+      <h2 class="text-lg font-bold sm:text-2xl">Your Ballot Summary</h2>
       <div class="flex items-center gap-2">
         <button
           id="share-modal-btn"
+          type="button"
+          aria-label="Share ballot summary"
+          title="Share ballot summary"
           class="hidden cursor-pointer items-center gap-2 rounded-lg bg-white/20 px-3 py-1 text-sm font-semibold transition-colors hover:bg-white/30"
         >
           <Share size="18" />
@@ -384,17 +426,52 @@ const clientRaces = races.map((r) => ({
       </div>
     </div>
 
-    <div class="flex-1 overflow-y-auto px-6 py-2" id="summary-content">
+    <div
+      class="min-h-0 flex-1 overflow-y-auto px-2 py-2 sm:px-6"
+      id="summary-content"
+    >
       <!-- Content populated by JS -->
     </div>
 
-    <div class="flex items-center justify-end border-t bg-gray-50 px-6 py-2">
-      <button
-        id="close-modal-footer-btn"
-        class="bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer rounded-lg px-6 py-2 font-semibold transition-colors"
-      >
-        Close
-      </button>
+    <div class="border-t bg-gray-50 px-4 py-3 sm:px-6">
+      <div class="mb-3">
+        <h3 class="text-primary text-sm font-bold sm:text-base">
+          Suggested polling location
+        </h3>
+        <div class="mt-1 space-y-1 text-xs text-gray-700 sm:text-sm">
+          <p id="summary-early-voting-row" style="display: none;">
+            Early Voting:{" "}
+            <a
+              id="summary-early-voting-link"
+              class="text-secondary hover:text-primary underline underline-offset-2"
+              target="_blank"
+              rel="noopener noreferrer"></a>
+          </p>
+          <p id="summary-day-voting-row" style="display: none;">
+            Election Day:{" "}
+            <a
+              id="summary-day-voting-link"
+              class="text-secondary hover:text-primary underline underline-offset-2"
+              target="_blank"
+              rel="noopener noreferrer"></a>
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center justify-between gap-3">
+        <a
+          href="/polling-locations"
+          class="bg-secondary hover:bg-secondary/90 focus:ring-secondary rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors focus:ring-2 focus:ring-offset-2 sm:text-base"
+        >
+          Polling locations
+        </a>
+        <button
+          id="close-modal-footer-btn"
+          type="button"
+          class="bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer rounded-lg px-6 py-2 text-sm font-semibold transition-colors sm:text-base"
+        >
+          Close
+        </button>
+      </div>
     </div>
   </div>
 </dialog>
@@ -453,6 +530,9 @@ const clientRaces = races.map((r) => ({
       "address-display-container",
     );
     const addressText = document.getElementById("address-display-text");
+    const suggestedLocationsContainer = document.getElementById(
+      "suggested-locations-container",
+    );
     if (addressContainer && addressText) {
       try {
         const stored = localStorage.getItem("voterAddressDisplay");
@@ -470,6 +550,74 @@ const clientRaces = races.map((r) => ({
             typeof data.zip === "string" ? data.zip : null,
           );
           addressContainer.style.display = "block";
+
+          const setSuggestedLocation = (
+            rowId: string,
+            linkId: string,
+            site: {
+              name?: unknown;
+              address?: unknown;
+              city?: unknown;
+              zip?: unknown;
+            } | null,
+          ): boolean => {
+            const row = document.getElementById(rowId);
+            const link = document.getElementById(
+              linkId,
+            ) as HTMLAnchorElement | null;
+            if (
+              !row ||
+              !link ||
+              !site ||
+              typeof site.name !== "string" ||
+              typeof site.address !== "string"
+            ) {
+              if (row) row.style.display = "none";
+              return false;
+            }
+
+            const siteCity = typeof site.city === "string" ? site.city : null;
+            const siteZip = typeof site.zip === "string" ? site.zip : null;
+            const siteAddress = formatVoterAddress(
+              site.address,
+              siteCity,
+              siteZip,
+            );
+            const mapsUrl = new URL("https://www.google.com/maps/search/");
+            mapsUrl.searchParams.set("api", "1");
+            mapsUrl.searchParams.set("query", `${site.name}, ${siteAddress}`);
+            link.href = mapsUrl.toString();
+            link.textContent = `${site.name} — ${siteAddress}`;
+            row.style.display = "block";
+            return true;
+          };
+
+          const hasEarlyVotingSuggestion = setSuggestedLocation(
+            "suggested-early-voting-row",
+            "suggested-early-voting-link",
+            data.suggestedEarlyVotingSite ?? null,
+          );
+          const hasDayVotingSuggestion = setSuggestedLocation(
+            "suggested-day-voting-row",
+            "suggested-day-voting-link",
+            data.suggestedDayOfVotingSite ?? null,
+          );
+          setSuggestedLocation(
+            "summary-early-voting-row",
+            "summary-early-voting-link",
+            data.suggestedEarlyVotingSite ?? null,
+          );
+          setSuggestedLocation(
+            "summary-day-voting-row",
+            "summary-day-voting-link",
+            data.suggestedDayOfVotingSite ?? null,
+          );
+          if (suggestedLocationsContainer) {
+            suggestedLocationsContainer.style.display =
+              hasEarlyVotingSuggestion || hasDayVotingSuggestion
+                ? "block"
+                : "none";
+          }
         }
       } catch (e) {
         console.error("Error loading address from localStorage:", e);

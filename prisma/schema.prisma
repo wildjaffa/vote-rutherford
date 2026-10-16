@@ -464,6 +464,10 @@ model VoterAddress {
   zip               String?
   latitude          Float
   longitude         Float
+  suggestedEarlyVotingSiteId String?
+  suggestedEarlyVotingSite   Site?   @relation("SuggestedEarlyVotingSite", fields: [suggestedEarlyVotingSiteId], references: [id], onDelete: SetNull)
+  suggestedDayOfVotingSiteId String?
+  suggestedDayOfVotingSite   Site?   @relation("SuggestedDayOfVotingSite", fields: [suggestedDayOfVotingSiteId], references: [id], onDelete: SetNull)
 
   districtGroup   DistrictGroup? @relation(fields: [districtGroupId], references: [id])
   districtGroupId String?
@@ -542,8 +546,11 @@ model Site {
   id             String       @id @default(uuid())
   name           String
   type           SiteType
+  description    String?
   voterAddressId String
   voterAddress   VoterAddress @relation(fields: [voterAddressId], references: [id])
+  suggestedForEarlyVoting VoterAddress[] @relation("SuggestedEarlyVotingSite")
+  suggestedForDayOfVoting VoterAddress[] @relation("SuggestedDayOfVotingSite")
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @default(now())
   deletedAt      DateTime?

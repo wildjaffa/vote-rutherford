@@ -33,6 +33,16 @@ module.exports = {
       restart_delay: 5000,
     },
     {
+      name: "polling-location-worker",
+      script: "./src/lib/jobs/pollingLocationWorker.ts",
+      interpreter: "tsx",
+      interpreter_args: "--import dotenv/config",
+      env: {
+        NODE_ENV: "production",
+      },
+      restart_delay: 5000,
+    },
+    {
       name: "search-analytics-worker",
       script: "./src/lib/jobs/searchAnalyticsWorker.ts",
       interpreter: "tsx",

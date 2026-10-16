@@ -17,12 +17,10 @@ export function formatVoterAddress(
   let addressZip = zip?.trim() ?? "";
   let state = "";
 
-  const lastPart = parts[parts.length - 1] ?? "";
-
   if (
     normalizedZip &&
     parts.length > 0 &&
-    normalizeAddressPart(lastPart) === normalizedZip
+    normalizeAddressPart(parts[parts.length - 1] ?? "") === normalizedZip
   ) {
     const embeddedZip = parts.pop() ?? "";
     addressZip ||= embeddedZip;
@@ -35,7 +33,7 @@ export function formatVoterAddress(
   if (
     normalizedCity &&
     parts.length > 0 &&
-    normalizeAddressPart(lastPart) === normalizedCity
+    normalizeAddressPart(parts[parts.length - 1] ?? "") === normalizedCity
   ) {
     const embeddedCity = parts.pop() ?? "";
     addressCity ||= embeddedCity;

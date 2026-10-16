@@ -50,16 +50,32 @@ function formatVolunteerDates(dates: Date[]): string {
 
     <!-- Sites Section -->
     <section>
-      <div class="flex justify-between items-center mb-4">
+      <div
+        class="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center"
+      >
         <h2 class="text-lg font-semibold text-gray-900">Sign Sites</h2>
-        <a
-          href="/admin/routing/sites/create"
-          class="bg-secondary hover:bg-secondary/90 focus:ring-secondary inline-flex items-center rounded-lg px-4 py-2 text-white transition-colors focus:ring-2 focus:ring-offset-2"
-        >
-          <Plus size="18" stroke-width={2} class="mr-2" />
-          New Site
-        </a>
+        <div class="flex flex-wrap gap-2">
+          <button
+            id="calculate-suggested-locations"
+            type="button"
+            class="focus:ring-secondary border-secondary text-secondary hover:bg-secondary/10 inline-flex items-center rounded-lg border px-4 py-2 transition-colors focus:ring-2 focus:ring-offset-2"
+          >
+            Calculate Suggested Locations
+          </button>
+          <a
+            href="/admin/routing/sites/create"
+            class="bg-secondary hover:bg-secondary/90 focus:ring-secondary inline-flex items-center rounded-lg px-4 py-2 text-white transition-colors focus:ring-2 focus:ring-offset-2"
+          >
+            <Plus size="18" stroke-width={2} class="mr-2" />
+            New Site
+          </a>
+        </div>
       </div>
+      <p class="mb-4 text-sm text-gray-600">
+        Recalculate after adding, removing, or moving polling sites, or after
+        importing refreshed voter addresses. Results update in batches while the
+        address search remains available.
+      </p>
 
       {
         sites.length > 0 ? (
@@ -161,6 +177,37 @@ function formatVolunteerDates(dates: Date[]): string {
         )
       }
     </section>
-
   </div>
 </AdminLayout>
+
+<script>
+  import { actions } from "astro:actions";
+
+  const calculateButton = document.getElementById(
+    "calculate-suggested-locations",
+  ) as HTMLButtonElement | null;
+
+  calculateButton?.addEventListener("click", async () => {
+    calculateButton.disabled = true;
+    calculateButton.textContent = "Queueing calculation...";
+    try {
+      const { data, error } = await actions.calculateSuggestedPollingLocations(
+        {},
+      );
+      if (error) {
+        window.toast.error(error.message || "Failed to queue calculation");
+      } else if (data?.success) {
+        window.toast.success(
+          "Suggested location calculation queued. Results will update in the background.",
+        );
+      }
+    } catch (error) {
+      window.toast.error(
+        error instanceof Error ? error.message : "Failed to queue calculation",
+      );
+    } finally {
+      calculateButton.disabled = false;
+      calculateButton.textContent = "Calculate Suggested Locations";
+    }
+  });
+</script>

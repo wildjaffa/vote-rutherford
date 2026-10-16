@@ -23,6 +23,7 @@ import {
   createVolunteer,
   updateVolunteer,
   deleteVolunteer,
+  calculateSuggestedPollingLocations,
 } from "./routing";
 
 export const server = {
@@ -53,4 +54,5 @@ export const server = {
   createVolunteer,
   updateVolunteer,
   deleteVolunteer,
+  calculateSuggestedPollingLocations,
 };
