@@ -1,6 +1,6 @@
 # Vote Rutherford
 
-A modern voting information platform and candidate outreach system for Rutherford County, built with Astro 5, Prisma 7, PostgreSQL, and Tailwind CSS 4.
+A modern voting information platform and candidate outreach system for Rutherford County, built with Astro 7, Prisma 7, PostgreSQL, and Tailwind CSS 4.
 
 This application provides comprehensive information about elections, races, and candidates, and includes internal tools for managing candidate responses and automated outreach.
 
@@ -17,7 +17,7 @@ This application provides comprehensive information about elections, races, and 
 
 ## Tech Stack
 
-- **Framework**: Astro 5 (Hybrid SSR)
+- **Framework**: Astro 7 (Hybrid SSR)
 - **Database**: PostgreSQL with Prisma 7 ORM
 - **Styling**: Tailwind CSS 4
 - **Background Jobs**: BullMQ and IORedis
@@ -29,7 +29,7 @@ This application provides comprehensive information about elections, races, and 
 
 ### Prerequisites
 
-- **Node.js**: 22+
+- **Node.js**: 24.22.1+
 - **PostgreSQL**: 14+ (local or remote)
 - **Redis**: Required for background email workers
 

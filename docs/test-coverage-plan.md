@@ -8,7 +8,7 @@ Goal: Achieve 70-80% code coverage for the vote-rutherford repository.
 
 ### Current State
 
-- **Framework**: Astro 5 + TypeScript + Prisma
+- **Framework**: Astro 7 + TypeScript + Prisma
 - **Test Setup**: None (Vitest not installed, Playwright available but unused)
 - **Source Files**: ~60+ TypeScript files across `src/lib`, `src/actions`, API routes
 - **Dependencies**: Prisma, Firebase, Cloudflare, MeiliSearch, BullMQ
@@ -567,7 +567,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24.22.1"
           cache: "npm"
 
       - name: Install dependencies
